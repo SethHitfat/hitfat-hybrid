@@ -1107,48 +1107,50 @@ const PROGRAM_ORDER=['race-16','race-12','race-8'];
    `plan` is a KEY resolved at runtime by resolvePlan() so definition
    order never matters.
    ============================================================ */
+/* Coach marketplace architecture is kept for the future (coachId, name, photo,
+   specialty, bio, programs[], programOwner, revenueShare) but the marketplace is
+   NOT active yet — HITFAT is the sole publisher. Only the real HITFAT coach shows;
+   no fake coaches/ratings/athlete counts. */
 const COACHES = {
-  seth:  { id:'seth',  name:'Coach Seth',  specialty:'HYROX Specialist',        athletes:'15K+', real:true,
-           bio:'HYROX Performance Coach (Level 1) and founder of HITFAT. Years helping athletes build the engine and strength to race strong.',
-           quals:['HYROX Performance Coach L1','Hybrid Strength & Conditioning'] },
-  dhil:  { id:'dhil',  name:'Coach Dhil',  specialty:'Strength & Conditioning', athletes:'—', real:false,
-           bio:'Strength & conditioning specialist. Programs coming soon to HITFAT HYBRID.', quals:[] },
-  afiq:  { id:'afiq',  name:'Coach Afiq',  specialty:'Running Performance',      athletes:'—', real:false,
-           bio:'Running performance coach focused on compromised running for hybrid racing. Programs coming soon.', quals:[] },
-  bella: { id:'bella', name:'Coach Bella', specialty:'Hybrid Performance',       athletes:'—', real:false,
-           bio:'Hybrid performance coach. Programs coming soon to HITFAT HYBRID.', quals:[] },
+  seth: { id:'seth', name:'Coach Seth', specialty:'HYROX Performance Coach · HITFAT', athletes:null, real:true, owner:true,
+          photo:null, revenueShare:0,
+          bio:'HYROX Performance Coach (Level 1) and founder of HITFAT. Every HITFAT HYBRID program is designed and delivered here.',
+          quals:['HYROX Performance Coach L1','Hybrid Strength & Conditioning'] },
 };
-const COACH_ORDER = ['seth','dhil','afiq','bella'];
+const COACH_ORDER = ['seth'];
 
+/* All programs are published by HITFAT (owner:'HITFAT', revShare:0 for now).
+   Prices live here — easy to change. access: free | paid | soon. */
 const CATALOG = {
-  // ---- FREE structured programs (generous free tier) ----
-  'hybrid-starter': { id:'hybrid-starter', title:'Hybrid Starter Plan', coach:'seth', weeks:9,  days:4, level:'Beginner–Intermediate',
+  // ---- FREE (generous free tier) ----
+  'hybrid-starter': { id:'hybrid-starter', title:'Hybrid Starter Plan', coach:'seth', owner:'HITFAT', revShare:0, weeks:9,  days:4, level:'Beginner–Intermediate',
      goal:'Build strength, endurance & hybrid fitness', tag:'Hybrid', access:'free', price:0, plan:'HYBRID_PLAN', img:IMG.engine,
      summary:'Your free foundation — build a hybrid engine toward the HITFAT Hybrid Simulation. No race ticket needed.' },
-  'foundation-13': { id:'foundation-13', title:'13-Week Foundation', coach:'seth', weeks:13, days:3, level:'All levels',
+  'foundation-13': { id:'foundation-13', title:'13-Week Foundation', coach:'seth', owner:'HITFAT', revShare:0, weeks:13, days:3, level:'All levels',
      goal:'Base, pace, power, taper', tag:'Hybrid', access:'free', price:0, plan:'TRAINING_PLAN', img:IMG.found,
      summary:'A free phase-based progression: build base, raise pace, sharpen power, then taper.' },
-  // ---- PAID structured programs (real data) ----
-  'first-timer': { id:'first-timer', title:'HYROX First Timer', coach:'seth', weeks:4, days:4, level:'Beginner',
+  // ---- RM19 ENTRY (real data) ----
+  'first-timer': { id:'first-timer', title:'HYROX First Timer', coach:'seth', owner:'HITFAT', revShare:0, weeks:4, days:4, level:'Beginner',
      goal:'Prepare for your first HYROX', tag:'Race Prep', access:'paid', price:19, plan:'FIRST_TIMER', img:IMG.power,
      summary:'A 4-week structured starter for anyone curious about HYROX: hybrid basics → engine + strength → stations → mini simulation.' },
-  'race-8':  { id:'race-8',  title:'8-Week Race Prep', coach:'seth', weeks:8,  days:5, level:'PRO / OPEN / Beginner',
+  // ---- RACE-SPECIFIC (real data) ----
+  'race-8':  { id:'race-8',  title:'8-Week Race Prep', coach:'seth', owner:'HITFAT', revShare:0, weeks:8,  days:5, level:'PRO / OPEN / Beginner',
      goal:'Complete, race-ready block', tag:'Race Prep', access:'paid', price:99,  plan:'RACE_8', img:IMG.power,
      summary:'A complete final block. Nothing wasted before race day.' },
-  'race-12': { id:'race-12', title:'12-Week Race Ready', coach:'seth', weeks:12, days:5, level:'PRO / OPEN / Beginner',
+  'race-12': { id:'race-12', title:'12-Week Race Ready', coach:'seth', owner:'HITFAT', revShare:0, weeks:12, days:5, level:'PRO / OPEN / Beginner',
      goal:'Lock in pace, power & every station', tag:'Race Prep', access:'paid', price:149, plan:'PRO_PROGRAM', img:IMG.complete,
      summary:'Base → Pace → Accelerate → Prime → Race. Full preparation for race day.' },
-  'road-kl': { id:'road-kl', title:'Road to HYROX KL', coach:'seth', weeks:12, days:5, level:'PRO / OPEN / Beginner',
+  'road-kl': { id:'road-kl', title:'Road to HYROX KL', coach:'seth', owner:'HITFAT', revShare:0, weeks:12, days:5, level:'PRO / OPEN / Beginner',
      goal:'Race-specific prep for HYROX Kuala Lumpur', tag:'Race Prep', access:'paid', price:199, plan:'PRO_PROGRAM', img:IMG.complete, event:'kl',
      summary:'Everything to arrive in KL ready: countdown, race pacing, station strategy, simulations & the 12-week build.' },
-  // ---- COMING SOON (no dummy content until real workouts are ready) ----
-  'build-engine':   { id:'build-engine',   title:'Build Your Engine', coach:'seth', weeks:6, days:4, level:'Intermediate', goal:'Improve your aerobic engine', tag:'Engine',    access:'soon', price:49,  plan:null, img:IMG.engine,   summary:'Improve your aerobic engine for hybrid racing.' },
-  'sled-power':     { id:'sled-power',     title:'Sled Power',        coach:'dhil', weeks:4, days:3, level:'Intermediate', goal:'Sled push & pull strength',   tag:'Strength',  access:'soon', price:39,  plan:null, img:IMG.power,    summary:'Build strength and technique for sled push and sled pull.' },
-  'hyrox-beginner': { id:'hyrox-beginner', title:'HYROX Beginner',    coach:'seth', weeks:8, days:4, level:'Beginner',     goal:'Your first structured HYROX build', tag:'Race Prep', access:'soon', price:79,  plan:null, img:IMG.found,   summary:'A beginner-friendly build toward your first race.' },
-  'run-faster':     { id:'run-faster',     title:'Run Faster for HYROX', coach:'afiq', weeks:6, days:4, level:'Intermediate', goal:'Improve compromised running', tag:'Running', access:'soon', price:39, plan:null, img:IMG.found,   summary:'Improve your compromised running.' },
-  'doubles-prep':   { id:'doubles-prep',   title:"Men's Doubles Prep", coach:'seth', weeks:8, days:5, level:'Advanced',    goal:'Doubles race strategy & prep',  tag:'Race Prep', access:'soon', price:129, plan:null, img:IMG.complete, summary:'Split strategy and preparation for HYROX Doubles.' },
+  // ---- CORE PAID (COMING SOON — no dummy content until real workouts are ready) ----
+  'hybrid-beginner':{ id:'hybrid-beginner',title:'Hybrid Beginner',   coach:'seth', owner:'HITFAT', revShare:0, weeks:8, days:4, level:'Beginner',     goal:'Your first structured hybrid build', tag:'Hybrid',   access:'soon', price:59, plan:null, img:IMG.found,   summary:'A beginner-friendly build into hybrid training and your first race.' },
+  'build-engine':   { id:'build-engine',   title:'Build Your Engine', coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:4, level:'Intermediate', goal:'Improve your aerobic engine',        tag:'Engine',   access:'soon', price:59, plan:null, img:IMG.engine,  summary:'Improve your aerobic engine systematically for hybrid racing.' },
+  'hybrid-strength':{ id:'hybrid-strength',title:'Hybrid Strength',   coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:3, level:'Intermediate', goal:'Strength for hybrid power',          tag:'Strength', access:'soon', price:59, plan:null, img:IMG.power,   summary:'Structured strength — squats, carries, sled — to power every station.' },
+  'run-better':     { id:'run-better',     title:'Run Better for HYROX', coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:4, level:'Intermediate', goal:'Improve compromised running',     tag:'Running',  access:'soon', price:59, plan:null, img:IMG.found,   summary:'Improve your compromised running through structured progression.' },
+  'station-builder':{ id:'station-builder',title:'Station Builder',   coach:'seth', owner:'HITFAT', revShare:0, weeks:4, days:3, level:'Intermediate', goal:'Bring up weak HYROX stations',       tag:'Strength', access:'soon', price:59, plan:null, img:IMG.complete,summary:'Focused progression to bring up your weakest HYROX stations.' },
 };
-const CATALOG_ORDER = ['first-timer','race-12','road-kl','race-8','hybrid-starter','foundation-13','build-engine','sled-power','hyrox-beginner','run-faster','doubles-prep'];
+const CATALOG_ORDER = ['first-timer','race-12','road-kl','race-8','hybrid-starter','foundation-13','hybrid-beginner','build-engine','hybrid-strength','run-better','station-builder'];
 function coachPrograms(coachId){ return CATALOG_ORDER.filter(function(id){ return CATALOG[id].coach===coachId; }); }
 function fmtPrice(p){ return (p&&p>0) ? ('RM'+p) : 'Free'; }
 
@@ -3120,7 +3122,8 @@ function programCard(id,full){
 }
 function quickCard(i){ const q=QUICK_WORKOUTS[i]; return `<div class="qwcard" onclick="openQuickWorkout(${i})"><span class="badge free">Free</span><div class="t">${q.title}</div><div class="m">${q.tag} · ${totalMins(q)} min · RPE ${q.rpe}</div></div>`; }
 function coachCard(id){ const c=COACHES[id]; const n=coachPrograms(id).length; const ini=c.name.replace('Coach ','')[0];
-  return `<div class="coachcard" onclick="openCoach('${id}')"><div class="coachav">${ini}</div><div class="ci"><div class="n">${c.name}</div><div class="s">${c.specialty}</div><div class="x">${n} program${n!==1?'s':''}${c.athletes&&c.athletes!=='—'?' · '+c.athletes+' athletes':''}</div></div><div class="arr">›</div></div>`; }
+  const np=coachPrograms(id).filter(pid=>CATALOG[pid].access!=='free').length;
+  return `<div class="coachcard" onclick="openCoach('${id}')"><div class="coachav">${ini}</div><div class="ci"><div class="n">${c.name}</div><div class="s">${c.specialty}</div><div class="x">${np} program${np!==1?'s':''}${c.athletes&&c.athletes!=='—'?' · '+c.athletes+' athletes':''}</div></div><div class="arr">›</div></div>`; }
 
 /* ---- Explore ---- */
 let exFilter='all';
@@ -3142,7 +3145,7 @@ function renderExplore(){
     h+=sec('Popular Programs', hs(['first-timer','race-12','road-kl','race-8'].map(id=>programCard(id)).join('')), "setFilter('programs')");
     h+=sec('Free Programs', ['hybrid-starter','foundation-13'].map(id=>programCard(id,true)).join(''));
     h+=sec('Race Preparation', hs(CATALOG_ORDER.filter(id=>CATALOG[id].tag==='Race Prep').map(id=>programCard(id)).join('')), "setFilter('race')");
-    h+=sec('Programs From Coaches', hs(coachPrograms('seth').map(id=>programCard(id)).join('')), "switchTab('coaches')");
+    h+=sec('HITFAT Programs', hs(coachPrograms('seth').map(id=>programCard(id)).join('')), "setFilter('programs')");
     h+=`<div class="exsec"><div class="eh"><h3>More Training</h3></div>
       <div class="catcard" onclick="switchTab('target')" style="margin-bottom:12px;"><div class="body"><div class="ttl">Target Sessions</div><div class="cnt">Fix a weak station or quality</div></div><div class="arr">›</div></div>
       <div class="catcard" onclick="switchTab('programs')"><div class="body"><div class="ttl">Workout Library</div><div class="cnt">Free sessions by category</div></div><div class="arr">›</div></div></div>`;
@@ -3157,23 +3160,33 @@ function renderExplore(){
     h+=sec('Your Weakest Area', `<div class="benchcard"><div class="bt">${AREA_LABEL[wk]} — ${b[wk]}/100</div><div class="bm">Train this to raise your Hybrid Score fastest.</div></div>
       <div class="catcard" onclick="switchTab('target')" style="margin-top:10px;"><div class="body"><div class="ttl">Target Sessions</div><div class="cnt">Focused station & quality work</div></div><div class="arr">›</div></div>`);
   } else if(exFilter==='coaches'){
-    h+=sec('Coaches', COACH_ORDER.map(coachCard).join(''));
+    h+=coachesSoonHTML();
   }
   $('ex-body').innerHTML=h; $('screen').scrollTop=0;
 }
 
-/* ---- Coaches ---- */
-function renderCoaches(){ $('coach-cards').innerHTML=COACH_ORDER.map(coachCard).join(''); }
+/* ---- Coaches (marketplace COMING SOON — HITFAT is the sole publisher for now) ---- */
+function coachesSoonHTML(){
+  return `<div class="exsec"><div style="position:relative;text-align:center;padding:30px 22px;border:1px solid var(--line);border-radius:18px;background:radial-gradient(420px 200px at 80% -10%,rgba(255,224,0,.10),transparent 60%),linear-gradient(155deg,#1a1a1a 0%,#0e0e0e 100%);overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;width:4px;height:100%;background:var(--hyrox);"></div>
+      <div style="font-family:'Oswald';font-size:11px;letter-spacing:2.5px;color:var(--hyrox);font-weight:700;">COACH PROGRAMS</div>
+      <div style="font-family:'Oswald';font-size:30px;font-weight:700;letter-spacing:.5px;margin:8px 0 12px;text-transform:uppercase;">Coming Soon</div>
+      <div style="color:var(--dim);font-size:13.5px;line-height:1.6;max-width:330px;margin:0 auto;">Train with specialist coaches. New coach-led programs are coming to HITFAT HYBRID.</div>
+    </div>
+    <div class="sechead">Your Coach</div>
+    ${coachCard('seth')}</div>`;
+}
+function renderCoaches(){ $('coach-cards').innerHTML=coachesSoonHTML(); }
 function showCoachesList(){ $('coaches-list').style.display='block'; $('coach-profile').style.display='none'; $('tabs').style.display='flex'; renderCoaches(); $('screen').scrollTop=0; }
 function openCoach(id){ const c=COACHES[id]; if(!c) return; $('coaches-list').style.display='none'; $('coach-profile').style.display='block';
-  const progs=coachPrograms(id); const ini=c.name.replace('Coach ','')[0];
+  const progs=coachPrograms(id).filter(pid=>CATALOG[pid].access!=='free'); const ini=c.name.replace('Coach ','')[0];
   $('coach-profile-body').innerHTML=`
     <div class="coachhero"><div class="av">${ini}</div><div class="n">${c.name}</div><div class="s">${c.specialty}</div></div>
-    <div class="coachstats"><div class="c"><b>${progs.length}</b><small>Programs</small></div><div class="c"><b>${c.athletes}</b><small>Athletes</small></div><div class="c"><b>${c.real?'L1':'Soon'}</b><small>${c.real?'Certified':'Status'}</small></div></div>
+    <div class="coachstats"><div class="c"><b>${progs.length}</b><small>Programs</small></div><div class="c"><b>L1</b><small>HYROX Coach</small></div><div class="c"><b>HITFAT</b><small>Publisher</small></div></div>
     <div class="desc" style="margin:14px 2px;">${c.bio}</div>
     ${c.quals&&c.quals.length?`<div class="pd-meta" style="margin-bottom:6px;">${c.quals.map(q=>`<span class="chip">${q}</span>`).join('')}</div>`:''}
     <div class="sechead">Programs by ${c.name}</div>
-    ${progs.length?progs.map(pid=>programCard(pid,true)).join(''):'<div class="empty">Programs coming soon to HITFAT HYBRID.</div>'}`;
+    ${progs.length?progs.map(pid=>programCard(pid,true)).join(''):'<div class="empty">Programs coming soon.</div>'}`;
   $('screen').scrollTop=0;
 }
 
