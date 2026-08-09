@@ -2522,6 +2522,7 @@ function openCategory(i){
 
 /* ============ SKRIN 3: BUTIRAN ============ */
 function backToList(){
+  if(window.fromFT){ window.fromFT=false; openFirstTimer(); return; }
   if(window.fromQuick){ window.fromQuick=false; switchTab(window.quickBack||'explore'); return; }
   if(window.fromPlan){ window.fromPlan=false; switchTab('pro'); return; }
   if(window.fromHome){ window.fromHome=false; switchTab('home'); return; }
@@ -3273,8 +3274,35 @@ function openProgramContent(id){
   if(id==='road-kl'){ switchTab('pro'); openEvent(); return; }
   if(id==='foundation-13'){ switchTab('plans'); return; }
   if(id==='hybrid-starter'){ switchTab('pro'); try{ renderMyPlan(); }catch(e){} return; }
+  if(id==='first-timer'){ openFirstTimer(); return; }
   nfToast((CATALOG[id]?CATALOG[id].title:'This program')+' — full content finalising, coming soon.');
 }
+/* ---- HYROX First Timer (RM19) — real 4-week plan built from the library ---- */
+const FIRST_TIMER=(function(){
+  // [catIdx,workoutIdx] · cat 0=Foundation 1=Power 2=Complete 3=Engine (indices within counts F15/P9/C10/E4)
+  const phases=[['Hybrid Basics',[[0,0],[0,1],[3,0],[2,0]]],['Engine + Strength',[[3,1],[1,0],[0,2],[2,1]]],['Stations',[[2,2],[1,1],[3,2],[0,3]]],['Mini Simulation',[[2,3],[3,3],[0,4],[2,4]]]];
+  return phases.map((ph,i)=>({week:i+1,phase:ph[0],days:ph[1].map((r,di)=>({c:r[0],w:r[1],day:di+1}))}));
+})();
+function openFirstTimer(){
+  if(window.klTicker){ clearInterval(window.klTicker); window.klTicker=null; }
+  ['home','explore','store','coaches','progress','profile','categories','plans','pro','target','list','detail'].forEach(x=>{const e=$(x);if(e)e.style.display='none';});
+  $('progdetail').style.display='block'; $('tabs').style.display='flex'; curTab='progdetail'; pdBackTab='store';
+  renderFirstTimer(); $('screen').scrollTop=0;
+}
+function renderFirstTimer(){
+  let openWk=null;
+  for(const wko of FIRST_TIMER){ for(const d of wko.days){ if(!HF.isDone('ft-w'+wko.week+'-d'+d.day)){ openWk=wko.week; break; } } if(openWk) break; }
+  if(openWk===null) openWk=FIRST_TIMER.length;
+  const weeks=FIRST_TIMER.map(wko=>{
+    let wdone=0;
+    const rows=wko.days.map(d=>{ const wo=CATEGORIES[d.c].workouts[d.w]; const key='ft-w'+wko.week+'-d'+d.day; const on=HF.isDone(key); if(on) wdone++;
+      return `<div class="klses" onclick="openFTSession(${d.c},${d.w},'${key}')"><div class="kday">D${d.day}</div><div class="kbody"><div class="kt">${wo.title}</div><div class="km">${wko.phase} · RPE ${wo.rpe} · ${totalMins(wo)} min · ▶ video</div></div><div class="ktick ${on?'on':''}" onclick="event.stopPropagation();toggleFT('${key}',${d.c},${d.w});">✓</div></div>`; }).join('');
+    return `<div class="klwk ${wko.week===openWk?'open':''}"><div class="klwkh" onclick="this.parentNode.classList.toggle('open')"><span class="wn">WEEK ${wko.week}</span><span class="wp">${wko.phase}</span><span class="wd">${wdone}/${wko.days.length}</span><span class="wc">›</span></div><div class="klbody">${rows}</div></div>`;
+  }).join('');
+  $('pgd-body').innerHTML=`<div class="hgroup"><div class="k">HYROX First Timer · OWNED</div><h2>4-WEEK STARTER</h2><p>Prepare for your first HYROX — hybrid basics → engine + strength → stations → mini simulation. Tap a session to start.</p></div>${weeks}`;
+}
+function toggleFT(key,c,w){ if(HF.isDone(key)) HF.undone(key); else HF.markDone(key,{name:CATEGORIES[c].workouts[w].title}); renderFirstTimer(); }
+function openFTSession(c,w,key){ window.fromFT=true; window.fromPlan=false; window.fromHome=false; window.fromKL=false; window.pendingKey=key; openDetail(c,w); }
 
 /* ---- Join / payment (BCL.my — Cara A manual, links added later) ---- */
 // TODO(payment): paste each program's BCL.my payment link here → auto "Pay" button works.
