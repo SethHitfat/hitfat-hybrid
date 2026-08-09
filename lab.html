@@ -44,7 +44,9 @@
   .stage{position:relative;flex:1;overflow:hidden;background:#000;}
   #video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);}
   #video.rear{transform:none;}
-  #overlay{position:absolute;inset:0;width:100%;height:100%;}
+  /* overlay must mirror the same way as the video so the skeleton lands on the body */
+  #overlay{position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1);}
+  #overlay.rear{transform:none;}
   .hud{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:calc(14px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px));}
   .hud .top{display:flex;justify-content:space-between;align-items:flex-start;}
   .repbox{background:rgba(0,0,0,.55);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:10px 18px;text-align:center;}
@@ -203,7 +205,7 @@ async function start(){
   $('intro').style.display='none'; $('live').classList.add('on'); $('loading').style.display='grid';
   try{
     stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:facing, width:{ideal:1280}, height:{ideal:720} }, audio:false });
-    video.srcObject=stream; video.classList.toggle('rear', facing==='environment'); await video.play();
+    video.srcObject=stream; video.classList.toggle('rear', facing==='environment'); overlay.classList.toggle('rear', facing==='environment'); await video.play();
     if(!detector) await initDetector();
   }catch(e){
     $('live').classList.remove('on'); $('intro').style.display='block';
@@ -212,7 +214,7 @@ async function start(){
     return;
   }
   $('loading').style.display='none';
-  resize(); running=true; reps=0;valid=0;grey=0;repDepths=[];state='up';seenBottom=false;
+  resize(); running=true; reps=0;valid=0;grey=0;repDepths=[];state='up';seenBottom=false;smoothKP=null;
   $('repN').textContent='0';$('validN').textContent='0';$('greyN').textContent='0';
   loop();
 }
@@ -225,9 +227,20 @@ async function loop(){
   if(poses[0]){ analyze(poses[0].keypoints); }
   raf=requestAnimationFrame(loop);
 }
-function analyze(kp){
+/* EMA smoothing to kill jitter → clean, stable skeleton */
+let smoothKP=null;
+function smooth(kp){
+  if(!smoothKP || smoothKP.length!==kp.length){ smoothKP=kp.map(p=>({x:p.x,y:p.y,score:p.score})); return smoothKP; }
+  const a=0.4;
+  for(let i=0;i<kp.length;i++){ smoothKP[i].x+=(kp[i].x-smoothKP[i].x)*a; smoothKP[i].y+=(kp[i].y-smoothKP[i].y)*a; smoothKP[i].score=kp[i].score; }
+  return smoothKP;
+}
+// COCO/MoveNet connections: arms, torso, legs (skip face for a clean look)
+const SKELETON=[[5,7],[7,9],[6,8],[8,10],[5,6],[5,11],[6,12],[11,12],[11,13],[13,15],[12,14],[14,16]];
+function analyze(kp0){
+  const kp=smooth(kp0);
   const s=usableSide(kp), hip=pt(kp,s.hip), knee=pt(kp,s.knee), sh=pt(kp,s.sh);
-  drawSkeleton(kp,s);
+  drawScene(kp,s);
   if(hip.score<MINSCORE||knee.score<MINSCORE){ setStatus('MOVE INTO FRAME',''); return; }
   // scale-invariant depth: (hipY - kneeY) / torso(shoulder→hip). >0 = hip below knee.
   const torso=Math.max(30, Math.abs(hip.y - (sh.score>MINSCORE?sh.y:hip.y-100)) );
@@ -257,14 +270,35 @@ function analyze(kp){
 let flashT=null;
 function flash(cls){ const el=$('status'); el.className='status '+(cls==='valid'?'valid':cls==='grey'?'grey':''); el.textContent=cls==='valid'?'VALID ✓':cls==='grey'?'GREY ZONE':'TOO HIGH'; clearTimeout(flashT); flashT=setTimeout(()=>{el.className='status';el.textContent='READY';},700); beep(cls); }
 function setStatus(t,c){ const el=$('status'); if(el.className.indexOf('valid')>-1||el.className.indexOf('grey')>-1) return; el.className='status '+(c||''); el.textContent=t; }
-function drawSkeleton(kp,s){
-  const pairs=[[s.sh,s.hip],[s.hip,s.knee],[s.knee,s.ank]];
-  ctx.lineWidth=Math.max(3,overlay.width/220); ctx.strokeStyle='rgba(255,224,0,.9)'; ctx.lineCap='round';
-  pairs.forEach(p=>{ const a=kp[p[0]],b=kp[p[1]]; if(a.score>MINSCORE&&b.score>MINSCORE){ ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke(); }});
-  // hip + knee dots + a horizontal "knee line"
+function drawScene(kp,s){
+  const W=overlay.width, H=overlay.height;
   const knee=kp[s.knee], hip=kp[s.hip];
-  if(knee.score>MINSCORE){ ctx.strokeStyle='rgba(46,194,126,.55)'; ctx.lineWidth=2; ctx.setLineDash([8,8]); ctx.beginPath();ctx.moveTo(0,knee.y);ctx.lineTo(overlay.width,knee.y);ctx.stroke(); ctx.setLineDash([]); }
-  [[hip,'#fff'],[knee,'#2ec27e']].forEach(d=>{ if(d[0].score>MINSCORE){ ctx.fillStyle=d[1]; ctx.beginPath();ctx.arc(d[0].x,d[0].y,Math.max(5,overlay.width/130),0,7); ctx.fill(); }});
+  const below = hip.score>MINSCORE && knee.score>MINSCORE && hip.y>knee.y;
+  // 1) DEPTH LINE at knee level + translucent grey-zone band
+  if(knee.score>MINSCORE){
+    const band=H*0.03;
+    ctx.fillStyle='rgba(255,255,255,.05)'; ctx.fillRect(0,knee.y-band,W,band*2);
+    ctx.strokeStyle= below?'rgba(46,194,126,.95)':'rgba(255,224,0,.85)';
+    ctx.lineWidth=Math.max(2,W/300); ctx.setLineDash([18,12]);
+    ctx.beginPath();ctx.moveTo(0,knee.y);ctx.lineTo(W,knee.y);ctx.stroke(); ctx.setLineDash([]);
+  }
+  // 2) DEPTH GAP — vertical line from hip down to the knee line (green when valid)
+  if(hip.score>MINSCORE && knee.score>MINSCORE){
+    ctx.strokeStyle= below?'rgba(46,194,126,.85)':'rgba(255,224,0,.5)'; ctx.lineWidth=Math.max(2,W/260);
+    ctx.beginPath();ctx.moveTo(hip.x,hip.y);ctx.lineTo(hip.x,knee.y);ctx.stroke();
+  }
+  // 3) SKELETON — full body, smooth, subtle shadow for contrast
+  ctx.save(); ctx.shadowColor='rgba(0,0,0,.55)'; ctx.shadowBlur=W/70;
+  ctx.strokeStyle='rgba(255,255,255,.92)'; ctx.lineWidth=Math.max(3,W/150); ctx.lineCap='round'; ctx.lineJoin='round';
+  SKELETON.forEach(pr=>{ const a=kp[pr[0]],b=kp[pr[1]]; if(a.score>MINSCORE&&b.score>MINSCORE){ ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke(); }});
+  ctx.restore();
+  // 4) JOINTS — hips yellow, knees green, rest white
+  for(let i=5;i<kp.length;i++){ const p=kp[i]; if(p.score<MINSCORE) continue;
+    const isHip=(i===11||i===12), isKnee=(i===13||i===14);
+    ctx.beginPath(); ctx.fillStyle= isKnee?'#2ec27e': isHip?'#FFE000':'rgba(255,255,255,.95)';
+    ctx.arc(p.x,p.y,(isHip||isKnee)?Math.max(6,W/95):Math.max(4,W/160),0,7); ctx.fill();
+    if(isHip||isKnee){ ctx.lineWidth=Math.max(2,W/200); ctx.strokeStyle='rgba(0,0,0,.5)'; ctx.stroke(); }
+  }
 }
 let ac=null;
 function beep(cls){ try{ if(!ac)ac=new (window.AudioContext||window.webkitAudioContext)(); const o=ac.createOscillator(),g=ac.createGain(); o.connect(g);g.connect(ac.destination); o.frequency.value=cls==='valid'?880:cls==='grey'?520:300; o.type='sine'; g.gain.setValueAtTime(.001,ac.currentTime); g.gain.exponentialRampToValueAtTime(.3,ac.currentTime+.01); g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.18); o.start();o.stop(ac.currentTime+.2);}catch(e){} }
