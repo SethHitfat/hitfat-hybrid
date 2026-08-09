@@ -485,6 +485,98 @@
   .authforgot{text-align:center;margin-top:10px;}
   .authforgot a{color:var(--dim);font-size:12px;cursor:pointer;text-decoration:underline;}
   .authnote{font-size:11px;color:var(--dim2);line-height:1.5;text-align:center;margin-top:22px;}
+
+  /* ============================================================
+     ████  HITFAT HYBRID V3 — Explore / Coaches / cards / score  ████
+     ============================================================ */
+  /* filters (Explore) */
+  .filters{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;margin:4px -18px 14px;padding:0 18px 2px;scrollbar-width:none;}
+  .filters::-webkit-scrollbar{display:none;}
+  .filt{flex:0 0 auto;background:var(--surface);border:1px solid var(--line);color:var(--dim);font-family:'Inter',system-ui,sans-serif;font-size:12.5px;font-weight:700;letter-spacing:.3px;padding:9px 15px;border-radius:99px;cursor:pointer;white-space:nowrap;transition:all .12s;}
+  .filt.on{background:var(--hyrox);color:var(--hyrox-ink);border-color:var(--hyrox);}
+  .exsec{margin:20px 0 6px;}
+  .exsec .eh{display:flex;align-items:baseline;justify-content:space-between;margin:0 2px 12px;}
+  .exsec .eh h3{font-family:'Inter',system-ui,sans-serif;font-size:19px;font-weight:800;letter-spacing:-.2px;color:#fff;}
+  .exsec .eh .all{font-size:12px;color:var(--hyrox);font-weight:700;cursor:pointer;}
+  /* horizontal scroller of cards */
+  .hscroll{display:flex;gap:13px;overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -18px;padding:0 18px 6px;scrollbar-width:none;}
+  .hscroll::-webkit-scrollbar{display:none;}
+  /* premium program card (big) */
+  .pcard{position:relative;flex:0 0 auto;width:250px;border-radius:16px;overflow:hidden;cursor:pointer;border:1px solid var(--line);background:linear-gradient(155deg,#1b1b1b 0%,#111 55%,#0a0a0a 100%);transition:transform .12s;}
+  .pcard.full{width:auto;flex:1 1 auto;display:block;margin-bottom:13px;}
+  .pcard:active{transform:scale(.98);}
+  .pcard .top{position:relative;height:120px;background-size:cover;background-position:center;}
+  .pcard .top::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.15),rgba(10,10,10,.85));}
+  .pcard .top .edge{position:absolute;top:0;left:0;width:4px;height:100%;background:var(--hyrox);z-index:2;}
+  .pcard .badge{position:absolute;top:10px;left:11px;z-index:3;font-family:'Oswald';font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 9px;border-radius:99px;}
+  .badge.free{background:#1c7d3a;color:#fff;}
+  .badge.paid{background:var(--hyrox);color:var(--hyrox-ink);}
+  .badge.owned{background:#0e6b8c;color:#fff;}
+  .badge.soon{background:rgba(255,255,255,.16);color:#eee;border:1px solid rgba(255,255,255,.2);}
+  .badge.done{background:#3a3a3a;color:#fff;}
+  .pcard .info{padding:12px 14px 14px;}
+  .pcard .info .t{font-family:'Oswald';font-size:17px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:#fff;line-height:1.05;}
+  .pcard .info .m{font-size:11px;color:var(--dim);font-weight:600;margin-top:6px;letter-spacing:.2px;}
+  .pcard .info .by{font-size:11px;color:var(--dim2);margin-top:5px;}
+  .pcard .info .price{position:absolute;bottom:13px;right:14px;font-family:'Oswald';font-weight:700;font-size:15px;color:var(--hyrox);}
+  .pcard.full .info .price{position:static;float:right;margin-top:-2px;}
+  /* quick workout small card */
+  .qwcard{position:relative;flex:0 0 auto;width:170px;border-radius:14px;overflow:hidden;cursor:pointer;border:1px solid var(--line);background:linear-gradient(155deg,#181818 0%,#0e0e0e 100%);padding:14px 14px 13px;transition:transform .12s;}
+  .qwcard:active{transform:scale(.97);}
+  .qwcard .badge{position:static;display:inline-block;margin-bottom:10px;}
+  .qwcard .t{font-family:'Oswald';font-size:15px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:#fff;line-height:1.1;}
+  .qwcard .m{font-size:11px;color:var(--dim);font-weight:600;margin-top:6px;}
+  /* coaches */
+  .coachcard{position:relative;display:flex;align-items:center;gap:14px;background:linear-gradient(155deg,#1a1a1a 0%,#0e0e0e 100%);border:1px solid var(--line);border-radius:16px;padding:15px;margin-bottom:12px;cursor:pointer;transition:transform .12s;}
+  .coachcard:active{transform:scale(.985);}
+  .coachcard::before{content:"";position:absolute;top:0;left:0;width:4px;height:100%;background:var(--hyrox);border-radius:16px 0 0 16px;}
+  .coachav{width:60px;height:60px;flex:0 0 auto;border-radius:50%;background:radial-gradient(circle at 30% 25%,#2a2a2a,#0d0d0d);border:1.5px solid var(--line);display:grid;place-items:center;font-family:'Oswald';font-weight:700;font-size:22px;color:var(--hyrox);}
+  .coachcard .ci{flex:1;min-width:0;}
+  .coachcard .ci .n{font-family:'Oswald';font-size:18px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:#fff;line-height:1;}
+  .coachcard .ci .s{font-size:12px;color:var(--hyrox);font-weight:700;margin-top:5px;}
+  .coachcard .ci .x{font-size:11px;color:var(--dim);font-weight:600;margin-top:4px;}
+  .coachcard .arr{color:var(--hyrox);font-size:20px;opacity:.7;}
+  .coachhero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:8px 0 6px;}
+  .coachhero .av{width:96px;height:96px;border-radius:50%;background:radial-gradient(circle at 30% 25%,#2a2a2a,#0d0d0d);border:2px solid var(--hyrox);display:grid;place-items:center;font-family:'Oswald';font-weight:700;font-size:34px;color:var(--hyrox);}
+  .coachhero .n{font-family:'Oswald';font-size:26px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;margin-top:14px;}
+  .coachhero .s{color:var(--hyrox);font-weight:700;font-size:13px;margin-top:5px;}
+  .coachstats{display:flex;gap:10px;margin:16px 0 8px;}
+  .coachstats .c{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:13px 8px;text-align:center;}
+  .coachstats .c b{display:block;font-family:'Oswald';font-size:20px;color:var(--hyrox);}
+  .coachstats .c small{display:block;font-size:10px;color:var(--dim);letter-spacing:.4px;text-transform:uppercase;margin-top:4px;}
+  /* hybrid score ring */
+  .scorewrap{display:flex;align-items:center;gap:20px;background:linear-gradient(155deg,#1a1a1a 0%,#0e0e0e 100%);border:1px solid var(--line);border-radius:18px;padding:20px 18px;margin:2px 0 10px;}
+  .ring{--val:72;width:104px;height:104px;flex:0 0 auto;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--hyrox) calc(var(--val)*1%),#242424 0);}
+  .ring::before{content:"";position:absolute;width:78px;height:78px;border-radius:50%;background:#0e0e0e;}
+  .ring .rv{position:relative;text-align:center;}
+  .ring .rv b{font-family:'Oswald';font-size:30px;font-weight:700;line-height:1;color:#fff;}
+  .ring .rv small{display:block;font-size:9px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;margin-top:2px;}
+  .scorewrap .sb{flex:1;}
+  .sbar{margin-bottom:9px;}
+  .sbar .l{display:flex;justify-content:space-between;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:#cfcfcf;margin-bottom:4px;}
+  .sbar .l b{color:var(--hyrox);font-family:'Oswald';}
+  .sbar .t{height:6px;border-radius:99px;background:#242424;overflow:hidden;}
+  .sbar .t i{display:block;height:100%;background:var(--hyrox);border-radius:99px;}
+  /* program detail (V3) */
+  .pd-hero{position:relative;border-radius:16px;overflow:hidden;height:170px;margin:6px 0 14px;background-size:cover;background-position:center;border:1px solid var(--line);}
+  .pd-hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.2),rgba(8,8,8,.92));}
+  .pd-hero .edge{position:absolute;top:0;left:0;width:5px;height:100%;background:var(--hyrox);z-index:2;}
+  .pd-hero .body{position:absolute;left:18px;right:18px;bottom:16px;z-index:3;}
+  .pd-hero .body .badge{position:static;display:inline-block;margin-bottom:9px;}
+  .pd-hero .body h2{font-family:'Oswald';font-size:26px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;line-height:1;}
+  .pd-meta{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px;}
+  .chip{background:var(--surface);border:1px solid var(--line);color:#ddd;font-size:11px;font-weight:600;padding:6px 11px;border-radius:99px;}
+  .chip b{color:var(--hyrox);}
+  .joinbar{display:flex;gap:10px;align-items:center;margin:16px 0 6px;}
+  .joinbar .buy{flex:1;background:var(--hyrox);color:var(--hyrox-ink) !important;border:none;border-radius:99px;padding:16px;font-family:'Oswald';font-weight:700;font-size:15px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;}
+  .joinbar .buy.owned{background:#0e6b8c;color:#fff !important;}
+  .joinbar .buy.soon{background:#2a2a2a;color:var(--dim) !important;}
+  .joinbar .wish{flex:0 0 auto;width:54px;height:54px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--dim);font-size:20px;cursor:pointer;}
+  .joinbar .wish.on{color:var(--hyrox);border-color:var(--hyrox);}
+  .phaselist2 .ph2{display:flex;align-items:center;gap:13px;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:13px 14px;margin-bottom:9px;}
+  .phaselist2 .ph2 .n{font-family:'Oswald';font-size:20px;color:var(--hyrox);font-weight:700;min-width:30px;text-align:center;}
+  .phaselist2 .ph2 .i .t{font-family:'Oswald';font-size:15px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#fff;}
+  .phaselist2 .ph2 .i .m{font-size:11px;color:var(--dim);margin-top:3px;}
 </style>
 </head>
 <body>
@@ -494,14 +586,16 @@
     <div class="right"><span style="color:var(--dim);font-size:12px;font-weight:600;">EN</span><div class="av">●</div></div>
   </div>
 
-  <!-- TAB NAVIGATION (5 utama: Home · My Plan · Workout Library · Progress · Profile) -->
+  <!-- TAB NAVIGATION V3 (Home · Explore · Coaches · Progress · Profile) -->
   <div class="tabs" id="tabs">
     <button class="tab active" id="tab-home" onclick="switchTab('home')"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>Home</button>
-    <button class="tab" id="tab-pro" onclick="switchTab('pro')"><svg viewBox="0 0 24 24"><path d="M9 3H4v18h16V8l-5-5H9z"/><path d="M9 3v5h5"/><path d="M8 13h8M8 17h5"/></svg>My Plan</button>
-    <button class="tab" id="tab-programs" onclick="switchTab('programs')"><svg viewBox="0 0 24 24"><path d="M6.5 7v10M17.5 7v10M3 9.5v5M21 9.5v5M6.5 12h11"/></svg>Library</button>
+    <button class="tab" id="tab-explore" onclick="switchTab('explore')"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="M21 21l-4.5-4.5"/></svg>Explore</button>
+    <button class="tab" id="tab-coaches" onclick="switchTab('coaches')"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><circle cx="17.5" cy="9" r="2.6"/><path d="M15.5 15.2c2.6.2 5 1.9 5 4.8"/></svg>Coaches</button>
     <button class="tab" id="tab-progress" onclick="switchTab('progress')"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3M20 16V6"/></svg>Progress</button>
     <button class="tab" id="tab-profile" onclick="switchTab('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Profile</button>
     <!-- stub tabs kept hidden so existing switchTab references never hit null -->
+    <button class="tab" id="tab-pro" style="display:none" onclick="switchTab('pro')"></button>
+    <button class="tab" id="tab-programs" style="display:none" onclick="switchTab('programs')"></button>
     <button class="tab" id="tab-target" style="display:none" onclick="switchTab('target')"></button>
     <button class="tab" id="tab-plans" style="display:none" onclick="switchTab('plans')"></button>
     <button class="tab" id="tab-kl" style="display:none" onclick="goKL()"></button>
@@ -623,9 +717,32 @@
           <div class="pd-section"><div class="pd-h">Coaching Notes</div><div class="pd-body" id="td-notes">—</div></div>
         </div>
       </div>
+      <!-- SKRIN EXPLORE (V3 discovery) -->
+      <div id="explore" style="display:none;">
+        <div class="hgroup"><div class="k">Discover</div><h2>EXPLORE</h2><p>Free workouts, structured programs, race prep and coaches — all in one place.</p></div>
+        <div class="filters" id="ex-filters"></div>
+        <div id="ex-body"></div>
+      </div>
+      <!-- SKRIN COACHES (V3 marketplace) -->
+      <div id="coaches" style="display:none;">
+        <div id="coaches-list">
+          <div class="hgroup"><div class="k">Marketplace</div><h2>COACHES</h2><p>Learn from specialist coaches. Buy individual programs — everything lives in one account.</p></div>
+          <div id="coach-cards"></div>
+        </div>
+        <div id="coach-profile" style="display:none;">
+          <button class="back" onclick="showCoachesList()">← All Coaches</button>
+          <div id="coach-profile-body"></div>
+        </div>
+      </div>
+      <!-- SKRIN PROGRAM DETAIL (V3 access + CTA) -->
+      <div id="progdetail" style="display:none;">
+        <button class="back" id="pgd-back" onclick="closeProgramDetail()">← Back</button>
+        <div id="pgd-body"></div>
+      </div>
       <!-- SKRIN PROGRESS -->
       <div id="progress" style="display:none;">
-        <div class="hgroup"><div class="k">Your Training</div><h2>PROGRESS</h2><p>Every session you complete, your streak, and your benchmark history — all saved on this device.</p></div>
+        <div class="hgroup"><div class="k">Your Training</div><h2>PROGRESS</h2><p>Your Hybrid Score, streak and history — all saved to your account.</p></div>
+        <div id="prog-score"></div>
         <div id="prog-stats"></div>
         <div class="sechead">Benchmark History</div>
         <div id="prog-bench"></div>
@@ -1777,42 +1894,29 @@ function showCategories(){ $('list').style.display='none'; $('detail').style.dis
 /* ============ TAB NAVIGATION ============ */
 function switchTab(tab){
   curTab=tab;
-  // sembunyi semua skrin dalam, balik ke level atas
-  $('list').style.display='none'; $('detail').style.display='none'; $('prodetail').style.display='none';
-  $('home').style.display='none';
-  $('categories').style.display='none'; $('plans').style.display='none'; $('pro').style.display='none'; $('target').style.display='none';
-  $('progress').style.display='none'; $('profile').style.display='none';
-  if(window.klTicker && tab!=='pro' && tab!=='home'){ clearInterval(window.klTicker); window.klTicker=null; }
-  ['tab-home','tab-programs','tab-plans','tab-pro','tab-target','tab-kl','tab-progress','tab-profile'].forEach(id=>{ const b=$(id); if(b&&b.classList) b.classList.remove('active'); });
+  // hide every screen
+  ['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail'].forEach(id=>{ const e=$(id); if(e) e.style.display='none'; });
+  if(window.klTicker && tab!=='pro' && tab!=='home' && tab!=='explore'){ clearInterval(window.klTicker); window.klTicker=null; }
+  ['tab-home','tab-programs','tab-plans','tab-pro','tab-target','tab-kl','tab-progress','tab-profile','tab-explore','tab-coaches'].forEach(id=>{ const b=$(id); if(b&&b.classList) b.classList.remove('active'); });
   const setActive=id=>{ const b=$(id); if(b&&b.classList) b.classList.add('active'); };
   if(tab==='home'){
-    $('home').style.display='block';
-    setActive('tab-home');
-    renderHome();
+    $('home').style.display='block'; setActive('tab-home'); renderHome();
+  } else if(tab==='explore'){
+    $('explore').style.display='block'; setActive('tab-explore'); renderExplore();
+  } else if(tab==='coaches'){
+    $('coaches').style.display='block'; setActive('tab-coaches'); showCoachesList();
   } else if(tab==='programs'){
-    $('categories').style.display='block';
-    setActive('tab-programs');
-    renderCategories(); // always render fresh so the category list never shows empty
+    $('categories').style.display='block'; setActive('tab-explore'); renderCategories();
   } else if(tab==='plans'){
-    $('plans').style.display='block';
-    setActive('tab-programs'); // 13-week lives under Library ("Other Programs")
-    renderPlans();
+    $('plans').style.display='block'; setActive('tab-explore'); renderPlans();
   } else if(tab==='pro'){
-    $('pro').style.display='block';
-    setActive('tab-pro');
-    showCatalog();
+    $('pro').style.display='block'; setActive('tab-explore'); showCatalog();
   } else if(tab==='target'){
-    $('target').style.display='block';
-    setActive('tab-programs'); // Target Sessions live under Library
-    showTargetGrid();
+    $('target').style.display='block'; setActive('tab-explore'); showTargetGrid();
   } else if(tab==='progress'){
-    $('progress').style.display='block';
-    setActive('tab-progress');
-    renderProgress();
+    $('progress').style.display='block'; setActive('tab-progress'); renderProgress();
   } else if(tab==='profile'){
-    $('profile').style.display='block';
-    setActive('tab-profile');
-    renderProfile();
+    $('profile').style.display='block'; setActive('tab-profile'); renderProfile();
   }
   $('screen').scrollTop=0;
 }
@@ -2220,19 +2324,20 @@ function renderHome(){
   for(let i=0;i<7;i++){ const dt=new Date(mon); dt.setDate(mon.getDate()+i);
     ws+=`<div class="wcell ${i===off?'today':''}"><small>${names[i]}</small><b>${dt.getDate()}</b></div>`; }
   $('wstrip').innerHTML=ws;
-  // weekly completion + totals
+  // my progress: current program %, streak, hybrid score
   const wk=weekStats();
-  $('home-stats').innerHTML=`<div class="dstat">
-    <div class="c"><b>${wk.pct}%</b><small>This Week</small></div>
-    <div class="c"><b>${HF.totalDone()}</b><small>Sessions Done</small></div>
+  $('home-stats').innerHTML=`<div class="sechead">My Progress</div><div class="dstat">
+    <div class="c" onclick="switchTab('progress')" style="cursor:pointer;"><b>${hybridScore()}</b><small>Hybrid Score</small></div>
     <div class="c"><b>${HF.streak()}</b><small>Day Streak</small></div>
+    <div class="c"><b>${wk.pct}%</b><small>This Week</small></div>
   </div>`;
   // upcoming benchmark
   const bm=nextBenchmark();
   $('home-bench').innerHTML=bm?`<div class="sechead">Next Benchmark</div>
     <div class="benchcard"><div class="bt">${bm.name}</div><div class="bm">${bm.when}</div></div>`:'';
-  // (Ask Coach / WhatsApp removed for now)
-  $('home-ask').innerHTML='';
+  // Quick Workouts (free) scroller
+  $('home-ask').innerHTML=`<div class="sechead">Quick Workouts <span style="font-size:11px;color:#1c7d3a;font-weight:800;letter-spacing:1px;">FREE</span></div>
+    <div class="hscroll">${QUICK_WORKOUTS.map((_,i)=>quickCard(i)).join('')}</div>`;
   // library row
   $('home-lib').innerHTML=CATEGORIES.map((c,i)=>`
     <div class="nfcard" onclick="switchTab('programs');openCategory(${i})" style="width:128px;aspect-ratio:1/1.15;">
@@ -2397,6 +2502,7 @@ function openCategory(i){
 
 /* ============ SKRIN 3: BUTIRAN ============ */
 function backToList(){
+  if(window.fromQuick){ window.fromQuick=false; switchTab(window.quickBack||'explore'); return; }
   if(window.fromPlan){ window.fromPlan=false; switchTab('pro'); return; }
   if(window.fromHome){ window.fromHome=false; switchTab('home'); return; }
   if(window.fromKL){ window.fromKL=false; switchTab('pro'); openEvent(); }
@@ -2693,9 +2799,19 @@ function finishWorkout(){ openCompleteModal(window.curSessionKey, cur?cur.title:
 function closeModal(){ $('modal').classList.remove('on'); }
 
 /* --- Progress screen --- */
+function scoreDashHTML(){
+  const s=hybridScore(), b=scoreBreakdown();
+  const bar=(k)=>`<div class="sbar"><div class="l"><span>${AREA_LABEL[k]}</span><b>${b[k]}</b></div><div class="t"><i style="width:${b[k]}%"></i></div></div>`;
+  return `<div class="scorewrap">
+    <div class="ring" style="--val:${s}"><div class="rv"><b>${s}</b><small>Hybrid</small></div></div>
+    <div class="sb">${['engine','strength','stations','running'].map(bar).join('')}</div>
+  </div>`;
+}
 function renderProgress(){
   const wk=weekStats();
-  $('prog-stats').innerHTML=`<div class="dstat">
+  const el=$('prog-score'); if(el){ el.innerHTML=`<div class="sechead" style="margin-top:14px;">Hybrid Score</div>${scoreDashHTML()}
+    <div class="infonote" style="margin-bottom:6px;">Weakest area: <b>${AREA_LABEL[weakestArea()]}</b> — <span onclick="switchTab('explore');setFilter('weakness')" style="color:var(--hyrox);cursor:pointer;">train it →</span></div>`; }
+  $('prog-stats').innerHTML=`<div class="sechead">Activity</div><div class="dstat">
       <div class="c"><b>${HF.totalDone()}</b><small>Total Sessions</small></div>
       <div class="c"><b>${wk.pct}%</b><small>This Week</small></div>
       <div class="c"><b>${HF.streak()}</b><small>Day Streak</small></div>
@@ -2941,6 +3057,175 @@ async function onSignedIn(session){
   await HF.pull();                 // load this user's cloud data (or seed it)
   if(!_appStarted) startApp(); else { switchTab('home'); if(!HF.data.onboarded) startOnboarding(); }
 }
+/* ============================================================
+   ████  HITFAT HYBRID V3 — EXPLORE · COACHES · PROGRAM DETAIL  ████
+   Wires the V3 catalog/coaches/score data to real screens.
+   Program "Open" routes to EXISTING real workout views (no dummy).
+   ============================================================ */
+
+/* ---- Quick Workouts (FREE) — built from the existing movement library ---- */
+const QW=(title,tag,rpe,equip,desc,blocks)=>({title,tag,rpe,equip:equip||['Bodyweight'],desc,blocks,free:true});
+const QUICK_WORKOUTS=[
+  QW('10 Min Mobility','Recovery',3,['Bodyweight'],'Gentle full-body mobility to move, breathe and recover.',[
+    {phase:'Mobility',mins:10,format:'Easy flow',note:'Move slowly, focus on breathing.',moves:[mv('Bird Dog','birddog',40),mv('Dead Bug','deadbug',40),mv('Walking Lunge','wlunge',40),mv('Glute Bridge','glute',40),mv('Plank','plank',30),mv('Side Plank','sideplank',30),mv('Hollow Hold','hollow',30)]}]),
+  QW('15 Min Core','Core',6,['Bodyweight'],'Tight, focused core circuit.',[
+    WARMS[1](),{phase:'Core',mins:11,format:'3 Rounds',rounds:3,note:'Rest as needed between rounds.',moves:[mv('Sit Up','situp',null,15),mv('Russian Twist','russian',null,20),mv('Leg Raise','legraise',null,12),mv('Plank','plank',40),rest(30)]}]),
+  QW('20 Min Full Body','Full Body',7,['Bodyweight'],'No-equipment full-body conditioning you can do anywhere.',[
+    WARMS[0](),{phase:'Main Workout',mins:14,format:'AMRAP · 14 min',note:'As many rounds as possible with good form.',moves:[mv('Squat Jump','squatjump',null,12),mv('Push Up','pushup',null,10),mv('Alternating Lunge','altlunge',null,12),mv('Mountain Climber','mtnclimb',30),mv('Burpee','burpee',null,6)]},COOLS[0]()]),
+  QW('30 Min Engine','Engine',8,['Machine or Run'],'Steady aerobic engine builder on any machine or run.',[
+    WARMS[2](),{phase:'Engine',mins:24,format:'6 Rounds · 3:00 / 1:00',rounds:6,note:'Steady, repeatable pace throughout.',moves:[mv('Run / Row / Ski @ RPE 7','run',180),rest(60)]}]),
+  QW('Running Intervals','Running',8,['Run'],'Compromised-run intervals to sharpen race pace.',[
+    WARMS[2](),{phase:'Intervals',mins:18,format:'6 × 300m @ race pace',rounds:6,note:'Hold pace, short recovery.',moves:[mv('Run 300m @ race pace','run',75),rest(45)]}]),
+  QW('Lower Body Strength','Strength',7,['Dumbbell (optional)'],'Legs & posterior-chain strength for hybrid power.',[
+    WARMS[1](),{phase:'Strength',mins:16,format:'4 Rounds',rounds:4,note:'Control the tempo, full range.',moves:[mv('Bulgarian Split Squat','bulgarian',null,10),mv('Glute Bridge','glute',null,15),mv('Reverse Lunge','revlunge',null,12),mv('Wall Sit','wallsit',40),rest(45)]}]),
+];
+function scalingBoxHTML(rpe,mins){ return `<div class="scalebox">
+    <div class="sh">Intended Stimulus</div><div class="si">Target effort <b>RPE ${rpe}/10</b> · ~${mins} min. Move well first, then add pace.</div>
+    <div class="sh" style="margin-top:10px;">Scaling Options</div>
+    <div class="si"><b>Beginner:</b> reduce load, reps and rounds; swap machines for a brisk walk; rest as needed.</div>
+    <div class="si"><b>Intermediate:</b> lighten heavy loads to keep sets unbroken and clean.</div>
+    <div class="si"><b>Advanced:</b> as prescribed; add load/pace only if technique holds.</div>
+    <div class="si" style="color:var(--dim2);margin-top:8px;">Scale to your ability. Stop if you feel chest pain, dizziness or sharp pain.</div></div>`; }
+function blocksAccHTML(blocks){ return blocks.map((b,bi)=>`
+  <div class="acc ${bi===0?'open':''}"><div class="acc-h" onclick="this.parentNode.classList.toggle('open')"><span class="ph">${b.phase}</span>
+    <span style="display:flex;align-items:center;gap:12px;"><span class="mins">${b.mins} MIN</span><span class="pm">${bi===0?'–':'+'}</span></span></div>
+    <div class="acc-body">${b.format?`<div class="fmt">Format: ${b.format}</div>`:''}${b.rounds?`<div class="fmt" style="color:var(--hyrox)">↻ ${b.rounds} Round</div>`:''}
+    ${b.moves.map(m=>m.rest?`<div class="ex rest"><span class="q">${fmtClock(m.rest)}</span><span class="nm">Rest</span><span class="ch">⏸</span></div>`:`<div class="ex ${(m.vimeo||m.list)?'':'norec'}"><span class="q">${m.reps!=null?m.reps+'x':fmtClock(m.time)}</span><span class="nm">${m.name}${m.list?'<br><span style="font-size:12px;color:var(--dim)">'+m.list.join(' + ')+'</span>':''}${m.partner?'<br><span style="font-size:11px;color:var(--dim2)">'+m.partner+'</span>':''}</span><span class="ch">${m.vimeo?'▾ video':(m.list?'↻':'')}</span></div>`).join('')}
+    ${b.note?`<div class="note"><span class="d">●</span><span>${b.note}</span></div>`:''}</div></div>`).join(''); }
+function openWorkoutObject(w,label,key,backTab){
+  cur=w; window.curSessionKey=key||('qw-'+(w.title||'').replace(/\W+/g,'')); window.pendingKey=null;
+  window.quickBack=backTab||'explore'; window.fromQuick=true; window.fromHome=false; window.fromKL=false; window.fromPlan=false;
+  ['home','explore','coaches','progress','profile','categories','plans','pro','target','list','progdetail'].forEach(id=>{const e=$(id);if(e)e.style.display='none';});
+  $('tabs').style.display='none'; $('detail').style.display='block';
+  $('d-label').textContent=label||w.tag||'Quick Workout';
+  $('d-title').textContent=w.title; $('d-rpe').textContent=w.rpe||'—'; $('d-mins').textContent=totalMins(w);
+  $('d-equip').innerHTML='<b>Equipment:</b> '+(w.equip||['Bodyweight']).join(' · '); $('d-desc').textContent=w.desc||'';
+  $('d-scaling').innerHTML=scalingBoxHTML(w.rpe||6,totalMins(w));
+  $('d-acc').innerHTML=blocksAccHTML(w.blocks);
+  $('screen').scrollTop=0;
+}
+function openQuickWorkout(i){ const q=QUICK_WORKOUTS[i]; if(q) openWorkoutObject(q,'Quick Workout · '+q.tag,'quick-'+i,'explore'); }
+
+/* ---- cards ---- */
+function badgeCls(st){ return st==='OWNED'?'owned':st==='FREE'?'free':st==='SOON'?'soon':st==='COMPLETED'?'done':'paid'; }
+function programCard(id,full){
+  const p=CATALOG[id]; if(!p) return ''; const st=programState(id);
+  const price=(st==='PAID')?`<div class="price">${fmtPrice(p.price)}</div>`:'';
+  return `<div class="pcard ${full?'full':''}" onclick="openProgramDetail('${id}')">
+    <div class="top" style="background-image:url('${p.img}')"><div class="edge"></div><span class="badge ${badgeCls(st)}">${st}</span></div>
+    <div class="info"><div class="t">${p.title}</div><div class="m">${p.weeks} wk · ${p.days} days/wk · ${p.level}</div><div class="by">${COACHES[p.coach]?COACHES[p.coach].name:''}</div>${price}</div></div>`;
+}
+function quickCard(i){ const q=QUICK_WORKOUTS[i]; return `<div class="qwcard" onclick="openQuickWorkout(${i})"><span class="badge free">Free</span><div class="t">${q.title}</div><div class="m">${q.tag} · ${totalMins(q)} min · RPE ${q.rpe}</div></div>`; }
+function coachCard(id){ const c=COACHES[id]; const n=coachPrograms(id).length; const ini=c.name.replace('Coach ','')[0];
+  return `<div class="coachcard" onclick="openCoach('${id}')"><div class="coachav">${ini}</div><div class="ci"><div class="n">${c.name}</div><div class="s">${c.specialty}</div><div class="x">${n} program${n!==1?'s':''}${c.athletes&&c.athletes!=='—'?' · '+c.athletes+' athletes':''}</div></div><div class="arr">›</div></div>`; }
+
+/* ---- Explore ---- */
+let exFilter='all';
+function setFilter(f){ exFilter=f; renderExplore(); }
+function renderExplore(){
+  const F=[['all','All'],['programs','Programs'],['quick','Quick Workouts'],['race','Race Prep'],['weakness','Weakness'],['coaches','Coaches']];
+  $('ex-filters').innerHTML=F.map(f=>`<button class="filt ${exFilter===f[0]?'on':''}" onclick="setFilter('${f[0]}')">${f[1]}</button>`).join('');
+  const sec=(t,inner,all)=>`<div class="exsec"><div class="eh"><h3>${t}</h3>${all?`<span class="all" onclick="${all}">See all</span>`:''}</div>${inner}</div>`;
+  const hs=cards=>`<div class="hscroll">${cards}</div>`;
+  let h='';
+  if(exFilter==='all'){
+    const owned=CATALOG_ORDER.filter(id=>ownsProgram(id)&&CATALOG[id].access!=='free');
+    if(owned.length) h+=sec('Continue Training', owned.map(id=>programCard(id)).join('')&&hs(owned.map(id=>programCard(id)).join('')));
+    h+=sec('Quick Workouts — FREE', hs(QUICK_WORKOUTS.map((_,i)=>quickCard(i)).join('')), "setFilter('quick')");
+    h+=sec('Popular Programs', hs(['first-timer','race-12','road-kl','race-8'].map(id=>programCard(id)).join('')), "setFilter('programs')");
+    h+=sec('Free Programs', ['hybrid-starter','foundation-13'].map(id=>programCard(id,true)).join(''));
+    h+=sec('Race Preparation', hs(CATALOG_ORDER.filter(id=>CATALOG[id].tag==='Race Prep').map(id=>programCard(id)).join('')), "setFilter('race')");
+    h+=sec('Programs From Coaches', hs(coachPrograms('seth').map(id=>programCard(id)).join('')), "switchTab('coaches')");
+    h+=`<div class="exsec"><div class="eh"><h3>More Training</h3></div>
+      <div class="catcard" onclick="switchTab('target')" style="margin-bottom:12px;"><div class="body"><div class="ttl">Target Sessions</div><div class="cnt">Fix a weak station or quality</div></div><div class="arr">›</div></div>
+      <div class="catcard" onclick="switchTab('programs')"><div class="body"><div class="ttl">Workout Library</div><div class="cnt">Free sessions by category</div></div><div class="arr">›</div></div></div>`;
+  } else if(exFilter==='quick'){
+    h+=sec('Quick Workouts — FREE', QUICK_WORKOUTS.map((q,i)=>`<div class="pcard full" onclick="openQuickWorkout(${i})"><div class="info" style="padding:15px 16px;"><span class="badge free">Free</span><div class="t" style="margin-top:9px;">${q.title}</div><div class="m">${q.tag} · ${totalMins(q)} min · RPE ${q.rpe}</div></div></div>`).join(''));
+  } else if(exFilter==='programs'){
+    h+=sec('All Programs', CATALOG_ORDER.map(id=>programCard(id,true)).join(''));
+  } else if(exFilter==='race'){
+    h+=sec('Race Preparation', CATALOG_ORDER.filter(id=>CATALOG[id].tag==='Race Prep').map(id=>programCard(id,true)).join(''));
+  } else if(exFilter==='weakness'){
+    const wk=weakestArea(); const b=scoreBreakdown();
+    h+=sec('Your Weakest Area', `<div class="benchcard"><div class="bt">${AREA_LABEL[wk]} — ${b[wk]}/100</div><div class="bm">Train this to raise your Hybrid Score fastest.</div></div>
+      <div class="catcard" onclick="switchTab('target')" style="margin-top:10px;"><div class="body"><div class="ttl">Target Sessions</div><div class="cnt">Focused station & quality work</div></div><div class="arr">›</div></div>`);
+  } else if(exFilter==='coaches'){
+    h+=sec('Coaches', COACH_ORDER.map(coachCard).join(''));
+  }
+  $('ex-body').innerHTML=h; $('screen').scrollTop=0;
+}
+
+/* ---- Coaches ---- */
+function renderCoaches(){ $('coach-cards').innerHTML=COACH_ORDER.map(coachCard).join(''); }
+function showCoachesList(){ $('coaches-list').style.display='block'; $('coach-profile').style.display='none'; $('tabs').style.display='flex'; renderCoaches(); $('screen').scrollTop=0; }
+function openCoach(id){ const c=COACHES[id]; if(!c) return; $('coaches-list').style.display='none'; $('coach-profile').style.display='block';
+  const progs=coachPrograms(id); const ini=c.name.replace('Coach ','')[0];
+  $('coach-profile-body').innerHTML=`
+    <div class="coachhero"><div class="av">${ini}</div><div class="n">${c.name}</div><div class="s">${c.specialty}</div></div>
+    <div class="coachstats"><div class="c"><b>${progs.length}</b><small>Programs</small></div><div class="c"><b>${c.athletes}</b><small>Athletes</small></div><div class="c"><b>${c.real?'L1':'Soon'}</b><small>${c.real?'Certified':'Status'}</small></div></div>
+    <div class="desc" style="margin:14px 2px;">${c.bio}</div>
+    ${c.quals&&c.quals.length?`<div class="pd-meta" style="margin-bottom:6px;">${c.quals.map(q=>`<span class="chip">${q}</span>`).join('')}</div>`:''}
+    <div class="sechead">Programs by ${c.name}</div>
+    ${progs.length?progs.map(pid=>programCard(pid,true)).join(''):'<div class="empty">Programs coming soon to HITFAT HYBRID.</div>'}`;
+  $('screen').scrollTop=0;
+}
+
+/* ---- Program detail (access + CTA) ---- */
+let pdBackTab='explore';
+function programPhases(id){
+  let ph;
+  if(id==='road-kl'||id==='race-12') ph=[['1','Base','Weeks 1–4'],['2','Pace','Weeks 5–8'],['3','Accelerate','Weeks 9–10'],['4','Prime','Week 11'],['5','Race','Week 12']];
+  else if(id==='race-8') ph=[['1','Build','Weeks 1–4'],['2','Sharpen','Weeks 5–7'],['3','Race','Week 8']];
+  else if(id==='first-timer') ph=[['1','Hybrid Basics','Week 1'],['2','Engine + Strength','Week 2'],['3','Stations','Week 3'],['4','Mini Simulation','Week 4']];
+  else if(id==='hybrid-starter') ph=[['1','Base','Weeks 1–3'],['2','Build','Weeks 4–6'],['3','Hybrid','Weeks 7–8'],['4','Simulation','Week 9']];
+  else if(id==='foundation-13') ph=[['1','Base','Foundation'],['2','Pace','Threshold'],['3','Power','Accelerate'],['4','Prime','Taper']];
+  else ph=null;
+  if(!ph) return '';
+  return `<div class="sechead" style="margin:20px 0 12px;">Program Phases</div><div class="phaselist2">${ph.map(x=>`<div class="ph2"><div class="n">${x[0]}</div><div class="i"><div class="t">${x[1]}</div><div class="m">${x[2]}</div></div></div>`).join('')}</div>`;
+}
+function openProgramDetail(id,backTab){ const p=CATALOG[id]; if(!p) return; pdBackTab=backTab||(curTab==='progdetail'?pdBackTab:curTab)||'explore';
+  ['home','explore','coaches','progress','profile','categories','plans','pro','target','list','detail'].forEach(x=>{const e=$(x);if(e)e.style.display='none';});
+  $('progdetail').style.display='block'; $('tabs').style.display='flex'; curTab='progdetail';
+  const st=programState(id), owned=ownsProgram(id), soon=p.access==='soon';
+  const cta = soon ? `<button class="buy soon" disabled>Coming Soon</button>`
+    : ((owned||p.access==='free') ? `<button class="buy ${owned&&p.access!=='free'?'owned':''}" onclick="openProgramContent('${id}')">${p.access==='free'?'Start Program ▸':'Open Program ▸'}</button>`
+             : `<button class="buy" onclick="joinProgram('${id}')">Join Program — ${fmtPrice(p.price)}</button>`);
+  const wish = soon?'':`<button class="wish ${inWishlist(id)?'on':''}" onclick="toggleWishlist('${id}');openProgramDetail('${id}')">♥</button>`;
+  $('pgd-body').innerHTML=`
+    <div class="pd-hero" style="background-image:url('${p.img}')"><div class="edge"></div><div class="body"><span class="badge ${badgeCls(st)}">${st}</span><h2>${p.title}</h2></div></div>
+    <div class="pd-meta"><span class="chip"><b>${p.weeks}</b> weeks</span><span class="chip"><b>${p.days}</b> days/wk</span><span class="chip">${p.level}</span><span class="chip" onclick="openCoach('${p.coach}')" style="cursor:pointer;">${COACHES[p.coach].name}</span></div>
+    <div class="desc" style="margin:0 2px 6px;">${p.summary}</div>
+    <div class="scalebox" style="margin-top:12px;"><div class="sh">Goal</div><div class="si">${p.goal}</div></div>
+    ${programPhases(id)}
+    <div class="joinbar">${cta}${wish}</div>
+    ${(owned||p.access==='free'||soon)?'':'<div class="infonote" style="margin-top:10px;">One account · one app. When you join, this program unlocks inside HITFAT HYBRID — forever.</div>'}`;
+  $('screen').scrollTop=0;
+}
+function closeProgramDetail(){ switchTab(pdBackTab||'explore'); }
+function openProgramContent(id){
+  if(id==='race-12'){ switchTab('pro'); openProgram('race-12'); return; }
+  if(id==='race-8'){ switchTab('pro'); openProgram('race-8'); return; }
+  if(id==='road-kl'){ switchTab('pro'); openEvent(); return; }
+  if(id==='foundation-13'){ switchTab('plans'); return; }
+  if(id==='hybrid-starter'){ switchTab('pro'); try{ renderMyPlan(); }catch(e){} return; }
+  nfToast((CATALOG[id]?CATALOG[id].title:'This program')+' — full content finalising, coming soon.');
+}
+
+/* ---- Join / payment (BCL.my — Cara A manual, links added later) ---- */
+// TODO(payment): paste each program's BCL.my payment link here → auto "Pay" button works.
+const BCL_LINKS = { /* 'race-12':'https://bcl.my/xxxx', 'road-kl':'https://bcl.my/yyyy' */ };
+function joinProgram(id){ const p=CATALOG[id]; if(!p) return;
+  $('modal-sheet').innerHTML=`<h3>Join ${p.title}</h3>
+    <p class="msub">One-time ${fmtPrice(p.price)} — unlocks inside your HITFAT HYBRID account, forever.</p>
+    <div class="infonote">Secure payment via <b>BCL.my</b> (FPX, DuitNow QR, cards, eWallet). Your program unlocks after payment is confirmed.</div>
+    <div class="modalrow"><button class="cancel" onclick="closeModal()">Not now</button><button class="confirm" onclick="payProgram('${id}')">Pay ${fmtPrice(p.price)}</button></div>`;
+  $('modal').classList.add('on');
+}
+function payProgram(id){ const url=BCL_LINKS[id]; closeModal();
+  if(url){ window.open(url,'_blank'); nfToast('Complete payment — your program unlocks after confirmation.'); }
+  else { nfToast('Payment link coming soon for this program.'); }
+}
+
 function boot(){
   if(!document.getElementById('catlist')){ return setTimeout(boot,60); }
   if(!SUPA_READY){
