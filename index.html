@@ -1707,6 +1707,7 @@ function switchTab(tab){
   } else if(tab==='programs'){
     $('categories').style.display='block';
     setActive('tab-programs');
+    renderCategories(); // always render fresh so the category list never shows empty
   } else if(tab==='plans'){
     $('plans').style.display='block';
     setActive('tab-programs'); // 13-week lives under Library ("Other Programs")
