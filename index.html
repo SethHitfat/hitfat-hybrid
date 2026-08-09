@@ -25,7 +25,8 @@
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
   html,body{height:100%;min-height:600px;}
   body{background:radial-gradient(1000px 500px at 85% -10%,#1c1905 0%,transparent 55%),var(--bg);color:var(--txt);font-family:'Inter',system-ui,sans-serif;overflow:hidden;}
-  .app{max-width:440px;margin:0 auto;height:100vh;height:100dvh;min-height:600px;display:flex;flex-direction:column;position:relative;overflow:hidden;}
+  /* fixed to the viewport so the bottom nav always sits at the very bottom on every iOS (no dvh/vh gap) */
+  .app{position:fixed;top:0;right:0;bottom:0;left:0;margin:0 auto;width:100%;max-width:440px;display:flex;flex-direction:column;overflow:hidden;}
   .app, .app *{color:inherit;transform:none !important;writing-mode:horizontal-tb !important;float:none !important;}
   .hgroup h2,.dtitle,.pname,.card .ttl,.catcard .ttl{color:#fff !important;}
   .hgroup .k,.ptar{color:var(--hitfat) !important;}
@@ -546,8 +547,8 @@
   .coachstats .c small{display:block;font-size:10px;color:var(--dim);letter-spacing:.4px;text-transform:uppercase;margin-top:4px;}
   /* hybrid score ring */
   .scorewrap{display:flex;align-items:center;gap:20px;background:linear-gradient(155deg,#1a1a1a 0%,#0e0e0e 100%);border:1px solid var(--line);border-radius:18px;padding:20px 18px;margin:2px 0 10px;}
-  .ring{--val:72;width:104px;height:104px;flex:0 0 auto;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--hyrox) calc(var(--val)*1%),#242424 0);}
-  .ring::before{content:"";position:absolute;width:78px;height:78px;border-radius:50%;background:#0e0e0e;}
+  .ring{--val:72;position:relative;width:104px;height:104px;flex:0 0 auto;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--hyrox) calc(var(--val)*1%),#242424 0);}
+  .ring::before{content:"";position:absolute;inset:0;margin:auto;width:78px;height:78px;border-radius:50%;background:#0e0e0e;}
   .ring .rv{position:relative;text-align:center;}
   .ring .rv b{font-family:'Oswald';font-size:30px;font-weight:700;line-height:1;color:#fff;}
   .ring .rv small{display:block;font-size:9px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;margin-top:2px;}
@@ -1894,6 +1895,7 @@ function showCategories(){ $('list').style.display='none'; $('detail').style.dis
 /* ============ TAB NAVIGATION ============ */
 function switchTab(tab){
   curTab=tab;
+  $('tabs').style.display='flex'; // always restore the bottom nav when landing on a main tab
   // hide every screen
   ['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail'].forEach(id=>{ const e=$(id); if(e) e.style.display='none'; });
   if(window.klTicker && tab!=='pro' && tab!=='home' && tab!=='explore'){ clearInterval(window.klTicker); window.klTicker=null; }
