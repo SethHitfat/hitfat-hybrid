@@ -759,8 +759,12 @@
       </div>
       <!-- SKRIN PROFILE -->
       <div id="profile" style="display:none;">
-        <div class="hgroup"><div class="k">Account</div><h2>PROFILE</h2><p>Your account, track, program and settings.</p></div>
+        <div class="hgroup"><div class="k">Account</div><h2>PROFILE</h2><p>Your account, programs, plan and settings.</p></div>
         <div id="pf-account"></div>
+        <div class="sechead">My Programs</div>
+        <div id="pf-programs"></div>
+        <div class="sechead">Purchases</div>
+        <div id="pf-purchases"></div>
         <div class="sechead">Your Plan</div>
         <div id="pf-summary"></div>
         <div class="sechead">Settings</div>
@@ -1115,7 +1119,7 @@ const PROGRAM_ORDER=['race-16','race-12','race-8'];
    NOT active yet — HITFAT is the sole publisher. Only the real HITFAT coach shows;
    no fake coaches/ratings/athlete counts. */
 const COACHES = {
-  seth: { id:'seth', name:'Coach Seth', specialty:'HYROX Performance Coach · HITFAT', athletes:null, real:true, owner:true,
+  seth: { id:'seth', name:'HITFAT', specialty:'HYROX Performance Coach', athletes:null, real:true, owner:true,
           photo:null, revenueShare:0,
           bio:'HYROX Performance Coach (Level 1) and founder of HITFAT. Every HITFAT HYBRID program is designed and delivered here.',
           quals:['HYROX Performance Coach L1','Hybrid Strength & Conditioning'] },
@@ -2866,6 +2870,20 @@ function renderProfile(){
   }
   // sign-out only makes sense when signed in
   const so=$('pf-signout'); if(so) so.style.display = HF.userId ? 'flex' : 'none';
+  // My Programs — owned/paid + the free plan you're following
+  const mine=[];
+  CATALOG_ORDER.forEach(id=>{ if(ownsProgram(id)&&CATALOG[id].access!=='free') mine.push(id); });
+  mine.push(race?'road-kl':'hybrid-starter'); // current track plan (free-to-follow)
+  const seen={}; const list=mine.filter(id=>{ if(seen[id])return false; seen[id]=1; return true; });
+  $('pf-programs').innerHTML=list.map(id=>{ const c=CATALOG[id]; const st=programState(id);
+    return `<div class="pfrow" style="cursor:pointer;" onclick="${ownsProgram(id)?`openProgramContent('${id}')`:`switchTab('store');openProgramDetail('${id}','profile')`}">
+      <span class="l" style="color:#fff;font-weight:600;">${c.title}</span>
+      <span class="v"><span class="badge ${badgeCls(st)}" style="position:static;">${st}</span></span></div>`; }).join('');
+  // Purchases
+  const pur=(HF.data.purchases||[]).slice().reverse();
+  $('pf-purchases').innerHTML = pur.length ? pur.map(x=>{ const d=new Date(x.date);
+    return `<div class="pfrow"><span class="l">${x.title}</span><span class="v">${fmtPrice(x.price)} · ${d.getDate()}/${d.getMonth()+1}</span></div>`; }).join('')
+    : `<div class="infonote">No purchases yet. Programs you buy unlock here — one account, forever.</div>`;
   $('pf-summary').innerHTML=`
     <div class="pfrow"><span class="l">Track</span><span class="v">${race?'Race Ready':'Hybrid Starter'}</span></div>
     <div class="pfrow"><span class="l">Goal</span><span class="v">${p.goal||'—'}</span></div>
@@ -3129,7 +3147,7 @@ function programCard(id,full){
   const price=(st==='PAID')?`<div class="price">${fmtPrice(p.price)}</div>`:'';
   return `<div class="pcard ${full?'full':''}" onclick="openProgramDetail('${id}')">
     <div class="top" style="background-image:url('${p.img}')"><div class="edge"></div><span class="badge ${badgeCls(st)}">${st}</span></div>
-    <div class="info"><div class="t">${p.title}</div><div class="m">${p.weeks} wk · ${p.days} days/wk · ${p.level}</div><div class="by">${COACHES[p.coach]?COACHES[p.coach].name:''}</div>${price}</div></div>`;
+    <div class="info"><div class="t">${p.title}</div><div class="m">${p.weeks} wk · ${p.days} days/wk · ${p.level}</div><div class="by">by HITFAT</div>${price}</div></div>`;
 }
 function quickCard(i){ const q=QUICK_WORKOUTS[i]; return `<div class="qwcard" onclick="openQuickWorkout(${i})"><span class="badge free">Free</span><div class="t">${q.title}</div><div class="m">${q.tag} · ${totalMins(q)} min · RPE ${q.rpe}</div></div>`; }
 function coachCard(id){ const c=COACHES[id]; const n=coachPrograms(id).length; const ini=c.name.replace('Coach ','')[0];
@@ -3200,8 +3218,8 @@ function coachesSoonHTML(){
       <div style="font-family:'Oswald';font-size:30px;font-weight:700;letter-spacing:.5px;margin:8px 0 12px;text-transform:uppercase;">Coming Soon</div>
       <div style="color:var(--dim);font-size:13.5px;line-height:1.6;max-width:330px;margin:0 auto;">Train with specialist coaches. New coach-led programs are coming to HITFAT HYBRID.</div>
     </div>
-    <div class="sechead">Your Coach</div>
-    ${coachCard('seth')}</div>`;
+    <div class="sechead">Meanwhile</div>
+    <div class="benchcard" onclick="switchTab('store')" style="cursor:pointer;"><div class="bt">HITFAT Programs</div><div class="bm">Structured programs built and delivered by HITFAT →</div></div></div>`;
 }
 function renderCoaches(){ $('coach-cards').innerHTML=coachesSoonHTML(); }
 function showCoachesList(){ $('coaches-list').style.display='block'; $('coach-profile').style.display='none'; $('tabs').style.display='flex'; renderCoaches(); $('screen').scrollTop=0; }
@@ -3240,7 +3258,7 @@ function openProgramDetail(id,backTab){ const p=CATALOG[id]; if(!p) return; pdBa
   const wish = soon?'':`<button class="wish ${inWishlist(id)?'on':''}" onclick="toggleWishlist('${id}');openProgramDetail('${id}')">♥</button>`;
   $('pgd-body').innerHTML=`
     <div class="pd-hero" style="background-image:url('${p.img}')"><div class="edge"></div><div class="body"><span class="badge ${badgeCls(st)}">${st}</span><h2>${p.title}</h2></div></div>
-    <div class="pd-meta"><span class="chip"><b>${p.weeks}</b> weeks</span><span class="chip"><b>${p.days}</b> days/wk</span><span class="chip">${p.level}</span><span class="chip">by ${COACHES[p.coach].name} · HITFAT</span></div>
+    <div class="pd-meta"><span class="chip"><b>${p.weeks}</b> weeks</span><span class="chip"><b>${p.days}</b> days/wk</span><span class="chip">${p.level}</span><span class="chip">by HITFAT</span></div>
     <div class="desc" style="margin:0 2px 6px;">${p.summary}</div>
     <div class="scalebox" style="margin-top:12px;"><div class="sh">Goal</div><div class="si">${p.goal}</div></div>
     ${programPhases(id)}
