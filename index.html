@@ -40,7 +40,7 @@
 
   .screen{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
   .screen::-webkit-scrollbar{display:none;}
-  .pad{padding:6px 18px 50px;}
+  .pad{padding:6px 18px calc(92px + env(safe-area-inset-bottom,0px));} /* clear the fixed bottom nav */
 
   .hgroup{margin:16px 2px 16px;}
   .hgroup .k{font-family:'Inter',system-ui,sans-serif;font-size:12.5px;font-weight:600;letter-spacing:.4px;text-transform:none;}
@@ -49,7 +49,8 @@
   .back{display:inline-flex;align-items:center;gap:8px;color:var(--hitfat);font-size:13px;font-weight:700;background:none;border:none;cursor:pointer;padding:8px 0;letter-spacing:.5px;}
 
   /* tab navigation */
-  .tabs{display:flex;align-items:flex-end;flex:none;border-bottom:none;order:2;background:#0a0a0a;border-top:1px solid var(--line);padding:9px 8px calc(10px + env(safe-area-inset-bottom,0px));}
+  /* nav pinned directly to the viewport bottom so it is ALWAYS flush at the bottom on iPhone */
+  .tabs{position:fixed;bottom:0;left:0;right:0;margin:0 auto;width:100%;max-width:440px;z-index:60;display:flex;align-items:flex-end;background:#0a0a0a;border-top:1px solid var(--line);padding:9px 8px calc(10px + env(safe-area-inset-bottom,0px));}
   .tab{flex:1;background:none;border:none;color:var(--dim);font-family:'Inter',system-ui,sans-serif;font-size:11.5px;font-weight:500;letter-spacing:0;text-transform:none;padding:6px 2px 2px;cursor:pointer;border-bottom:none;display:flex;flex-direction:column;align-items:center;gap:6px;transition:color .15s;}
   .tab svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
   .tab.active{color:var(--hyrox);border-bottom:none;}
