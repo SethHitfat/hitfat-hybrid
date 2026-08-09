@@ -979,7 +979,92 @@ const PROGRAM_ORDER=['race-16','race-12','race-8'];
 /* Availability by date (season ladder). Edit opens/closes above per tier.
    Before opens = LOCKED ("Opens ..."), within window = LIVE, after closes = CLOSED.
    ownsProgram() will later bypass this for athletes who already bought (Supabase). */
-function ownsProgram(id){ return false; } /* TODO: return true if the signed-in athlete owns this tier */
+/* ============================================================
+   ████  HITFAT HYBRID V3 — PROGRAM CATALOG · COACHES · SCORE  ████
+   Metadata layer (prices, access, coach). Real workout data still
+   lives in PRO_PROGRAM / RACE_8 / TRAINING_PLAN / HYBRID_PLAN etc.
+   Prices are in ONE place here — easy to change later.
+   access: 'free' | 'paid' | 'soon'   (owned tracked in HF.data.owned)
+   `plan` is a KEY resolved at runtime by resolvePlan() so definition
+   order never matters.
+   ============================================================ */
+const COACHES = {
+  seth:  { id:'seth',  name:'Coach Seth',  specialty:'HYROX Specialist',        athletes:'15K+', real:true,
+           bio:'HYROX Performance Coach (Level 1) and founder of HITFAT. Years helping athletes build the engine and strength to race strong.',
+           quals:['HYROX Performance Coach L1','Hybrid Strength & Conditioning'] },
+  dhil:  { id:'dhil',  name:'Coach Dhil',  specialty:'Strength & Conditioning', athletes:'—', real:false,
+           bio:'Strength & conditioning specialist. Programs coming soon to HITFAT HYBRID.', quals:[] },
+  afiq:  { id:'afiq',  name:'Coach Afiq',  specialty:'Running Performance',      athletes:'—', real:false,
+           bio:'Running performance coach focused on compromised running for hybrid racing. Programs coming soon.', quals:[] },
+  bella: { id:'bella', name:'Coach Bella', specialty:'Hybrid Performance',       athletes:'—', real:false,
+           bio:'Hybrid performance coach. Programs coming soon to HITFAT HYBRID.', quals:[] },
+};
+const COACH_ORDER = ['seth','dhil','afiq','bella'];
+
+const CATALOG = {
+  // ---- FREE structured programs (generous free tier) ----
+  'hybrid-starter': { id:'hybrid-starter', title:'Hybrid Starter Plan', coach:'seth', weeks:9,  days:4, level:'Beginner–Intermediate',
+     goal:'Build strength, endurance & hybrid fitness', tag:'Hybrid', access:'free', price:0, plan:'HYBRID_PLAN', img:IMG.engine,
+     summary:'Your free foundation — build a hybrid engine toward the HITFAT Hybrid Simulation. No race ticket needed.' },
+  'foundation-13': { id:'foundation-13', title:'13-Week Foundation', coach:'seth', weeks:13, days:3, level:'All levels',
+     goal:'Base, pace, power, taper', tag:'Hybrid', access:'free', price:0, plan:'TRAINING_PLAN', img:IMG.found,
+     summary:'A free phase-based progression: build base, raise pace, sharpen power, then taper.' },
+  // ---- PAID structured programs (real data) ----
+  'first-timer': { id:'first-timer', title:'HYROX First Timer', coach:'seth', weeks:4, days:4, level:'Beginner',
+     goal:'Prepare for your first HYROX', tag:'Race Prep', access:'paid', price:19, plan:'FIRST_TIMER', img:IMG.power,
+     summary:'A 4-week structured starter for anyone curious about HYROX: hybrid basics → engine + strength → stations → mini simulation.' },
+  'race-8':  { id:'race-8',  title:'8-Week Race Prep', coach:'seth', weeks:8,  days:5, level:'PRO / OPEN / Beginner',
+     goal:'Complete, race-ready block', tag:'Race Prep', access:'paid', price:99,  plan:'RACE_8', img:IMG.power,
+     summary:'A complete final block. Nothing wasted before race day.' },
+  'race-12': { id:'race-12', title:'12-Week Race Ready', coach:'seth', weeks:12, days:5, level:'PRO / OPEN / Beginner',
+     goal:'Lock in pace, power & every station', tag:'Race Prep', access:'paid', price:149, plan:'PRO_PROGRAM', img:IMG.complete,
+     summary:'Base → Pace → Accelerate → Prime → Race. Full preparation for race day.' },
+  'road-kl': { id:'road-kl', title:'Road to HYROX KL', coach:'seth', weeks:12, days:5, level:'PRO / OPEN / Beginner',
+     goal:'Race-specific prep for HYROX Kuala Lumpur', tag:'Race Prep', access:'paid', price:199, plan:'PRO_PROGRAM', img:IMG.complete, event:'kl',
+     summary:'Everything to arrive in KL ready: countdown, race pacing, station strategy, simulations & the 12-week build.' },
+  // ---- COMING SOON (no dummy content until real workouts are ready) ----
+  'build-engine':   { id:'build-engine',   title:'Build Your Engine', coach:'seth', weeks:6, days:4, level:'Intermediate', goal:'Improve your aerobic engine', tag:'Engine',    access:'soon', price:49,  plan:null, img:IMG.engine,   summary:'Improve your aerobic engine for hybrid racing.' },
+  'sled-power':     { id:'sled-power',     title:'Sled Power',        coach:'dhil', weeks:4, days:3, level:'Intermediate', goal:'Sled push & pull strength',   tag:'Strength',  access:'soon', price:39,  plan:null, img:IMG.power,    summary:'Build strength and technique for sled push and sled pull.' },
+  'hyrox-beginner': { id:'hyrox-beginner', title:'HYROX Beginner',    coach:'seth', weeks:8, days:4, level:'Beginner',     goal:'Your first structured HYROX build', tag:'Race Prep', access:'soon', price:79,  plan:null, img:IMG.found,   summary:'A beginner-friendly build toward your first race.' },
+  'run-faster':     { id:'run-faster',     title:'Run Faster for HYROX', coach:'afiq', weeks:6, days:4, level:'Intermediate', goal:'Improve compromised running', tag:'Running', access:'soon', price:39, plan:null, img:IMG.found,   summary:'Improve your compromised running.' },
+  'doubles-prep':   { id:'doubles-prep',   title:"Men's Doubles Prep", coach:'seth', weeks:8, days:5, level:'Advanced',    goal:'Doubles race strategy & prep',  tag:'Race Prep', access:'soon', price:129, plan:null, img:IMG.complete, summary:'Split strategy and preparation for HYROX Doubles.' },
+};
+const CATALOG_ORDER = ['first-timer','race-12','road-kl','race-8','hybrid-starter','foundation-13','build-engine','sled-power','hyrox-beginner','run-faster','doubles-prep'];
+function coachPrograms(coachId){ return CATALOG_ORDER.filter(function(id){ return CATALOG[id].coach===coachId; }); }
+function fmtPrice(p){ return (p&&p>0) ? ('RM'+p) : 'Free'; }
+
+/* ---- Access / ownership ---- */
+function ownsProgram(id){ const p=CATALOG[id]; if(!p) return false; if(p.access==='free') return true; return !!(HF.data.owned && HF.data.owned[id]); }
+function programState(id){ // FREE | OWNED | PAID | SOON | COMPLETED  (+ IN PROGRESS handled by caller)
+  const p=CATALOG[id]; if(!p) return 'SOON';
+  if(p.access==='soon') return 'SOON';
+  if(p.access==='free') return 'FREE';
+  return ownsProgram(id) ? 'OWNED' : 'PAID';
+}
+function grantProgram(id, price){ // called after a confirmed purchase (payment integration later)
+  if(!CATALOG[id]) return;
+  HF.data.owned[id]=Object.assign({date:new Date().toISOString()}, HF.data.owned[id]||{});
+  HF.data.purchases.push({id:id, title:CATALOG[id].title, price:(price!=null?price:CATALOG[id].price), date:new Date().toISOString()});
+  HF.save();
+}
+function toggleWishlist(id){ if(HF.data.wishlist[id]) delete HF.data.wishlist[id]; else HF.data.wishlist[id]=1; HF.save(); }
+function inWishlist(id){ return !!HF.data.wishlist[id]; }
+
+/* ---- HYBRID SCORE (0–100 across Engine / Strength / Stations / Running) ---- */
+const SCORE_KEYS = ['engine','strength','stations','running'];
+function seedScores(){
+  if(HF.data.scores && SCORE_KEYS.every(function(k){ return typeof HF.data.scores[k]==='number'; })) return;
+  const base = {Beginner:44, Intermediate:60, Advanced:74}[HF.data.prefs && HF.data.prefs.level] || 52;
+  HF.data.scores = { engine:base, strength:base+3, stations:base-5, running:base-1 };
+  // nudge up by training volume (each session +0.4, capped +18)
+  const bump = Math.min(18, Math.round((HF.totalDone()||0)*0.4));
+  SCORE_KEYS.forEach(function(k){ HF.data.scores[k]=Math.max(1, Math.min(99, HF.data.scores[k]+bump)); });
+  HF.save();
+}
+function scoreBreakdown(){ seedScores(); const s=HF.data.scores||{}; const o={}; SCORE_KEYS.forEach(function(k){ o[k]=Math.round(s[k]||50); }); return o; }
+function hybridScore(){ const b=scoreBreakdown(); return Math.round(SCORE_KEYS.reduce(function(a,k){return a+b[k];},0)/SCORE_KEYS.length); }
+function weakestArea(){ const b=scoreBreakdown(); return SCORE_KEYS.reduce(function(lo,k){ return b[k]<b[lo]?k:lo; }, SCORE_KEYS[0]); }
+const AREA_LABEL = {engine:'Engine', strength:'Strength', stations:'Stations', running:'Running'};
 function progAvail(p, today){
   today=today||new Date();
   if(p.opens||p.closes){
@@ -2470,8 +2555,9 @@ if(SUPA_READY){ try{ sb = window.supabase.createClient(SUPA_URL, SUPA_KEY); }cat
 const HF = {
   KEY:'hitfat_hybrid_v1',
   userId:null, email:null,
-  data:{ track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'' },
-  _defaults(){ return { track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'' }; },
+  // owned: {programId:{date}}  scores: {engine,strength,stations,running}  wishlist: {programId:1}  purchases: [{id,title,price,date}]
+  data:{ track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[] },
+  _defaults(){ return { track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[] }; },
   cacheKey(){ return this.KEY + (this.userId ? '_'+this.userId : ''); },
   setUser(id, email){ this.userId=id||null; this.email=email||null; },
   apply(obj){ // replace working data from a plain object (cloud or cache)
@@ -2479,6 +2565,8 @@ const HF = {
     if(obj&&typeof obj==='object'){
       d.track=obj.track||null; d.onboarded=!!obj.onboarded; d.readiness=!!obj.readiness;
       d.prefs=Object.assign({},obj.prefs||{}); d.sessions=Object.assign({},obj.sessions||{}); d.note=obj.note||'';
+      d.owned=Object.assign({},obj.owned||{}); d.scores=Object.assign({},obj.scores||{});
+      d.wishlist=Object.assign({},obj.wishlist||{}); d.purchases=Array.isArray(obj.purchases)?obj.purchases.slice():[];
     }
     this.data=d;
   },
