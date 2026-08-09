@@ -2336,7 +2336,7 @@ function renderHome(){
   }
   // 5) CONTINUE YOUR PROGRAM
   const ownedP=CATALOG_ORDER.filter(id=>ownsProgram(id)&&CATALOG[id].access!=='free');
-  const contId = ownedP[0] || (race?'road-kl':'hybrid-starter');
+  const contId = ownedP[0] || 'hybrid-starter'; // free users continue the free Hybrid Starter plan
   const cp=CATALOG[contId];
   $('home-continue').innerHTML=`<div class="sechead">Continue Your Program</div>
     <div class="today" style="cursor:pointer;" onclick="${ownsProgram(contId)?`openProgramContent('${contId}')`:`openProgramDetail('${contId}','home')`}">
@@ -2757,18 +2757,25 @@ const HYBRID_PLAN=(function(){
 })();
 function trackDays(){ return HF.data.prefs.days || 5; }
 function sKey(track,week,day){ return track+'-w'+week+'-d'+day; }
+/* Active daily-training plan = a PAID plan you own, else the FREE Hybrid Starter.
+   This gates race content: free users (any track) train the free plan until they buy. */
+function currentPlan(){
+  if(ownsProgram('road-kl')||ownsProgram('race-12')) return {plan:planFor('race'), prefix:'race'};
+  if(ownsProgram('first-timer')) return {plan:FIRST_TIMER, prefix:'ft'};
+  return {plan:planFor('starter'), prefix:'starter'}; // FREE default
+}
 function nextSession(){
-  const track=HF.data.track||'starter', plan=planFor(track), target=trackDays();
+  const ap=currentPlan(), plan=ap.plan, prefix=ap.prefix, target=trackDays();
   for(const wko of plan){
     const days=wko.days.slice(0, Math.min(target, wko.days.length));
     for(const d of days){
-      const key=sKey(track, wko.week, d.day);
+      const key=prefix+'-w'+wko.week+'-d'+d.day;
       if(!HF.isDone(key)) return {c:d.c, w:d.w, day:d.day, week:wko.week, phase:wko.phase, key};
     }
   }
   return null;
 }
-function currentWeek(){ const n=nextSession(); if(n) return n.week; const p=planFor(HF.data.track||'starter'); return p.length?p[p.length-1].week:1; }
+function currentWeek(){ const n=nextSession(); if(n) return n.week; const p=currentPlan().plan; return p.length?p[p.length-1].week:1; }
 function weekStats(){
   const now=new Date(), off=(now.getDay()+6)%7, mon=new Date(now); mon.setHours(0,0,0,0); mon.setDate(now.getDate()-off);
   const target=trackDays(); let done=0;
@@ -2780,7 +2787,12 @@ function nextBenchmark(){
   return {name:'HITFAT Hybrid Simulation', when:'Final week · date to be announced'};
 }
 function greetWord(){ const h=new Date().getHours(); return h<12?'Good morning':(h<18?'Good afternoon':'Good evening'); }
-function prettyPlan(){ return HF.data.track==='race'?'12-Week Sharpen':'Hybrid Starter Plan'; }
+function prettyPlan(){
+  if(ownsProgram('road-kl')) return 'Road to HYROX KL';
+  if(ownsProgram('race-12')) return '12-Week Race Ready';
+  if(ownsProgram('first-timer')) return 'HYROX First Timer';
+  return 'Hybrid Starter Plan'; // FREE default (any track)
+}
 function prettyLevel(){ return HF.data.prefs.level || 'All levels'; }
 
 /* --- Open a scheduled session (returns to Home) --- */
