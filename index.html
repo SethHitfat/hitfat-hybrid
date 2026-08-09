@@ -70,6 +70,8 @@
   .wcell b{width:36px;height:36px;margin:8px auto 0;display:flex;align-items:center;justify-content:center;border-radius:50%;font-family:'Inter',system-ui,sans-serif;font-size:16.5px;font-weight:600;color:#e8e8e8;}
   .wcell.today small{color:var(--dim);}
   .wcell.today b{background:var(--hyrox);color:var(--hyrox-ink);font-weight:700;}
+  .wcell.ddone b{background:#1c7d3a;color:#fff;font-weight:700;}
+  .wcell.today.ddone b{background:var(--hyrox);color:var(--hyrox-ink);box-shadow:0 0 0 2px #1c7d3a;}
 
   /* phase accordion */
   .phase{border-bottom:1px solid var(--line);}
@@ -605,21 +607,16 @@
   </div>
 
   <div class="screen" id="screen">
-      <!-- SKRIN HOME (dashboard — dirender oleh renderHome()) -->
+      <!-- SKRIN HOME (personalized dashboard — dirender oleh renderHome()) -->
       <div id="home" class="pad" style="display:none;">
-        <div id="home-hero"></div>
-        <div class="greet" id="home-greet"></div>
-        <div id="home-trackchip"></div>
-        <div id="home-countdown"></div>
-        <div class="sechead">Today's Workout</div>
+        <div id="home-greet"></div>
         <div id="home-today"></div>
-        <div class="sechead">This Week</div>
-        <div class="wstrip" id="wstrip"></div>
-        <div id="home-stats"></div>
-        <div id="home-bench"></div>
-        <div id="home-ask"></div>
-        <div class="sechead">Workout Library</div>
-        <div class="nfscroll" id="home-lib"></div>
+        <div id="home-progress"></div>
+        <div id="home-countdown"></div>
+        <div id="home-continue"></div>
+        <div id="home-recommend"></div>
+        <div id="home-quick"></div>
+        <div id="home-new"></div>
       </div>
     <div class="pad">
       <!-- SKRIN 1: WORKOUT LIBRARY -->
@@ -2273,90 +2270,96 @@ function nextKLSession(){
   }
   return null;
 }
+function homeDoneDaysThisWeek(){
+  const now=new Date(), off=(now.getDay()+6)%7, mon=new Date(now); mon.setHours(0,0,0,0); mon.setDate(now.getDate()-off);
+  const set=new Set();
+  Object.values(HF.data.sessions).forEach(s=>{ if(s&&s.date){ const d=new Date(s.date); if(d>=mon){ set.add((d.getDay()+6)%7); } } });
+  return set;
+}
 function renderHome(){
   const race = HF.data.track==='race';
-  // brand hero
-  $('home-hero').innerHTML=`
-    <div class="nfhero" style="min-height:170px;" onclick="switchTab('pro')">
-      <div class="ghost">HF</div><div class="edge"></div>
-      <div class="body">
-        <div class="kx">HITFAT Hybrid Performance</div>
-        <div class="h" style="font-size:26px;">Build Your Hybrid Engine</div>
-        <div style="color:#cfcfcf;font-size:12.5px;line-height:1.45;margin-bottom:14px;">Structured training for strength, endurance and race-ready performance.</div>
-        <span class="nfcta">Start Your Program ▸</span>
-      </div>
-    </div>`;
-  // greeting + track chip
-  $('home-greet').innerHTML=`<div class="hi">${greetWord()}${HF.data.prefs.name?', '+HF.data.prefs.name:''}</div>
-    <div class="who">${race?'Race Ready':'Hybrid Starter'} · ${prettyPlan()} · ${prettyLevel()}</div>`;
-  $('home-trackchip').innerHTML=`<span class="trackchip">● ${race?'Race Ready':'Hybrid Starter'}</span>
-    <span class="trackchip" style="background:#141414;border-color:var(--line);color:var(--dim);">Week ${currentWeek()}</span>`;
-  // countdown (race → KL, starter → Hybrid Simulation TBA)
-  if(race){
-    $('home-countdown').innerHTML=`<div class="cdmini" onclick="switchTab('pro');openEvent()">
-      <div class="cl">AirAsia HYROX KL · 11–13 Dec 2026</div>
-      <div class="ch">Road to HYROX KL</div>
-      <div class="cn"><b id="kl-mini-home">—</b><span>days to the event (11 Dec)</span></div>
-      <div class="cnote">Your race date &amp; start time depend on your category.</div>
-    </div>`;
-    tickKL();
-    if(window.klTicker) clearInterval(window.klTicker);
-    window.klTicker=setInterval(tickKL,1000);
-  } else {
-    if(window.klTicker){ clearInterval(window.klTicker); window.klTicker=null; }
-    $('home-countdown').innerHTML=`<div class="cdmini" style="cursor:default;">
-      <div class="cl">HITFAT Hybrid Simulation</div>
-      <div class="ch">Your Finish Line</div>
-      <div class="cn"><b style="font-size:18px;">Date to be announced</b></div>
-      <div class="cnote">Build toward the HITFAT Hybrid Simulation — the date will be announced here.</div>
-    </div>`;
-  }
-  // today's workout
+  const nameStr = HF.data.prefs.name?', '+HF.data.prefs.name:'';
+  // 1) GREETING
+  $('home-greet').innerHTML=`<div class="greet" style="margin:16px 2px 14px;">
+      <div class="hi">${greetWord()}${nameStr}</div>
+      <div class="who">${race?'Race Ready':'Hybrid Starter'} · ${prettyPlan()} · Week ${currentWeek()}</div></div>`;
+  // 2) TODAY'S TRAINING
   const nx=nextSession();
   if(nx){
     const wo=CATEGORIES[nx.c].workouts[nx.w];
-    $('home-today').innerHTML=`<div class="today">
-      <div class="tk">Today · ${nx.phase} · Day ${nx.day}</div>
-      <div class="tt">${wo.title}</div>
-      <div class="tm">RPE ${wo.rpe} · ${totalMins(wo)} min · ▶ video-guided</div>
-      <div class="trow">
-        <button class="go" onclick="openSessionDetail(${nx.c},${nx.w},'${nx.key}')">Continue Training</button>
-        <button class="go sec" onclick="quickComplete('${nx.key}')">✓</button>
-      </div>
-    </div>`;
+    $('home-today').innerHTML=`<div class="sechead" style="margin-top:2px;">Today's Training</div>
+      <div class="today">
+        <div class="tk">${nx.phase} · Day ${nx.day} · ${prettyPlan()}</div>
+        <div class="tt">${wo.title}</div>
+        <div class="tm">RPE ${wo.rpe} · ${totalMins(wo)} min · ▶ video-guided</div>
+        <div class="trow">
+          <button class="go" onclick="openSessionDetail(${nx.c},${nx.w},'${nx.key}')">Start Workout</button>
+          <button class="go sec" onclick="quickComplete('${nx.key}')">✓</button>
+        </div></div>`;
   } else {
-    $('home-today').innerHTML=`<div class="today"><div class="tk">Rest &amp; Recovery</div>
-      <div class="tt">No session scheduled</div>
-      <div class="tm">Take a mobility / easy walk day, hydrate and let the work settle.</div>
-      <div class="trow"><button class="go" onclick="switchTab('programs')">Browse Library</button></div></div>`;
+    $('home-today').innerHTML=`<div class="sechead" style="margin-top:2px;">Today's Training</div>
+      <div class="today"><div class="tk">Rest &amp; Recovery</div><div class="tt">Recovery Day</div>
+      <div class="tm">Take a mobility or easy-walk day, hydrate and let the work settle.</div>
+      <div class="trow"><button class="go" onclick="openQuickWorkout(0)">▶ 10-Min Mobility</button></div></div>`;
   }
-  // week strip (Mon-Sun, today highlighted)
+  // 3) MY PROGRESS (stats + week streak strip)
+  const wk=weekStats(); const done=homeDoneDaysThisWeek();
   const now=new Date(), off=(now.getDay()+6)%7, mon=new Date(now); mon.setDate(now.getDate()-off);
-  const names=['M','T','W','T','F','S','S'];
-  let ws='';
+  const names=['M','T','W','T','F','S','S']; let ws='';
   for(let i=0;i<7;i++){ const dt=new Date(mon); dt.setDate(mon.getDate()+i);
-    ws+=`<div class="wcell ${i===off?'today':''}"><small>${names[i]}</small><b>${dt.getDate()}</b></div>`; }
-  $('wstrip').innerHTML=ws;
-  // my progress: current program %, streak, hybrid score
-  const wk=weekStats();
-  $('home-stats').innerHTML=`<div class="sechead">My Progress</div><div class="dstat">
-    <div class="c" onclick="switchTab('progress')" style="cursor:pointer;"><b>${hybridScore()}</b><small>Hybrid Score</small></div>
-    <div class="c"><b>${HF.streak()}</b><small>Day Streak</small></div>
-    <div class="c"><b>${wk.pct}%</b><small>This Week</small></div>
-  </div>`;
-  // upcoming benchmark
-  const bm=nextBenchmark();
-  $('home-bench').innerHTML=bm?`<div class="sechead">Next Benchmark</div>
-    <div class="benchcard"><div class="bt">${bm.name}</div><div class="bm">${bm.when}</div></div>`:'';
-  // Quick Workouts (free) scroller
-  $('home-ask').innerHTML=`<div class="sechead">Quick Workouts <span style="font-size:11px;color:#1c7d3a;font-weight:800;letter-spacing:1px;">FREE</span></div>
+    ws+=`<div class="wcell ${i===off?'today':''} ${done.has(i)?'ddone':''}"><small>${names[i]}</small><b>${done.has(i)?'✓':dt.getDate()}</b></div>`; }
+  $('home-progress').innerHTML=`<div class="sechead">My Progress</div>
+    <div class="dstat">
+      <div class="c" onclick="switchTab('progress')" style="cursor:pointer;"><b>${hybridScore()}</b><small>Hybrid Score</small></div>
+      <div class="c"><b>${HF.streak()}</b><small>Day Streak</small></div>
+      <div class="c"><b>${wk.pct}%</b><small>This Week</small></div>
+    </div>
+    <div class="wstrip" style="margin-top:12px;">${ws}</div>`;
+  // 4) COUNTDOWN (race → KL / starter → Hybrid Sim)
+  if(race){
+    $('home-countdown').innerHTML=`<div class="cdmini" onclick="switchTab('store');openProgramDetail('road-kl','home')">
+      <div class="cl">AirAsia HYROX KL · 11–13 Dec 2026</div>
+      <div class="ch">Road to HYROX KL</div>
+      <div class="cn"><b id="kl-mini-home">—</b><span>days to the event (11 Dec)</span></div>
+      <div class="cnote">Your race date &amp; start time depend on your category.</div></div>`;
+    tickKL(); if(window.klTicker) clearInterval(window.klTicker); window.klTicker=setInterval(tickKL,1000);
+  } else {
+    if(window.klTicker){ clearInterval(window.klTicker); window.klTicker=null; }
+    $('home-countdown').innerHTML=`<div class="cdmini" style="cursor:default;">
+      <div class="cl">HITFAT Hybrid Simulation</div><div class="ch">Your Finish Line</div>
+      <div class="cn"><b style="font-size:18px;">Date to be announced</b></div>
+      <div class="cnote">Build toward the HITFAT Hybrid Simulation — the date will be announced here.</div></div>`;
+  }
+  // 5) CONTINUE YOUR PROGRAM
+  const ownedP=CATALOG_ORDER.filter(id=>ownsProgram(id)&&CATALOG[id].access!=='free');
+  const contId = ownedP[0] || (race?'road-kl':'hybrid-starter');
+  const cp=CATALOG[contId];
+  $('home-continue').innerHTML=`<div class="sechead">Continue Your Program</div>
+    <div class="today" style="cursor:pointer;" onclick="${ownsProgram(contId)?`openProgramContent('${contId}')`:`openProgramDetail('${contId}','home')`}">
+      <div class="tk">${cp.tag} · ${cp.level}</div>
+      <div class="tt">${cp.title}</div>
+      <div class="tm">Week ${currentWeek()} of ${cp.weeks} · ${wk.pct}% this week</div>
+      <div class="trkbar" style="margin:10px 0 2px;"><i style="width:${wk.pct}%"></i></div>
+    </div>`;
+  // 6) RECOMMENDED FOR YOU (weakness + funnel)
+  const weak=weakestArea(), b=scoreBreakdown();
+  const recIds=[];
+  if(!ownsProgram('first-timer') && CATALOG['first-timer']) recIds.push('first-timer');
+  recIds.push(race?'race-12':'build-engine');
+  recIds.push('station-builder');
+  $('home-recommend').innerHTML=`<div class="sechead">Recommended For You</div>
+    <div class="benchcard" onclick="switchTab('explore');setFilter('weakness')" style="cursor:pointer;margin-bottom:12px;">
+      <div class="bt">Weakest: ${AREA_LABEL[weak]} — ${b[weak]}/100</div>
+      <div class="bm">Train this to raise your Hybrid Score fastest →</div></div>
+    <div class="hscroll">${recIds.filter((v,i,a)=>a.indexOf(v)===i).map(id=>programCard(id)).join('')}</div>`;
+  // 7) QUICK WORKOUTS
+  $('home-quick').innerHTML=`<div class="sechead">Quick Workouts <span style="font-size:11px;color:#2ec27e;font-weight:800;letter-spacing:1px;">FREE</span></div>
     <div class="hscroll">${QUICK_WORKOUTS.map((_,i)=>quickCard(i)).join('')}</div>`;
-  // library row
-  $('home-lib').innerHTML=CATEGORIES.map((c,i)=>`
-    <div class="nfcard" onclick="switchTab('programs');openCategory(${i})" style="width:128px;aspect-ratio:1/1.15;">
-      <div class="ghost">${c.name[0]}</div><div class="edge"></div>
-      <div class="body"><div class="t">${c.name}</div><div class="m">${c.workouts.length} workouts</div></div>
-    </div>`).join('');
+  // 8) NEW THIS WEEK (Rep Lab hook)
+  $('home-new').innerHTML=`<div class="sechead">New This Week</div>
+    <div class="pcard full" onclick="location.href='lab.html'" style="cursor:pointer;">
+      <div class="top" style="height:110px;background:radial-gradient(420px 200px at 82% -10%,rgba(255,224,0,.22),transparent 60%),linear-gradient(155deg,#1d1d1d 0%,#0a0a0a 100%);"><div class="edge"></div><span class="badge free">AI · FREE</span></div>
+      <div class="info"><div class="t">HITFAT Rep Lab</div><div class="m">AI wall ball depth judge · live count · shareable Depth Score</div></div></div>`;
 }
 
 /* ---- Road to HYROX KL · event hub ----
