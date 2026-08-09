@@ -592,7 +592,7 @@
   <div class="tabs" id="tabs">
     <button class="tab active" id="tab-home" onclick="switchTab('home')"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>Home</button>
     <button class="tab" id="tab-explore" onclick="switchTab('explore')"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="M21 21l-4.5-4.5"/></svg>Explore</button>
-    <button class="tab" id="tab-coaches" onclick="switchTab('coaches')"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><circle cx="17.5" cy="9" r="2.6"/><path d="M15.5 15.2c2.6.2 5 1.9 5 4.8"/></svg>Coaches</button>
+    <button class="tab" id="tab-store" onclick="switchTab('store')"><svg viewBox="0 0 24 24"><path d="M4 7h16l-1 13H5L4 7z"/><path d="M8.5 7V5.5a3.5 3.5 0 0 1 7 0V7"/></svg>Programs</button>
     <button class="tab" id="tab-progress" onclick="switchTab('progress')"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3M20 16V6"/></svg>Progress</button>
     <button class="tab" id="tab-profile" onclick="switchTab('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Profile</button>
     <!-- stub tabs kept hidden so existing switchTab references never hit null -->
@@ -600,6 +600,7 @@
     <button class="tab" id="tab-programs" style="display:none" onclick="switchTab('programs')"></button>
     <button class="tab" id="tab-target" style="display:none" onclick="switchTab('target')"></button>
     <button class="tab" id="tab-plans" style="display:none" onclick="switchTab('plans')"></button>
+    <button class="tab" id="tab-coaches" style="display:none" onclick="switchTab('coaches')"></button>
     <button class="tab" id="tab-kl" style="display:none" onclick="goKL()"></button>
   </div>
 
@@ -721,9 +722,14 @@
       </div>
       <!-- SKRIN EXPLORE (V3 discovery) -->
       <div id="explore" style="display:none;">
-        <div class="hgroup"><div class="k">Discover</div><h2>EXPLORE</h2><p>Free workouts, structured programs, race prep and coaches — all in one place.</p></div>
+        <div class="hgroup"><div class="k">Discover</div><h2>EXPLORE</h2><p>Free workouts, structured programs and race prep — all in one place.</p></div>
         <div class="filters" id="ex-filters"></div>
         <div id="ex-body"></div>
+      </div>
+      <!-- SKRIN PROGRAMS (store) -->
+      <div id="store" style="display:none;">
+        <div class="hgroup"><div class="k">HITFAT Programs</div><h2>PROGRAMS</h2><p>Structured programs built to reach a specific goal — buy once, unlocked in your account forever.</p></div>
+        <div id="store-body"></div>
       </div>
       <!-- SKRIN COACHES (V3 marketplace) -->
       <div id="coaches" style="display:none;">
@@ -1900,16 +1906,18 @@ function switchTab(tab){
   curTab=tab;
   $('tabs').style.display='flex'; // always restore the bottom nav when landing on a main tab
   // hide every screen
-  ['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail'].forEach(id=>{ const e=$(id); if(e) e.style.display='none'; });
+  ['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail','store'].forEach(id=>{ const e=$(id); if(e) e.style.display='none'; });
   if(window.klTicker && tab!=='pro' && tab!=='home' && tab!=='explore'){ clearInterval(window.klTicker); window.klTicker=null; }
-  ['tab-home','tab-programs','tab-plans','tab-pro','tab-target','tab-kl','tab-progress','tab-profile','tab-explore','tab-coaches'].forEach(id=>{ const b=$(id); if(b&&b.classList) b.classList.remove('active'); });
+  ['tab-home','tab-programs','tab-plans','tab-pro','tab-target','tab-kl','tab-progress','tab-profile','tab-explore','tab-coaches','tab-store'].forEach(id=>{ const b=$(id); if(b&&b.classList) b.classList.remove('active'); });
   const setActive=id=>{ const b=$(id); if(b&&b.classList) b.classList.add('active'); };
   if(tab==='home'){
     $('home').style.display='block'; setActive('tab-home'); renderHome();
   } else if(tab==='explore'){
     $('explore').style.display='block'; setActive('tab-explore'); renderExplore();
+  } else if(tab==='store'){
+    $('store').style.display='block'; setActive('tab-store'); renderPrograms();
   } else if(tab==='coaches'){
-    $('coaches').style.display='block'; setActive('tab-coaches'); showCoachesList();
+    $('coaches').style.display='block'; setActive('tab-store'); showCoachesList();
   } else if(tab==='programs'){
     $('categories').style.display='block'; setActive('tab-explore'); renderCategories();
   } else if(tab==='plans'){
@@ -3129,7 +3137,7 @@ function coachCard(id){ const c=COACHES[id]; const n=coachPrograms(id).length; c
 let exFilter='all';
 function setFilter(f){ exFilter=f; renderExplore(); }
 function renderExplore(){
-  const F=[['all','All'],['programs','Programs'],['quick','Quick Workouts'],['race','Race Prep'],['weakness','Weakness'],['coaches','Coaches']];
+  const F=[['all','All'],['programs','Programs'],['quick','Quick Workouts'],['race','Race Prep'],['weakness','Weakness']];
   $('ex-filters').innerHTML=F.map(f=>`<button class="filt ${exFilter===f[0]?'on':''}" onclick="setFilter('${f[0]}')">${f[1]}</button>`).join('');
   const sec=(t,inner,all)=>`<div class="exsec"><div class="eh"><h3>${t}</h3>${all?`<span class="all" onclick="${all}">See all</span>`:''}</div>${inner}</div>`;
   const hs=cards=>`<div class="hscroll">${cards}</div>`;
@@ -3163,6 +3171,22 @@ function renderExplore(){
     h+=coachesSoonHTML();
   }
   $('ex-body').innerHTML=h; $('screen').scrollTop=0;
+}
+
+/* ---- Programs store (focus: sell HITFAT programs directly) ---- */
+function renderPrograms(){
+  const sec=(t,inner,sub)=>`<div class="exsec"><div class="eh"><h3>${t}</h3>${sub?`<span class="all" style="cursor:default;color:var(--dim)">${sub}</span>`:''}</div>${inner}</div>`;
+  let h='';
+  const owned=CATALOG_ORDER.filter(id=>ownsProgram(id)&&CATALOG[id].access!=='free');
+  if(owned.length) h+=sec('Your Programs', owned.map(id=>programCard(id,true)).join(''));
+  h+=sec('Start Here', programCard('first-timer',true), 'Entry · RM19');
+  h+=sec('Race Preparation', CATALOG_ORDER.filter(id=>CATALOG[id].tag==='Race Prep'&&id!=='first-timer'&&CATALOG[id].access!=='free').map(id=>programCard(id,true)).join(''));
+  h+=sec('Build Specific Strengths', CATALOG_ORDER.filter(id=>CATALOG[id].access==='soon').map(id=>programCard(id,true)).join(''), 'Coming soon');
+  h+=sec('Free Programs', CATALOG_ORDER.filter(id=>CATALOG[id].access==='free').map(id=>programCard(id,true)).join(''));
+  h+=`<div class="exsec"><div class="eh"><h3>More Free Training</h3></div>
+    <div class="catcard" onclick="switchTab('programs')" style="margin-bottom:12px;"><div class="body"><div class="ttl">Workout Library</div><div class="cnt">Free sessions by category</div></div><div class="arr">›</div></div>
+    <div class="catcard" onclick="switchTab('target')"><div class="body"><div class="ttl">Target Sessions</div><div class="cnt">Fix a weak station or quality</div></div><div class="arr">›</div></div></div>`;
+  $('store-body').innerHTML=h; $('screen').scrollTop=0;
 }
 
 /* ---- Coaches (marketplace COMING SOON — HITFAT is the sole publisher for now) ---- */
@@ -3213,7 +3237,7 @@ function openProgramDetail(id,backTab){ const p=CATALOG[id]; if(!p) return; pdBa
   const wish = soon?'':`<button class="wish ${inWishlist(id)?'on':''}" onclick="toggleWishlist('${id}');openProgramDetail('${id}')">♥</button>`;
   $('pgd-body').innerHTML=`
     <div class="pd-hero" style="background-image:url('${p.img}')"><div class="edge"></div><div class="body"><span class="badge ${badgeCls(st)}">${st}</span><h2>${p.title}</h2></div></div>
-    <div class="pd-meta"><span class="chip"><b>${p.weeks}</b> weeks</span><span class="chip"><b>${p.days}</b> days/wk</span><span class="chip">${p.level}</span><span class="chip" onclick="openCoach('${p.coach}')" style="cursor:pointer;">${COACHES[p.coach].name}</span></div>
+    <div class="pd-meta"><span class="chip"><b>${p.weeks}</b> weeks</span><span class="chip"><b>${p.days}</b> days/wk</span><span class="chip">${p.level}</span><span class="chip">by ${COACHES[p.coach].name} · HITFAT</span></div>
     <div class="desc" style="margin:0 2px 6px;">${p.summary}</div>
     <div class="scalebox" style="margin-top:12px;"><div class="sh">Goal</div><div class="si">${p.goal}</div></div>
     ${programPhases(id)}
