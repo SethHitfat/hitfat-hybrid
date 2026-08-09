@@ -3134,6 +3134,10 @@ function renderExplore(){
   if(exFilter==='all'){
     const owned=CATALOG_ORDER.filter(id=>ownsProgram(id)&&CATALOG[id].access!=='free');
     if(owned.length) h+=sec('Continue Training', owned.map(id=>programCard(id)).join('')&&hs(owned.map(id=>programCard(id)).join('')));
+    // Featured free AI tool — traffic/UGC hook
+    h+=`<div class="exsec"><div class="pcard full" onclick="location.href='lab.html'" style="cursor:pointer;">
+      <div class="top" style="height:112px;background:radial-gradient(420px 200px at 82% -10%,rgba(255,224,0,.22),transparent 60%),linear-gradient(155deg,#1d1d1d 0%,#0a0a0a 100%);"><div class="edge"></div><span class="badge free">AI · FREE</span></div>
+      <div class="info"><div class="t">HITFAT Rep Lab</div><div class="m">AI wall ball depth judge · live rep count · shareable Depth Score</div></div></div></div>`;
     h+=sec('Quick Workouts — FREE', hs(QUICK_WORKOUTS.map((_,i)=>quickCard(i)).join('')), "setFilter('quick')");
     h+=sec('Popular Programs', hs(['first-timer','race-12','road-kl','race-8'].map(id=>programCard(id)).join('')), "setFilter('programs')");
     h+=sec('Free Programs', ['hybrid-starter','foundation-13'].map(id=>programCard(id,true)).join(''));

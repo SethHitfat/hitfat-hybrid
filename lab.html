@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>HITFAT Rep Lab — Wall Ball Depth Analysis</title>
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Rep Lab">
+<meta name="theme-color" content="#000000">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+  :root{ --bg:#000; --surface:#0e0e0e; --surface2:#161616; --line:#262626; --txt:#fff; --dim:#9a9a9a; --dim2:#6a6a6a; --hyrox:#FFE000; --ink:#141000; --ok:#2ec27e; --grey:#8a8a8a; --bad:#ff5a5a; }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{background:radial-gradient(1000px 500px at 85% -10%,#1c1905 0%,transparent 55%),var(--bg);color:var(--txt);font-family:'Inter',system-ui,sans-serif;overflow:hidden;}
+  .app{position:fixed;inset:0;margin:0 auto;max-width:520px;display:flex;flex-direction:column;overflow:hidden;}
+  .brandbar{display:flex;align-items:center;justify-content:space-between;padding:calc(14px + env(safe-area-inset-top,0px)) 18px 12px;flex:none;border-bottom:1px solid var(--line);}
+  .logo{font-family:'Oswald';font-weight:700;font-size:16px;letter-spacing:3px;line-height:.95;}
+  .logo b{color:var(--hyrox);} .logo small{display:block;font-size:8px;letter-spacing:4px;color:var(--dim);font-weight:500;margin-top:3px;}
+  .badge{font-family:'Oswald';font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:5px 10px;border-radius:99px;background:#1c7d3a;color:#fff;}
+  .scr{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  .scr::-webkit-scrollbar{display:none;}
+  .pad{padding:20px 20px calc(28px + env(safe-area-inset-bottom,0px));}
+  h1{font-family:'Oswald';font-weight:700;font-size:30px;line-height:1.02;letter-spacing:.4px;text-transform:uppercase;margin-bottom:8px;}
+  h1 .y{color:var(--hyrox);}
+  .sub{color:var(--dim);font-size:14px;line-height:1.55;margin-bottom:22px;}
+  .card{background:linear-gradient(155deg,#1a1a1a 0%,#0e0e0e 60%,#080808 100%);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:14px;}
+  .card .h{font-family:'Oswald';font-size:12px;letter-spacing:2px;color:var(--hyrox);font-weight:700;text-transform:uppercase;margin-bottom:12px;}
+  .step{display:flex;gap:13px;align-items:flex-start;margin-bottom:13px;}
+  .step .n{font-family:'Oswald';font-size:15px;font-weight:700;color:var(--ink);background:var(--hyrox);min-width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;}
+  .step .t{font-size:13.5px;color:#ddd;line-height:1.5;}
+  .step .t b{color:#fff;}
+  .btn{width:100%;background:var(--hyrox);color:var(--ink)!important;border:none;border-radius:99px;padding:17px;font-family:'Oswald';font-weight:700;font-size:16px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;}
+  .btn:active{transform:scale(.985);}
+  .btn.sec{background:var(--surface2);color:#fff!important;border:1px solid var(--line);}
+  .btn:disabled{opacity:.5;}
+  .note{font-size:11.5px;color:var(--dim2);line-height:1.5;text-align:center;margin-top:14px;}
+
+  /* live */
+  #live{display:none;position:absolute;inset:0;background:#000;flex-direction:column;}
+  #live.on{display:flex;}
+  .stage{position:relative;flex:1;overflow:hidden;background:#000;}
+  #video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);}
+  #video.rear{transform:none;}
+  #overlay{position:absolute;inset:0;width:100%;height:100%;}
+  .hud{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:calc(14px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px));}
+  .hud .top{display:flex;justify-content:space-between;align-items:flex-start;}
+  .repbox{background:rgba(0,0,0,.55);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:10px 18px;text-align:center;}
+  .repbox b{font-family:'Oswald';font-size:52px;font-weight:700;line-height:.9;color:#fff;display:block;}
+  .repbox small{font-size:10px;letter-spacing:2px;color:var(--hyrox);text-transform:uppercase;font-weight:700;}
+  .mini{display:flex;gap:8px;}
+  .mchip{background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:8px 12px;text-align:center;}
+  .mchip b{font-family:'Oswald';font-size:18px;color:var(--hyrox);display:block;line-height:1;}
+  .mchip small{font-size:8px;letter-spacing:1px;color:var(--dim);text-transform:uppercase;}
+  .status{align-self:center;font-family:'Oswald';font-size:20px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:10px 24px;border-radius:99px;background:rgba(0,0,0,.6);border:1.5px solid var(--line);color:var(--dim);transition:all .1s;}
+  .status.go{color:var(--hyrox);border-color:var(--hyrox);}
+  .status.valid{color:#fff;background:var(--ok);border-color:var(--ok);}
+  .status.grey{color:#fff;background:var(--grey);border-color:var(--grey);}
+  .controls{display:flex;gap:10px;pointer-events:auto;}
+  .controls .btn{flex:1;padding:15px;}
+  .gauge{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:14px;height:40%;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.15);border-radius:99px;overflow:hidden;pointer-events:none;}
+  .gauge i{position:absolute;left:0;right:0;bottom:0;background:var(--hyrox);border-radius:99px;transition:height .05s;}
+  .gauge .line{position:absolute;left:-6px;right:-6px;height:2px;background:var(--ok);}
+
+  /* result */
+  #result{display:none;}
+  #result.on{display:block;}
+  .rcard{position:relative;border-radius:20px;overflow:hidden;border:1px solid var(--line);background:radial-gradient(600px 300px at 80% -10%,#26220a 0%,transparent 55%),linear-gradient(160deg,#141414 0%,#0a0a0a 100%);padding:22px 20px;}
+  .rcard .rb{display:flex;align-items:center;justify-content:space-between;}
+  .rcard .rb .l{font-family:'Oswald';font-weight:700;font-size:14px;letter-spacing:2px;}
+  .rcard .rb .l b{color:var(--hyrox);}
+  .rcard .rb .d{font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;}
+  .bigscore{text-align:center;margin:18px 0 6px;}
+  .bigscore .v{font-family:'Oswald';font-weight:700;font-size:88px;line-height:.9;color:var(--hyrox);}
+  .bigscore .l{font-size:11px;letter-spacing:3px;color:var(--dim);text-transform:uppercase;font-weight:700;margin-top:2px;}
+  .rgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:18px 0 6px;}
+  .rgrid .c{background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:13px;padding:13px 8px;text-align:center;}
+  .rgrid .c b{font-family:'Oswald';font-size:24px;color:#fff;display:block;line-height:1;}
+  .rgrid .c small{font-size:9px;letter-spacing:.5px;color:var(--dim);text-transform:uppercase;margin-top:6px;display:block;}
+  .repbar{display:flex;align-items:flex-end;gap:3px;height:52px;margin:16px 0 4px;padding:8px;background:rgba(0,0,0,.3);border-radius:12px;border:1px solid var(--line);overflow-x:auto;}
+  .repbar i{flex:0 0 7px;background:var(--ok);border-radius:2px;min-height:4px;}
+  .repbar i.grey{background:var(--grey);} .repbar i.bad{background:var(--bad);}
+  .verline{font-size:11px;color:var(--dim);text-align:center;margin-top:10px;}
+  .verline b{color:var(--hyrox);}
+  .actions{margin-top:16px;} .actions .btn{margin-bottom:10px;}
+  .err{color:var(--bad);font-size:13px;text-align:center;margin-top:14px;line-height:1.5;}
+  .loading{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.75);z-index:5;}
+  .loading .box{text-align:center;} .loading .box .s{font-family:'Oswald';color:var(--hyrox);letter-spacing:2px;font-size:14px;}
+  .spin{width:34px;height:34px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--hyrox);border-radius:50%;margin:0 auto 12px;animation:sp 1s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="brandbar">
+    <div class="logo">HITFAT <b>REP LAB</b><small>WALL BALL DEPTH ANALYSIS</small></div>
+    <span class="badge">Free · AI</span>
+  </div>
+
+  <!-- INTRO -->
+  <div class="scr" id="intro">
+    <div class="pad">
+      <h1>Judge your <span class="y">wall ball</span> depth</h1>
+      <div class="sub">AI pose analysis checks every rep against the HYROX standard — <b>hips below the knee</b> (rulebook 8.8.6). Live count, depth score, shareable result.</div>
+      <div class="card">
+        <div class="h">Set up for accuracy</div>
+        <div class="step"><div class="n">1</div><div class="t">Prop your phone at <b>hip height</b>, ~2–3m away, so your <b>full body</b> is in frame.</div></div>
+        <div class="step"><div class="n">2</div><div class="t">A <b>side angle</b> is most accurate for depth. Front-on still counts reps.</div></div>
+        <div class="step"><div class="n">3</div><div class="t">Good lighting. Hold the wall ball as normal and squat to depth each rep.</div></div>
+      </div>
+      <button class="btn" id="startBtn" onclick="start()">▶ Start Camera</button>
+      <div class="note">Runs on your device. Nothing is uploaded. Camera access is required.</div>
+      <div class="err" id="introErr"></div>
+    </div>
+  </div>
+
+  <!-- LIVE -->
+  <div id="live">
+    <div class="stage">
+      <video id="video" playsinline muted></video>
+      <canvas id="overlay"></canvas>
+      <div class="gauge"><span class="line" id="gline"></span><i id="gfill"></i></div>
+      <div class="loading" id="loading"><div class="box"><div class="spin"></div><div class="s">Loading AI model…</div></div></div>
+      <div class="hud">
+        <div class="top">
+          <div class="repbox"><b id="repN">0</b><small>Reps</small></div>
+          <div class="mini">
+            <div class="mchip"><b id="validN">0</b><small>Valid</small></div>
+            <div class="mchip"><b id="greyN">0</b><small>Grey</small></div>
+          </div>
+        </div>
+        <div class="status" id="status">GET READY</div>
+        <div class="controls">
+          <button class="btn sec" onclick="flipCam()">⟲ Flip</button>
+          <button class="btn" onclick="finish()">Finish ✓</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="scr" id="result">
+    <div class="pad">
+      <div class="rcard" id="rcard">
+        <div class="rb"><div class="l">HITFAT <b>REP LAB</b></div><div class="d" id="rdate">—</div></div>
+        <div class="bigscore"><div class="v" id="rscore">0</div><div class="l">Depth Score</div></div>
+        <div class="rgrid">
+          <div class="c"><b id="rvalid">0</b><small>Valid Reps</small></div>
+          <div class="c"><b id="rdepth">0%</b><small>Avg Depth</small></div>
+          <div class="c"><b id="rcons">0%</b><small>Consistency</small></div>
+        </div>
+        <div class="repbar" id="rbar"></div>
+        <div class="verline">Verified to HYROX depth standard — <b>hips below knee</b></div>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="shareResult()">Share Result</button>
+        <button class="btn sec" onclick="restart()">Try Again</button>
+        <button class="btn sec" onclick="location.href='/'">Train Wall Balls at HITFAT →</button>
+      </div>
+      <div class="note" id="shareNote"></div>
+    </div>
+  </div>
+</div>
+
+<!-- On-device pose detection: TensorFlow.js + MoveNet (loaded only on this page) -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@4.20.0/dist/tf-core.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@4.20.0/dist/tf-converter.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@4.20.0/dist/tf-backend-webgl.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
+<script>
+/* ============================================================
+   HITFAT REP LAB — wall ball depth judge
+   Pose (MoveNet) → hip vs knee → rep count + depth score.
+   Tunable constants below for on-device calibration.
+   ============================================================ */
+const $=id=>document.getElementById(id);
+const video=$('video'), overlay=$('overlay'), ctx=overlay.getContext('2d');
+let detector=null, stream=null, running=false, raf=null, facing='user';
+let reps=0, valid=0, grey=0, repDepths=[]; // repDepths: {score, cls}
+let state='up', bottom=-1, seenBottom=false;
+
+// MoveNet keypoint indices (COCO): 5 Lsh 6 Rsh 11 Lhip 12 Rhip 13 Lknee 14 Rknee 15 Lank 16 Rank
+const K={LSH:5,RSH:6,LHIP:11,RHIP:12,LKNEE:13,RKNEE:14,LANK:15,RANK:16};
+const MINSCORE=0.35;            // keypoint confidence
+const VALID_TH=0.0;             // hip-below-knee (normalized) → valid at/below 0
+const GREY_BAND=0.06;           // ± band around threshold = "grey zone"
+
+function pt(kp,i){ return kp[i]; }
+function usableSide(kp){
+  const l=(pt(kp,K.LHIP).score+pt(kp,K.LKNEE).score)/2, r=(pt(kp,K.RHIP).score+pt(kp,K.RKNEE).score)/2;
+  return r>l ? {hip:K.RHIP,knee:K.RKNEE,ank:K.RANK,sh:K.RSH} : {hip:K.LHIP,knee:K.LKNEE,ank:K.LANK,sh:K.LSH};
+}
+
+async function initDetector(){
+  await tf.setBackend('webgl'); await tf.ready();
+  detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet,
+    { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING });
+}
+async function start(){
+  $('introErr').textContent=''; $('startBtn').disabled=true; $('startBtn').textContent='Starting…';
+  $('intro').style.display='none'; $('live').classList.add('on'); $('loading').style.display='grid';
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:facing, width:{ideal:1280}, height:{ideal:720} }, audio:false });
+    video.srcObject=stream; video.classList.toggle('rear', facing==='environment'); await video.play();
+    if(!detector) await initDetector();
+  }catch(e){
+    $('live').classList.remove('on'); $('intro').style.display='block';
+    $('startBtn').disabled=false; $('startBtn').textContent='▶ Start Camera';
+    $('introErr').textContent = (e && /Permission|denied|NotAllowed/i.test(e.name+e.message)) ? 'Camera permission denied. Enable it in Settings → Safari → Camera, then reload.' : 'Could not start (need internet for the AI model, and a supported browser). '+(e.message||'');
+    return;
+  }
+  $('loading').style.display='none';
+  resize(); running=true; reps=0;valid=0;grey=0;repDepths=[];state='up';seenBottom=false;
+  $('repN').textContent='0';$('validN').textContent='0';$('greyN').textContent='0';
+  loop();
+}
+function resize(){ overlay.width=video.videoWidth||overlay.clientWidth; overlay.height=video.videoHeight||overlay.clientHeight; }
+async function loop(){
+  if(!running) return;
+  let poses=[];
+  try{ poses = await detector.estimatePoses(video, {maxPoses:1, flipHorizontal:false}); }catch(e){}
+  ctx.clearRect(0,0,overlay.width,overlay.height);
+  if(poses[0]){ analyze(poses[0].keypoints); }
+  raf=requestAnimationFrame(loop);
+}
+function analyze(kp){
+  const s=usableSide(kp), hip=pt(kp,s.hip), knee=pt(kp,s.knee), sh=pt(kp,s.sh);
+  drawSkeleton(kp,s);
+  if(hip.score<MINSCORE||knee.score<MINSCORE){ setStatus('MOVE INTO FRAME',''); return; }
+  // scale-invariant depth: (hipY - kneeY) / torso(shoulder→hip). >0 = hip below knee.
+  const torso=Math.max(30, Math.abs(hip.y - (sh.score>MINSCORE?sh.y:hip.y-100)) );
+  const depth=(hip.y - knee.y)/torso; // normalized
+  // gauge (map depth -0.4..0.4 → 0..100%)
+  const g=Math.max(0,Math.min(100, (depth+0.4)/0.8*100)); $('gfill').style.height=g+'%';
+  // knee line marker on gauge (threshold)
+  $('gline').style.bottom=((VALID_TH+0.4)/0.8*100)+'%';
+  // state machine
+  if(state==='up'){
+    if(depth > VALID_TH+0.02){ state='down'; bottom=depth; seenBottom=true; }
+    setStatus(depth>-0.1?'GO LOWER':'READY', depth>-0.1?'go':'');
+  } else { // down
+    bottom=Math.max(bottom,depth);
+    setStatus('GO LOWER','go');
+    if(depth < VALID_TH-0.03){ // returned to top → rep complete
+      state='up';
+      const cls = bottom>=VALID_TH+GREY_BAND ? 'valid' : (bottom>=VALID_TH-GREY_BAND ? 'grey':'bad');
+      const score = Math.max(0,Math.min(100, Math.round(50 + bottom*120)));
+      reps++; if(cls==='valid'){valid++;} else if(cls==='grey'){grey++;}
+      repDepths.push({score, cls});
+      $('repN').textContent=reps; $('validN').textContent=valid; $('greyN').textContent=grey;
+      flash(cls);
+    }
+  }
+}
+let flashT=null;
+function flash(cls){ const el=$('status'); el.className='status '+(cls==='valid'?'valid':cls==='grey'?'grey':''); el.textContent=cls==='valid'?'VALID ✓':cls==='grey'?'GREY ZONE':'TOO HIGH'; clearTimeout(flashT); flashT=setTimeout(()=>{el.className='status';el.textContent='READY';},700); beep(cls); }
+function setStatus(t,c){ const el=$('status'); if(el.className.indexOf('valid')>-1||el.className.indexOf('grey')>-1) return; el.className='status '+(c||''); el.textContent=t; }
+function drawSkeleton(kp,s){
+  const pairs=[[s.sh,s.hip],[s.hip,s.knee],[s.knee,s.ank]];
+  ctx.lineWidth=Math.max(3,overlay.width/220); ctx.strokeStyle='rgba(255,224,0,.9)'; ctx.lineCap='round';
+  pairs.forEach(p=>{ const a=kp[p[0]],b=kp[p[1]]; if(a.score>MINSCORE&&b.score>MINSCORE){ ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke(); }});
+  // hip + knee dots + a horizontal "knee line"
+  const knee=kp[s.knee], hip=kp[s.hip];
+  if(knee.score>MINSCORE){ ctx.strokeStyle='rgba(46,194,126,.55)'; ctx.lineWidth=2; ctx.setLineDash([8,8]); ctx.beginPath();ctx.moveTo(0,knee.y);ctx.lineTo(overlay.width,knee.y);ctx.stroke(); ctx.setLineDash([]); }
+  [[hip,'#fff'],[knee,'#2ec27e']].forEach(d=>{ if(d[0].score>MINSCORE){ ctx.fillStyle=d[1]; ctx.beginPath();ctx.arc(d[0].x,d[0].y,Math.max(5,overlay.width/130),0,7); ctx.fill(); }});
+}
+let ac=null;
+function beep(cls){ try{ if(!ac)ac=new (window.AudioContext||window.webkitAudioContext)(); const o=ac.createOscillator(),g=ac.createGain(); o.connect(g);g.connect(ac.destination); o.frequency.value=cls==='valid'?880:cls==='grey'?520:300; o.type='sine'; g.gain.setValueAtTime(.001,ac.currentTime); g.gain.exponentialRampToValueAtTime(.3,ac.currentTime+.01); g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.18); o.start();o.stop(ac.currentTime+.2);}catch(e){} }
+function flipCam(){ facing = facing==='user'?'environment':'user'; stop(); start(); }
+function stop(){ running=false; if(raf)cancelAnimationFrame(raf); if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;} }
+
+function finish(){
+  stop(); $('intro').style.display='none'; $('live').classList.remove('on'); $('result').classList.add('on');
+  const total=reps||1;
+  const avgDepth = repDepths.length? Math.round(repDepths.reduce((a,b)=>a+b.score,0)/repDepths.length):0;
+  // consistency = 100 - normalized stdev
+  const mean = avgDepth; const varc = repDepths.length? repDepths.reduce((a,b)=>a+Math.pow(b.score-mean,2),0)/repDepths.length:0;
+  const cons = Math.max(0, Math.round(100 - Math.sqrt(varc)*1.6));
+  const validRatio = reps? valid/reps : 0;
+  const depthScore = Math.round(Math.max(0,Math.min(100, avgDepth*0.65 + cons*0.15 + validRatio*100*0.20)));
+  $('rscore').textContent=depthScore; $('rvalid').textContent=valid;
+  $('rdepth').textContent=avgDepth+'%'; $('rcons').textContent=cons+'%';
+  const d=new Date(); $('rdate').textContent=(d.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+' '+d.getFullYear());
+  $('rbar').innerHTML = repDepths.length? repDepths.map(r=>`<i class="${r.cls==='valid'?'':r.cls==='grey'?'grey':'bad'}" style="height:${Math.max(8,r.score)}%"></i>`).join('') : '<i style="height:8%"></i>';
+  window._result={depthScore,valid,reps,avgDepth,cons,grey};
+}
+function restart(){ $('result').classList.remove('on'); $('intro').style.display='block'; $('startBtn').disabled=false; $('startBtn').textContent='▶ Start Camera'; }
+
+/* ---- Shareable image (branded canvas) → Web Share / download ---- */
+function buildShareImage(){
+  const r=window._result||{}; const c=document.createElement('canvas'); c.width=1080; c.height=1350; const x=c.getContext('2d');
+  x.fillStyle='#000'; x.fillRect(0,0,1080,1350);
+  const g=x.createRadialGradient(860,120,50,860,120,700); g.addColorStop(0,'rgba(255,224,0,.18)'); g.addColorStop(1,'transparent'); x.fillStyle=g; x.fillRect(0,0,1080,1350);
+  x.fillStyle='#FFE000'; x.fillRect(0,0,10,1350);
+  x.textAlign='left'; x.fillStyle='#fff'; x.font='700 40px Oswald, sans-serif'; x.fillText('HITFAT', 70, 130);
+  x.fillStyle='#FFE000'; x.fillText('REP LAB', 285, 130);
+  x.fillStyle='#9a9a9a'; x.font='600 22px Inter, sans-serif'; x.fillText('WALL BALL DEPTH ANALYSIS', 72, 168);
+  // big score
+  x.textAlign='center'; x.fillStyle='#FFE000'; x.font='700 380px Oswald, sans-serif'; x.fillText(String(r.depthScore||0), 540, 660);
+  x.fillStyle='#9a9a9a'; x.font='700 30px Inter, sans-serif'; x.fillText('DEPTH SCORE', 540, 720);
+  // stats row
+  const stats=[[r.valid||0,'VALID REPS'],[(r.avgDepth||0)+'%','AVG DEPTH'],[(r.cons||0)+'%','CONSISTENCY']];
+  stats.forEach((s,i)=>{ const cx=200+i*340; x.fillStyle='#141414'; roundRect(x,cx-140,840,280,180,20); x.fill(); x.strokeStyle='#262626';x.stroke();
+    x.fillStyle='#fff'; x.font='700 64px Oswald, sans-serif'; x.fillText(String(s[0]),cx,930);
+    x.fillStyle='#9a9a9a'; x.font='700 20px Inter, sans-serif'; x.fillText(s[1],cx,975); });
+  x.fillStyle='#6a6a6a'; x.font='600 24px Inter, sans-serif'; x.fillText('Verified to HYROX standard · hips below knee', 540, 1120);
+  x.fillStyle='#fff'; x.font='700 30px Oswald, sans-serif'; x.fillText('TRAIN · BUILD · RACE', 540, 1200);
+  x.fillStyle='#FFE000'; x.font='700 26px Inter, sans-serif'; x.fillText('hybrid.hitfat.io', 540, 1250);
+  return c;
+}
+function roundRect(x,rx,ry,w,h,r){ x.beginPath();x.moveTo(rx+r,ry);x.arcTo(rx+w,ry,rx+w,ry+h,r);x.arcTo(rx+w,ry+h,rx,ry+h,r);x.arcTo(rx,ry+h,rx,ry,r);x.arcTo(rx,ry,rx+w,ry,r);x.closePath(); }
+async function shareResult(){
+  $('shareNote').textContent='';
+  const canvas=buildShareImage();
+  canvas.toBlob(async (blob)=>{
+    const file=new File([blob],'hitfat-rep-lab.png',{type:'image/png'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file], title:'HITFAT Rep Lab', text:'My wall ball Depth Score on HITFAT Rep Lab 💪 hybrid.hitfat.io'}); return; }catch(e){}
+    }
+    // fallback: download
+    const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='hitfat-rep-lab.png'; a.click(); URL.revokeObjectURL(url);
+    $('shareNote').textContent='Image saved — share it to your story or feed 📲';
+  },'image/png');
+}
+window.addEventListener('resize',()=>{ if(running) resize(); });
+</script>
+</body>
+</html>

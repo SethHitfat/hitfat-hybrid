@@ -18,3 +18,14 @@
   for = "/manifest.json"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/lab.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# clean shareable URL for the Rep Lab tool
+[[redirects]]
+  from = "/lab"
+  to = "/lab.html"
+  status = 200
