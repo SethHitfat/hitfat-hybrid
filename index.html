@@ -611,6 +611,7 @@
       <div id="home" class="pad" style="display:none;">
         <div id="home-greet"></div>
         <div id="home-today"></div>
+        <div id="home-wod"></div>
         <div id="home-progress"></div>
         <div id="home-countdown"></div>
         <div id="home-continue"></div>
@@ -2306,6 +2307,16 @@ function renderHome(){
       <div class="tm">Take a mobility or easy-walk day, hydrate and let the work settle.</div>
       <div class="trow"><button class="go" onclick="openQuickWorkout(0)">▶ 10-Min Mobility</button></div></div>`;
   }
+  // 2b) WORKOUT OF THE DAY (free daily rotation — traffic/return hook)
+  (function(){ const i=wodIndex(), q=QUICK_WORKOUTS[i];
+    $('home-wod').innerHTML=`<div class="sechead">Workout of the Day <span style="font-size:11px;color:#2ec27e;font-weight:800;letter-spacing:1px;">FREE</span></div>
+      <div class="today">
+        <div class="tk">Free daily session · new one every day</div>
+        <div class="tt">${q.title}</div>
+        <div class="tm">${q.tag} · ${totalMins(q)} min · RPE ${q.rpe}</div>
+        <div class="trow"><button class="go" onclick="openWOD()">▶ Start Free Workout</button></div>
+      </div>`;
+  })();
   // 3) MY PROGRESS (stats + week streak strip)
   const wk=weekStats(); const done=homeDoneDaysThisWeek();
   const now=new Date(), off=(now.getDay()+6)%7, mon=new Date(now); mon.setDate(now.getDate()-off);
@@ -2359,11 +2370,12 @@ function renderHome(){
   // 7) QUICK WORKOUTS
   $('home-quick').innerHTML=`<div class="sechead">Quick Workouts <span style="font-size:11px;color:#2ec27e;font-weight:800;letter-spacing:1px;">FREE</span></div>
     <div class="hscroll">${QUICK_WORKOUTS.map((_,i)=>quickCard(i)).join('')}</div>`;
-  // 8) NEW THIS WEEK (Rep Lab hook)
+  // 8) NEW THIS WEEK (weekly-rotating free spotlight)
+  const sp=spotlightThisWeek();
   $('home-new').innerHTML=`<div class="sechead">New This Week</div>
-    <div class="pcard full" onclick="location.href='lab.html'" style="cursor:pointer;">
-      <div class="top" style="height:110px;background:radial-gradient(420px 200px at 82% -10%,rgba(255,224,0,.22),transparent 60%),linear-gradient(155deg,#1d1d1d 0%,#0a0a0a 100%);"><div class="edge"></div><span class="badge free">AI · FREE</span></div>
-      <div class="info"><div class="t">HITFAT Rep Lab</div><div class="m">AI wall ball depth judge · live count · shareable Depth Score</div></div></div>`;
+    <div class="pcard full" onclick="${sp.go}" style="cursor:pointer;">
+      <div class="top" style="height:110px;background:radial-gradient(420px 200px at 82% -10%,rgba(255,224,0,.22),transparent 60%),linear-gradient(155deg,#1d1d1d 0%,#0a0a0a 100%);"><div class="edge"></div><span class="badge free">${sp.badge}</span></div>
+      <div class="info"><div class="t">${sp.t}</div><div class="m">${sp.m}</div></div></div>`;
 }
 
 /* ---- Road to HYROX KL · event hub ----
@@ -3096,6 +3108,7 @@ function startApp(){
     switchTab('home');
     if(!HF.data.onboarded) startOnboarding();
     _appStarted=true;
+    handlePaidRedirect();            // auto-unlock if the buyer just returned from BCL payment
   }catch(e){ console.error(e); }
 }
 async function onSignedIn(session){
@@ -3125,6 +3138,23 @@ const QUICK_WORKOUTS=[
     WARMS[2](),{phase:'Intervals',mins:18,format:'6 × 300m @ race pace',rounds:6,note:'Hold pace, short recovery.',moves:[mv('Run 300m @ race pace','run',75),rest(45)]}]),
   QW('Lower Body Strength','Strength',7,['Dumbbell (optional)'],'Legs & posterior-chain strength for hybrid power.',[
     WARMS[1](),{phase:'Strength',mins:16,format:'4 Rounds',rounds:4,note:'Control the tempo, full range.',moves:[mv('Bulgarian Split Squat','bulgarian',null,10),mv('Glute Bridge','glute',null,15),mv('Reverse Lunge','revlunge',null,12),mv('Wall Sit','wallsit',40),rest(45)]}]),
+  // ---- added 2026-08-10: more free volume + Workout-of-the-Day rotation pool ----
+  QW('HYROX Sim Sprint','Hybrid',8,['Machine or Run'],'Run + functional stations — a taste of HYROX pacing, minimal kit.',[
+    WARMS[2](),{phase:'Main Workout',mins:20,format:'4 Rounds',rounds:4,note:'Steady & unbroken — jog the runs, hold form on the squats.',moves:[mv('Run / Ski / Row 200m','run',60),mv('Air Squat','squatpulse',null,20),mv('Burpee','burpee',null,10),mv('Walking Lunge','wlunge',null,20),rest(45)]},COOLS[0]()]),
+  QW('Engine Builder 24','Engine',8,['Machine or Run'],'Long steady aerobic piece to grow your base — any machine or run.',[
+    WARMS[2](),{phase:'Engine',mins:24,format:'3 × 6:00 / 2:00',rounds:3,note:'Repeatable RPE 7 — same pace on the last rep as the first.',moves:[mv('Run / Row / Ski @ RPE 7','run',360),rest(120)]},COOLS[0]()]),
+  QW('Tabata Core','Core',7,['Bodyweight'],'8 rounds of 20s on / 10s off — abs lit in under 10 minutes.',[
+    WARMS[1](),{phase:'Core Tabata',mins:8,format:'20s on / 10s off × 8',note:'Max quality reps each 20s, alternate the two moves.',moves:[mv('Hollow Hold','hollow',20),rest(10),mv('Mountain Climber','mtnclimb',20),rest(10)]},COOLS[1]()]),
+  QW('Leg Burner EMOM','Strength',7,['Bodyweight'],'16-minute EMOM stacking squats, lunges and bridges.',[
+    WARMS[1](),{phase:'EMOM · 16 min',mins:16,format:'Every minute, rotate move',note:'One move per minute, rest whatever time is left.',moves:[mv('Air Squat','squatpulse',null,20),mv('Reverse Lunge','revlunge',null,16),mv('Squat Jump','squatjump',null,15),mv('Glute Bridge','glute',null,20)]},COOLS[1]()]),
+  QW('Push Pull Core','Full Body',7,['Bodyweight'],'Upper-body push/pull with core — nothing but the floor.',[
+    WARMS[0](),{phase:'Main Workout',mins:15,format:'5 Rounds',rounds:5,note:'Smooth and controlled, full range.',moves:[mv('Push Up','pushup',null,12),mv('Plank','plank',40),mv('Sit Up','situp',null,15),mv('Side Plank','sideplank',30),rest(30)]},COOLS[1]()]),
+  QW('Wall Ball Legs','Strength',7,['Wall Ball (optional)'],'Squat-endurance builder — sub air squats if you have no ball.',[
+    WARMS[1](),{phase:'Main Workout',mins:16,format:'30-20-10 · run between',note:'Big squat set, smaller lunge set, 200m run each round.',moves:[mv('Wall Ball / Air Squat','squatpulse',null,30),mv('Walking Lunge','wlunge',null,20),mv('Run 200m','run',60)]},COOLS[0]()]),
+  QW('AMRAP 15 Grinder','Conditioning',8,['Bodyweight'],'One 15-minute AMRAP — pace it so round 8 looks like round 1.',[
+    WARMS[0](),{phase:'AMRAP · 15 min',mins:15,format:'As many rounds as possible',note:'Smooth, unbroken sets — count your rounds and beat them next time.',moves:[mv('Burpee','burpee',null,8),mv('Air Squat','squatpulse',null,12),mv('Push Up','pushup',null,10),mv('Mountain Climber','mtnclimb',30)]},COOLS[0]()]),
+  QW('Reset & Recover','Recovery',3,['Bodyweight'],'Easy full-body flow to loosen up, breathe and recover.',[
+    {phase:'Mobility Flow',mins:12,format:'Easy · hold each ~40s',note:'No rush — long exhales, move only as far as feels good.',moves:[mv('Bird Dog','birddog',40),mv('Dead Bug','deadbug',40),mv('Glute Bridge','glute',40),mv('Walking Lunge','wlunge',40),mv('Side Plank','sideplank',30),mv('Plank','plank',40),mv('Hollow Hold','hollow',30)]}]),
 ];
 function scalingBoxHTML(rpe,mins){ return `<div class="scalebox">
     <div class="sh">Intended Stimulus</div><div class="si">Target effort <b>RPE ${rpe}/10</b> · ~${mins} min. Move well first, then add pace.</div>
@@ -3152,6 +3182,20 @@ function openWorkoutObject(w,label,key,backTab){
   $('screen').scrollTop=0;
 }
 function openQuickWorkout(i){ const q=QUICK_WORKOUTS[i]; if(q) openWorkoutObject(q,'Quick Workout · '+q.tag,'quick-'+i,'explore'); }
+
+/* ---- Free daily/weekly rotation (traffic hook) — deterministic by date, no storage ----
+   dayOfYear() is the same for every user on a given date, so the WOD is shared and
+   changes at local midnight. WEEK-based spotlight rotates the "New This Week" card. */
+function dayOfYear(){ const d=new Date(); return Math.floor((d-new Date(d.getFullYear(),0,0))/86400000); }
+function wodIndex(){ return dayOfYear() % QUICK_WORKOUTS.length; }
+function openWOD(){ openQuickWorkout(wodIndex()); }
+const SPOTLIGHTS=[
+  {badge:'AI · FREE', t:'HITFAT Rep Lab', m:'AI wall-ball depth judge · live count · shareable Depth Score', go:"location.href='lab.html'"},
+  {badge:'FREE', t:'Target: Wall Balls', m:'3 focused sessions to keep wall balls unbroken', go:"switchTab('target')"},
+  {badge:'FREE', t:'13-Week Foundation', m:'Free phase-based plan — base, pace, power, taper', go:"openProgramDetail('foundation-13')"},
+  {badge:'FREE', t:'Target: Sled Push', m:'Build leg drive & the legs to run straight off the sled', go:"switchTab('target')"},
+];
+function spotlightThisWeek(){ return SPOTLIGHTS[Math.floor(dayOfYear()/7) % SPOTLIGHTS.length]; }
 
 /* ---- cards ---- */
 function badgeCls(st){ return st==='OWNED'?'owned':st==='FREE'?'free':st==='SOON'?'soon':st==='COMPLETED'?'done':'paid'; }
@@ -3316,9 +3360,16 @@ function renderFirstTimer(){
 function toggleFT(key,c,w){ if(HF.isDone(key)) HF.undone(key); else HF.markDone(key,{name:CATEGORIES[c].workouts[w].title}); renderFirstTimer(); }
 function openFTSession(c,w,key){ window.fromFT=true; window.fromPlan=false; window.fromHome=false; window.fromKL=false; window.pendingKey=key; openDetail(c,w); }
 
-/* ---- Join / payment (BCL.my — Cara A manual, links added later) ---- */
-// TODO(payment): paste each program's BCL.my payment link here → auto "Pay" button works.
-const BCL_LINKS = { /* 'race-12':'https://bcl.my/xxxx', 'road-kl':'https://bcl.my/yyyy' */ };
+/* ---- Join / payment (BCL.my — Cara A manual payment links) ---- */
+// Each link is a BCL.my payment form on hitfat.bcl.my. After payment, buyer is
+// redirected back to the app; owner confirms in BCL.my then runs grantProgram('<id>').
+// To add a program: create its BCL.my form, then map its id → form URL here.
+const BCL_LINKS = {
+  'first-timer': 'https://hitfat.bcl.my/form/hyrox-first-timer',   // RM19
+  'race-8':      'https://hitfat.bcl.my/form/race-prep-8week',     // RM99
+  'race-12':     'https://hitfat.bcl.my/form/race-ready-12week',   // RM149
+  'road-kl':     'https://hitfat.bcl.my/form/road-to-hyrox-kl',    // RM199
+};
 function joinProgram(id){ const p=CATALOG[id]; if(!p) return;
   $('modal-sheet').innerHTML=`<h3>Join ${p.title}</h3>
     <p class="msub">One-time ${fmtPrice(p.price)} — unlocks inside your HITFAT HYBRID account, forever.</p>
@@ -3327,11 +3378,34 @@ function joinProgram(id){ const p=CATALOG[id]; if(!p) return;
   $('modal').classList.add('on');
 }
 function payProgram(id){ const url=BCL_LINKS[id]; closeModal();
-  if(url){ window.open(url,'_blank'); nfToast('Complete payment — your program unlocks after confirmation.'); }
+  if(url){ nfToast('Opening secure payment…'); location.href=url; }   // same-window → BCL redirects back to ?paid=<id>
   else { nfToast('Payment link coming soon for this program.'); }
 }
 
+/* ---- Auto-unlock after BCL payment (Cara A) ----
+   BCL success_url = https://hybrid.hitfat.io/?paid=<programId>. On return, the buyer
+   is in their own logged-in session, so we grant the program to THEM and cloud-sync.
+   capturePaidParam() runs early (survives auth/OAuth redirect via localStorage);
+   handlePaidRedirect() applies it once user data is loaded. */
+function capturePaidParam(){
+  try{ const pid=new URLSearchParams(location.search).get('paid');
+    if(pid){ localStorage.setItem('hf_pending_paid', pid);
+      history.replaceState(null,'', location.pathname + location.hash); } // clean URL so refresh won't re-trigger
+  }catch(e){}
+}
+function handlePaidRedirect(){
+  try{ const pid=localStorage.getItem('hf_pending_paid'); if(!pid) return;
+    localStorage.removeItem('hf_pending_paid');
+    const p=CATALOG[pid]; if(!p || p.access==='free') return;
+    if(ownsProgram(pid)){ nfToast(p.title+' — already unlocked ✓'); return; }
+    grantProgram(pid);                                   // sets HF.data.owned + purchases, cloud-synced via HF.save()
+    nfToast('Payment received — '+p.title+' unlocked! 🎉');
+    if(typeof openProgramDetail==='function') openProgramDetail(pid);
+  }catch(e){ console.error(e); }
+}
+
 function boot(){
+  capturePaidParam();              // stash ?paid=<id> before auth/OAuth redirect can strip it
   if(!document.getElementById('catlist')){ return setTimeout(boot,60); }
   if(!SUPA_READY){
     // Not configured (or opened as a local file / offline) → run in local mode
