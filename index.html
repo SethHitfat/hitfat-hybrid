@@ -1134,9 +1134,13 @@ const CATALOG = {
   'hybrid-starter': { id:'hybrid-starter', title:'Hybrid Starter Plan', coach:'seth', owner:'HITFAT', revShare:0, weeks:9,  days:4, level:'Beginner–Intermediate',
      goal:'Build strength, endurance & hybrid fitness', tag:'Hybrid', access:'free', price:0, plan:'HYBRID_PLAN', img:IMG.engine,
      summary:'Your free foundation — build a hybrid engine toward the HITFAT Hybrid Simulation. No race ticket needed.' },
+  'foundation-starter': { id:'foundation-starter', title:'Foundation Starter', coach:'seth', owner:'HITFAT', revShare:0, weeks:4, days:3, level:'All levels',
+     goal:'Base phase — build your foundation', tag:'Hybrid', access:'free', price:0, plan:'TRAINING_PLAN', img:IMG.found,
+     summary:'A free 4-week Base phase taster from the HITFAT 13-Week Foundation — build aerobic base, technique & consistency. Unlock the full 13 weeks anytime.' },
+  // ---- PAID full 13-week (Base taster is free above; Pace/Accelerate/Prime unlock here) ----
   'foundation-13': { id:'foundation-13', title:'13-Week Foundation', coach:'seth', owner:'HITFAT', revShare:0, weeks:13, days:3, level:'All levels',
-     goal:'Base, pace, power, taper', tag:'Hybrid', access:'free', price:0, plan:'TRAINING_PLAN', img:IMG.found,
-     summary:'A free phase-based progression: build base, raise pace, sharpen power, then taper.' },
+     goal:'Base, pace, power, taper', tag:'Hybrid', access:'paid', price:79, plan:'TRAINING_PLAN', img:IMG.found,
+     summary:'The full 13-week structured build: Base → Pace → Accelerate → Prime. Progressive phases that develop a complete hybrid engine — everything after the free Base taster.' },
   // ---- RM19 ENTRY (real data) ----
   'first-timer': { id:'first-timer', title:'HYROX First Timer', coach:'seth', owner:'HITFAT', revShare:0, weeks:4, days:4, level:'Beginner',
      goal:'Prepare for your first HYROX', tag:'Race Prep', access:'paid', price:19, plan:'FIRST_TIMER', img:IMG.power,
@@ -1158,7 +1162,7 @@ const CATALOG = {
   'run-better':     { id:'run-better',     title:'Run Better for HYROX', coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:4, level:'Intermediate', goal:'Improve compromised running',     tag:'Running',  access:'soon', price:59, plan:null, img:IMG.found,   summary:'Improve your compromised running through structured progression.' },
   'station-builder':{ id:'station-builder',title:'Station Builder',   coach:'seth', owner:'HITFAT', revShare:0, weeks:4, days:3, level:'Intermediate', goal:'Bring up weak HYROX stations',       tag:'Strength', access:'soon', price:59, plan:null, img:IMG.complete,summary:'Focused progression to bring up your weakest HYROX stations.' },
 };
-const CATALOG_ORDER = ['first-timer','race-12','road-kl','race-8','hybrid-starter','foundation-13','hybrid-beginner','build-engine','hybrid-strength','run-better','station-builder'];
+const CATALOG_ORDER = ['first-timer','race-12','road-kl','race-8','hybrid-starter','foundation-starter','foundation-13','hybrid-beginner','build-engine','hybrid-strength','run-better','station-builder'];
 function coachPrograms(coachId){ return CATALOG_ORDER.filter(function(id){ return CATALOG[id].coach===coachId; }); }
 function fmtPrice(p){ return (p&&p>0) ? ('RM'+p) : 'Free'; }
 
@@ -1955,8 +1959,18 @@ function tpCard(ref,type){
   </div>`;
 }
 function renderPlans(){
-  $('phaselist').innerHTML=TRAINING_PLAN.phases.map((p,pi)=>`
-    <div class="phase ${pi===0?'open':''}" id="phase-${pi}">
+  const full = ownsProgram('foundation-13');   // paid unlock; free users get Base phase only
+  const banner = full ? '' : `<div class="infonote" style="margin:0 2px 12px;">Free taster — <b>Base Phase (Weeks 1–4)</b>. Unlock the full 13-week build — Pace · Accelerate · Prime — with <b style="color:var(--acc);cursor:pointer;" onclick="openProgramDetail('foundation-13')">13-Week Foundation ▸</b></div>`;
+  $('phaselist').innerHTML = banner + TRAINING_PLAN.phases.map((p,pi)=>{
+    if(!full && pi>0){   // locked phase → route to the paid program
+      return `<div class="phase locked" id="phase-${pi}">
+        <div class="phase-head" onclick="openProgramDetail('foundation-13')">
+          <div><div class="ttl">${pi+1}. ${p.name}</div><div class="phase-desc" style="margin:2px 0 0;opacity:.65;">Weeks ${p.weeks} · unlock with 13-Week Foundation</div></div>
+          <div class="ic">🔒</div>
+        </div>
+      </div>`;
+    }
+    return `<div class="phase ${pi===0?'open':''}" id="phase-${pi}">
       <div class="phase-head" onclick="togglePhase(${pi})">
         <div><div class="ttl">${pi+1}. ${p.name}</div></div>
         <div class="ic">+</div>
@@ -1973,8 +1987,8 @@ function renderPlans(){
           </div>
         `).join('')}
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 function togglePhase(pi){ $('phase-'+pi).classList.toggle('open'); }
 
@@ -3201,7 +3215,7 @@ function openWOD(){ openQuickWorkout(wodIndex()); }
 const SPOTLIGHTS=[
   {badge:'AI · FREE', t:'HITFAT Rep Lab', m:'AI wall-ball depth judge · live count · shareable Depth Score', go:"location.href='lab.html'"},
   {badge:'FREE', t:'Target: Wall Balls', m:'3 focused sessions to keep wall balls unbroken', go:"switchTab('target')"},
-  {badge:'FREE', t:'13-Week Foundation', m:'Free phase-based plan — base, pace, power, taper', go:"openProgramDetail('foundation-13')"},
+  {badge:'FREE', t:'Foundation Starter', m:'Free 4-week Base phase — unlock the full 13 weeks anytime', go:"openProgramDetail('foundation-starter')"},
   {badge:'FREE', t:'Target: Sled Push', m:'Build leg drive & the legs to run straight off the sled', go:"switchTab('target')"},
 ];
 function spotlightThisWeek(){ return SPOTLIGHTS[Math.floor(dayOfYear()/7) % SPOTLIGHTS.length]; }
@@ -3287,7 +3301,7 @@ function renderExplore(){
       <div class="info"><div class="t">HITFAT Rep Lab</div><div class="m">AI wall ball depth judge · live rep count · shareable Depth Score</div></div></div></div>`;
     h+=sec('Quick Workouts — FREE', hs(QUICK_WORKOUTS.map((_,i)=>quickCard(i)).join('')), "setFilter('quick')");
     h+=sec('Popular Programs', hs(['first-timer','race-12','road-kl','race-8'].map(id=>programCard(id)).join('')), "setFilter('programs')");
-    h+=sec('Free Programs', ['hybrid-starter','foundation-13'].map(id=>programCard(id,true)).join(''));
+    h+=sec('Free Programs', ['hybrid-starter','foundation-starter'].map(id=>programCard(id,true)).join(''));
     h+=sec('Race Preparation', hs(CATALOG_ORDER.filter(id=>CATALOG[id].tag==='Race Prep').map(id=>programCard(id)).join('')), "setFilter('race')");
     h+=sec('HITFAT Programs', hs(coachPrograms('seth').map(id=>programCard(id)).join('')), "setFilter('programs')");
     h+=`<div class="exsec"><div class="eh"><h3>More Training</h3></div>
@@ -3359,6 +3373,7 @@ function programPhases(id){
   else if(id==='first-timer') ph=[['1','Hybrid Basics','Week 1'],['2','Engine + Strength','Week 2'],['3','Stations','Week 3'],['4','Mini Simulation','Week 4']];
   else if(id==='hybrid-starter') ph=[['1','Base','Weeks 1–3'],['2','Build','Weeks 4–6'],['3','Hybrid','Weeks 7–8'],['4','Simulation','Week 9']];
   else if(id==='foundation-13') ph=[['1','Base','Foundation'],['2','Pace','Threshold'],['3','Power','Accelerate'],['4','Prime','Taper']];
+  else if(id==='foundation-starter') ph=[['1','Base','Weeks 1–4 · free taster']];
   else ph=null;
   if(!ph) return '';
   return `<div class="sechead" style="margin:20px 0 12px;">Program Phases</div><div class="phaselist2">${ph.map(x=>`<div class="ph2"><div class="n">${x[0]}</div><div class="i"><div class="t">${x[1]}</div><div class="m">${x[2]}</div></div></div>`).join('')}</div>`;
@@ -3388,7 +3403,7 @@ function openProgramContent(id){
   if(id==='race-12'){ switchTab('pro'); openProgram('race-12'); return; }
   if(id==='race-8'){ switchTab('pro'); openProgram('race-8'); return; }
   if(id==='road-kl'){ switchTab('pro'); openEvent(); return; }
-  if(id==='foundation-13'){ switchTab('plans'); return; }
+  if(id==='foundation-starter'||id==='foundation-13'){ switchTab('plans'); return; }
   if(id==='hybrid-starter'){ switchTab('pro'); try{ renderMyPlan(); }catch(e){} return; }
   if(id==='first-timer'){ openFirstTimer(); return; }
   nfToast((CATALOG[id]?CATALOG[id].title:'This program')+' — full content finalising, coming soon.');
