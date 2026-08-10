@@ -1164,10 +1164,16 @@ function fmtPrice(p){ return (p&&p>0) ? ('RM'+p) : 'Free'; }
 
 /* ---- Access / ownership ---- */
 function ownsProgram(id){ const p=CATALOG[id]; if(!p) return false; if(p.access==='free') return true; return !!(HF.data.owned && HF.data.owned[id]); }
+/* Payment launch flag — while false, paid programs show "Coming Soon" (demand capture via
+   wishlist / Notify me) instead of a Pay button. Flip to true on payment-release day.
+   BCL_LINKS + auto-unlock stay fully wired; nothing to rebuild when going live. */
+const PAYMENTS_LIVE = false;
+function paymentsSoon(id){ const p=CATALOG[id]; return !PAYMENTS_LIVE && !!p && p.access==='paid' && !ownsProgram(id); }
 function programState(id){ // FREE | OWNED | PAID | SOON | COMPLETED  (+ IN PROGRESS handled by caller)
   const p=CATALOG[id]; if(!p) return 'SOON';
   if(p.access==='soon') return 'SOON';
   if(p.access==='free') return 'FREE';
+  if(paymentsSoon(id)) return 'SOON';          // paid program, payments not live yet → Coming Soon
   return ownsProgram(id) ? 'OWNED' : 'PAID';
 }
 function grantProgram(id, price){ // called after a confirmed purchase (payment integration later)
@@ -3360,11 +3366,12 @@ function programPhases(id){
 function openProgramDetail(id,backTab){ const p=CATALOG[id]; if(!p) return; pdBackTab=backTab||(curTab==='progdetail'?pdBackTab:curTab)||'explore';
   ['home','explore','coaches','progress','profile','categories','plans','pro','target','list','detail'].forEach(x=>{const e=$(x);if(e)e.style.display='none';});
   $('progdetail').style.display='block'; $('tabs').style.display='flex'; curTab='progdetail';
-  const st=programState(id), owned=ownsProgram(id), soon=p.access==='soon';
+  const st=programState(id), owned=ownsProgram(id), soon=p.access==='soon', paySoon=paymentsSoon(id);
   const cta = soon ? `<button class="buy soon" disabled>Coming Soon</button>`
+    : paySoon ? `<button class="buy soon" onclick="toggleWishlist('${id}');openProgramDetail('${id}')">${inWishlist(id)?'✓ We’ll notify you':'🔔 Notify me when it opens'}</button>`
     : ((owned||p.access==='free') ? `<button class="buy ${owned&&p.access!=='free'?'owned':''}" onclick="openProgramContent('${id}')">${p.access==='free'?'Start Program ▸':'Open Program ▸'}</button>`
              : `<button class="buy" onclick="joinProgram('${id}')">Join Program — ${fmtPrice(p.price)}</button>`);
-  const wish = soon?'':`<button class="wish ${inWishlist(id)?'on':''}" onclick="toggleWishlist('${id}');openProgramDetail('${id}')">♥</button>`;
+  const wish = (soon||paySoon)?'':`<button class="wish ${inWishlist(id)?'on':''}" onclick="toggleWishlist('${id}');openProgramDetail('${id}')">♥</button>`;
   $('pgd-body').innerHTML=`
     <div class="pd-hero" style="background-image:url('${p.img}')"><div class="edge"></div><div class="body"><span class="badge ${badgeCls(st)}">${st}</span><h2>${p.title}</h2></div></div>
     <div class="pd-meta"><span class="chip"><b>${p.weeks}</b> weeks</span><span class="chip"><b>${p.days}</b> days/wk</span><span class="chip">${p.level}</span><span class="chip">by HITFAT</span></div>
@@ -3372,7 +3379,8 @@ function openProgramDetail(id,backTab){ const p=CATALOG[id]; if(!p) return; pdBa
     <div class="scalebox" style="margin-top:12px;"><div class="sh">Goal</div><div class="si">${p.goal}</div></div>
     ${programPhases(id)}
     <div class="joinbar">${cta}${wish}</div>
-    ${(owned||p.access==='free'||soon)?'':'<div class="infonote" style="margin-top:10px;">One account · one app. When you join, this program unlocks inside HITFAT HYBRID — forever.</div>'}`;
+    ${paySoon?`<div class="infonote" style="margin-top:10px;">Paid program · <b>${fmtPrice(p.price)}</b> — opening soon. Tap <b>Notify me</b> and we’ll tell you the moment it goes live.</div>`
+      :((owned||p.access==='free'||soon)?'':'<div class="infonote" style="margin-top:10px;">One account · one app. When you join, this program unlocks inside HITFAT HYBRID — forever.</div>')}`;
   $('screen').scrollTop=0;
 }
 function closeProgramDetail(){ switchTab(pdBackTab||'explore'); }
@@ -3423,6 +3431,7 @@ const BCL_LINKS = {
   'road-kl':     'https://hitfat.bcl.my/form/road-to-hyrox-kl',    // RM199
 };
 function joinProgram(id){ const p=CATALOG[id]; if(!p) return;
+  if(!PAYMENTS_LIVE){ nfToast(p.title+' — opening soon. Tap “Notify me”.'); openProgramDetail(id); return; }  // payments not live yet
   $('modal-sheet').innerHTML=`<h3>Join ${p.title}</h3>
     <p class="msub">One-time ${fmtPrice(p.price)} — unlocks inside your HITFAT HYBRID account, forever.</p>
     <div class="infonote">Secure payment via <b>BCL.my</b> (FPX, DuitNow QR, cards, eWallet). Your program unlocks after payment is confirmed.</div>
