@@ -2308,13 +2308,16 @@ function renderHome(){
       <div class="trow"><button class="go" onclick="openQuickWorkout(0)">▶ 10-Min Mobility</button></div></div>`;
   }
   // 2b) WORKOUT OF THE DAY (free daily rotation — traffic/return hook)
-  (function(){ const i=wodIndex(), q=QUICK_WORKOUTS[i];
+  (function(){ const i=wodIndex(), q=QUICK_WORKOUTS[i], st=HF.streak();
     $('home-wod').innerHTML=`<div class="sechead">Workout of the Day <span style="font-size:11px;color:#2ec27e;font-weight:800;letter-spacing:1px;">FREE</span></div>
       <div class="today">
-        <div class="tk">Free daily session · new one every day</div>
+        <div class="tk">Free daily session · new one every day${st>0?` · 🔥 ${st}-day streak`:''}</div>
         <div class="tt">${q.title}</div>
         <div class="tm">${q.tag} · ${totalMins(q)} min · RPE ${q.rpe}</div>
-        <div class="trow"><button class="go" onclick="openWOD()">▶ Start Free Workout</button></div>
+        <div class="trow">
+          <button class="go" onclick="openWOD()">▶ Start Free Workout</button>
+          <button class="go sec" onclick="shareWOD()">Share</button>
+        </div>
       </div>`;
   })();
   // 3) MY PROGRESS (stats + week streak strip)
@@ -3196,6 +3199,55 @@ const SPOTLIGHTS=[
   {badge:'FREE', t:'Target: Sled Push', m:'Build leg drive & the legs to run straight off the sled', go:"switchTab('target')"},
 ];
 function spotlightThisWeek(){ return SPOTLIGHTS[Math.floor(dayOfYear()/7) % SPOTLIGHTS.length]; }
+
+/* ---- Shareable WOD card (branded canvas → Web Share / download) — UGC traffic loop ---- */
+function _roundRectC(x,rx,ry,w,h,r){ x.beginPath();x.moveTo(rx+r,ry);x.arcTo(rx+w,ry,rx+w,ry+h,r);x.arcTo(rx+w,ry+h,rx,ry+h,r);x.arcTo(rx,ry+h,rx,ry,r);x.arcTo(rx,ry,rx+w,ry,r);x.closePath(); }
+function _wrapText(x,text,cx,y,maxW,lh){ const words=String(text).split(' '); let line='',yy=y;
+  for(let i=0;i<words.length;i++){ const t=line?line+' '+words[i]:words[i];
+    if(x.measureText(t).width>maxW && line){ x.fillText(line,cx,yy); line=words[i]; yy+=lh; } else line=t; }
+  x.fillText(line,cx,yy); return yy; }
+function buildWODCard(){
+  const q=QUICK_WORKOUTS[wodIndex()], st=HF.streak();
+  const c=document.createElement('canvas'); c.width=1080; c.height=1350; const x=c.getContext('2d');
+  x.fillStyle='#000'; x.fillRect(0,0,1080,1350);
+  const g=x.createRadialGradient(860,120,50,860,120,760); g.addColorStop(0,'rgba(255,224,0,.18)'); g.addColorStop(1,'transparent'); x.fillStyle=g; x.fillRect(0,0,1080,1350);
+  x.fillStyle='#FFE000'; x.fillRect(0,0,10,1350);
+  // header
+  x.textAlign='left'; x.fillStyle='#fff'; x.font='700 40px Oswald, sans-serif'; x.fillText('HITFAT', 70, 130);
+  x.fillStyle='#FFE000'; x.fillText('HYBRID', 250, 130);
+  x.fillStyle='#9a9a9a'; x.font='600 22px Inter, sans-serif'; x.fillText('WORKOUT OF THE DAY', 72, 168);
+  // hero: today's workout title
+  x.textAlign='center';
+  x.fillStyle='#6a6a6a'; x.font='700 24px Inter, sans-serif'; x.fillText("TODAY'S FREE WORKOUT", 540, 350);
+  x.fillStyle='#FFE000'; x.font='700 78px Oswald, sans-serif'; _wrapText(x, q.title.toUpperCase(), 540, 470, 940, 84);
+  x.fillStyle='#9a9a9a'; x.font='600 26px Inter, sans-serif'; x.fillText('A new session every day — free', 540, 640);
+  // stats row
+  const stats=[[totalMins(q)+' MIN','DURATION'],['RPE '+q.rpe,'EFFORT'],[String(st),'DAY STREAK']];
+  stats.forEach((s,i)=>{ const cx=200+i*340; x.fillStyle='#141414'; _roundRectC(x,cx-150,720,300,190,20); x.fill(); x.strokeStyle='#262626'; x.lineWidth=2; x.stroke();
+    x.fillStyle='#fff'; x.font='700 60px Oswald, sans-serif'; x.fillText(String(s[0]),cx,822);
+    x.fillStyle='#9a9a9a'; x.font='700 20px Inter, sans-serif'; x.fillText(s[1],cx,872); });
+  // footer
+  x.fillStyle='#6a6a6a'; x.font='600 24px Inter, sans-serif'; x.fillText('Free hybrid & HYROX training', 540, 1120);
+  x.fillStyle='#fff'; x.font='700 34px Oswald, sans-serif'; x.fillText('TRAIN · BUILD · RACE', 540, 1200);
+  x.fillStyle='#FFE000'; x.font='700 28px Inter, sans-serif'; x.fillText('hybrid.hitfat.io', 540, 1252);
+  return c;
+}
+function shareWOD(){
+  try{
+    buildWODCard().toBlob(async (blob)=>{
+      if(!blob){ nfToast('Could not build the card.'); return; }
+      const file=new File([blob],'hitfat-wod.png',{type:'image/png'});
+      const q=QUICK_WORKOUTS[wodIndex()];
+      const text=`Today's free Workout of the Day on HITFAT HYBRID — ${q.title} 💪 Train free at hybrid.hitfat.io`;
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        try{ await navigator.share({files:[file], title:'HITFAT Workout of the Day', text}); return; }
+        catch(e){ if(e && e.name==='AbortError') return; }   // user cancelled → do nothing
+      }
+      const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='hitfat-wod.png'; a.click(); URL.revokeObjectURL(url);
+      nfToast('Card saved — share it to your story 📲');
+    },'image/png');
+  }catch(e){ console.error(e); nfToast('Could not build share card.'); }
+}
 
 /* ---- cards ---- */
 function badgeCls(st){ return st==='OWNED'?'owned':st==='FREE'?'free':st==='SOON'?'soon':st==='COMPLETED'?'done':'paid'; }
