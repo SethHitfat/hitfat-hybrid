@@ -611,6 +611,7 @@
       <div id="home" class="pad" style="display:none;">
         <div id="home-greet"></div>
         <div id="home-today"></div>
+        <div id="home-challenge"></div>
         <div id="home-wod"></div>
         <div id="home-progress"></div>
         <div id="home-countdown"></div>
@@ -2340,6 +2341,7 @@ function renderHome(){
         </div>
       </div>`;
   })();
+  try{ renderChallenge(); }catch(e){ console.error(e); }   // 2c) 7-Day Hybrid Challenge (launch lead-magnet)
   // 3) MY PROGRESS (stats + week streak strip)
   const wk=weekStats(); const done=homeDoneDaysThisWeek();
   const now=new Date(), off=(now.getDay()+6)%7, mon=new Date(now); mon.setDate(now.getDate()-off);
@@ -3264,6 +3266,85 @@ function shareWOD(){
         catch(e){ if(e && e.name==='AbortError') return; }   // user cancelled → do nothing
       }
       const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='hitfat-wod.png'; a.click(); URL.revokeObjectURL(url);
+      nfToast('Card saved — share it to your story 📲');
+    },'image/png');
+  }catch(e){ console.error(e); nfToast('Could not build share card.'); }
+}
+
+/* ---- Free 7-Day Hybrid Challenge (launch lead-magnet) ----
+   7 short sessions from the free pool. Progress tracked via session keys chal-1..7
+   (so it reuses markDone/streak/cloud-sync). Completion funnels to a paid program. */
+const CHALLENGE_7=[
+  {q:2,  label:'Full Body Kickoff'},
+  {q:3,  label:'Build the Engine'},
+  {q:5,  label:'Lower Body Strength'},
+  {q:8,  label:'Core Blast'},
+  {q:6,  label:'HYROX Sim Sprint'},
+  {q:10, label:'Push · Pull · Core'},
+  {q:12, label:'Finisher — AMRAP 15'},
+];
+function chalKey(i){ return 'chal-'+(i+1); }
+function challengeDone(){ let n=0; for(let i=0;i<CHALLENGE_7.length;i++){ if(HF.isDone(chalKey(i))) n++; } return n; }
+function nextChallengeIdx(){ for(let i=0;i<CHALLENGE_7.length;i++){ if(!HF.isDone(chalKey(i))) return i; } return -1; }
+function openChallengeDay(i){ const c=CHALLENGE_7[i]; const q=QUICK_WORKOUTS[c.q]; if(q) openWorkoutObject(q,'Day '+(i+1)+' · 7-Day Challenge',chalKey(i),'home'); }
+function renderChallenge(){
+  const total=CHALLENGE_7.length, done=challengeDone(), pct=Math.round(done/total*100), nxt=nextChallengeIdx(), complete=done>=total;
+  const rows=CHALLENGE_7.map((c,i)=>{ const q=QUICK_WORKOUTS[c.q], isD=HF.isDone(chalKey(i)), isNext=(i===nxt);
+    return `<div onclick="openChallengeDay(${i})" style="display:flex;align-items:center;gap:10px;padding:9px 11px;background:${isD?'rgba(46,194,126,.10)':'#141414'};border:1px solid ${isD?'rgba(46,194,126,.35)':'#242424'};border-radius:12px;cursor:pointer;">
+      <div style="width:26px;height:26px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;background:${isD?'#2ec27e':(isNext?'#FFE000':'#222')};color:${(isD||isNext)?'#000':'#888'};">${isD?'✓':(i+1)}</div>
+      <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:13.5px;">Day ${i+1} · ${c.label}</div><div style="font-size:11.5px;color:#8a8a8a;">${q.tag} · ${totalMins(q)} min</div></div>
+      <div style="font-size:12px;font-weight:700;color:${isD?'#2ec27e':(isNext?'#FFE000':'#666')};">${isD?'Done':(isNext?'Start':'▶')}</div>
+    </div>`; }).join('');
+  $('home-challenge').innerHTML=`<div class="sechead">7-Day Hybrid Challenge <span style="font-size:11px;color:#2ec27e;font-weight:800;letter-spacing:1px;">FREE</span></div>
+    <div class="today">
+      <div class="tk">${complete?'Challenge complete 🏆':'Free · one short session a day · build the habit'}</div>
+      <div class="tt">${complete?'You finished all 7 days!':(done?`Day ${nxt+1} up next`:'Start Day 1 today')}</div>
+      <div style="height:8px;background:#222;border-radius:6px;overflow:hidden;margin:9px 0 5px;"><div style="height:100%;width:${pct}%;background:#FFE000;border-radius:6px;transition:width .3s;"></div></div>
+      <div class="tm">${done}/${total} days complete</div>
+      <div style="margin-top:11px;display:flex;flex-direction:column;gap:7px;">${rows}</div>
+      <div class="trow" style="margin-top:13px;">
+        ${complete?`<button class="go" onclick="openProgramDetail('first-timer')">Level up ▸ HYROX First Timer</button>`
+                  :`<button class="go" onclick="openChallengeDay(${nxt<0?0:nxt})">${done?'Continue Challenge':'Start Day 1'}</button>`}
+        <button class="go sec" onclick="shareChallenge()">Share</button>
+      </div>
+    </div>`;
+}
+function buildChallengeCard(){
+  const done=challengeDone(), total=CHALLENGE_7.length, st=HF.streak();
+  const c=document.createElement('canvas'); c.width=1080; c.height=1350; const x=c.getContext('2d');
+  x.fillStyle='#000'; x.fillRect(0,0,1080,1350);
+  const g=x.createRadialGradient(860,120,50,860,120,760); g.addColorStop(0,'rgba(255,224,0,.18)'); g.addColorStop(1,'transparent'); x.fillStyle=g; x.fillRect(0,0,1080,1350);
+  x.fillStyle='#FFE000'; x.fillRect(0,0,10,1350);
+  x.textAlign='left'; x.fillStyle='#fff'; x.font='700 40px Oswald, sans-serif'; x.fillText('HITFAT', 70, 130);
+  x.fillStyle='#FFE000'; x.fillText('HYBRID', 250, 130);
+  x.fillStyle='#9a9a9a'; x.font='600 22px Inter, sans-serif'; x.fillText('7-DAY HYBRID CHALLENGE', 72, 168);
+  x.textAlign='center';
+  x.fillStyle='#6a6a6a'; x.font='700 24px Inter, sans-serif'; x.fillText(done>=total?'CHALLENGE COMPLETE':'TAKING THE CHALLENGE', 540, 340);
+  x.fillStyle='#FFE000'; x.font='700 300px Oswald, sans-serif'; x.fillText(done+'/'+total, 540, 660);
+  x.fillStyle='#9a9a9a'; x.font='700 30px Inter, sans-serif'; x.fillText('DAYS DONE', 540, 720);
+  const stats=[[done>=total?'🏆':(total-done),done>=total?'FINISHED':'TO GO'],[String(st),'DAY STREAK'],['FREE','TO JOIN']];
+  stats.forEach((s,i)=>{ const cx=200+i*340; x.fillStyle='#141414'; _roundRectC(x,cx-150,780,300,180,20); x.fill(); x.strokeStyle='#262626'; x.lineWidth=2; x.stroke();
+    x.fillStyle='#fff'; x.font='700 56px Oswald, sans-serif'; x.fillText(String(s[0]),cx,878);
+    x.fillStyle='#9a9a9a'; x.font='700 20px Inter, sans-serif'; x.fillText(s[1],cx,925); });
+  x.fillStyle='#6a6a6a'; x.font='600 24px Inter, sans-serif'; x.fillText('Free hybrid & HYROX training', 540, 1130);
+  x.fillStyle='#fff'; x.font='700 34px Oswald, sans-serif'; x.fillText('TRAIN · BUILD · RACE', 540, 1205);
+  x.fillStyle='#FFE000'; x.font='700 28px Inter, sans-serif'; x.fillText('hybrid.hitfat.io', 540, 1255);
+  return c;
+}
+function shareChallenge(){
+  try{
+    buildChallengeCard().toBlob(async (blob)=>{
+      if(!blob){ nfToast('Could not build the card.'); return; }
+      const file=new File([blob],'hitfat-7day-challenge.png',{type:'image/png'});
+      const done=challengeDone();
+      const text=done>=CHALLENGE_7.length
+        ? `I just finished the HITFAT 7-Day Hybrid Challenge 🏆 Try it free → hybrid.hitfat.io`
+        : `I'm taking the HITFAT 7-Day Hybrid Challenge — Day ${done}/7 💪 Join me free → hybrid.hitfat.io`;
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        try{ await navigator.share({files:[file], title:'HITFAT 7-Day Hybrid Challenge', text}); return; }
+        catch(e){ if(e && e.name==='AbortError') return; }
+      }
+      const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='hitfat-7day-challenge.png'; a.click(); URL.revokeObjectURL(url);
       nfToast('Card saved — share it to your story 📲');
     },'image/png');
   }catch(e){ console.error(e); nfToast('Could not build share card.'); }
