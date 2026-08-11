@@ -2931,9 +2931,50 @@ function openSessionAnalysis(key){
   $('modal-sheet').innerHTML=`<h3>${s.name||'Workout'}</h3>
     <p class="msub">${s.stype?s.stype+' · ':''}${dateStr}</p>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0;">${t.join('')}</div>
-    <div class="infonote">${s.strava?'<span style="color:#fc4c02;">● Synced from Strava</span>':'Logged in HITFAT'}${basic?' — no detailed metrics recorded for this session':''}</div>
+    ${s.sid?`<div id="sess-detail"><div class="infonote">Loading HR zones &amp; splits from Strava…</div></div>`:''}
+    <div class="infonote">${s.strava?'<span style="color:#fc4c02;">● Synced from Strava</span>':'Logged in HITFAT'}${(basic&&!s.sid)?' — no detailed metrics recorded for this session':''}</div>
     ${s.sid?`<div class="modalrow"><button class="cancel" onclick="closeModal()">Close</button><button class="confirm" onclick="window.open('https://www.strava.com/activities/${s.sid}','_blank');closeModal();">View on Strava ↗</button></div>`:`<div class="modalrow"><button class="confirm" onclick="closeModal()">Close</button></div>`}`;
   $('modal').classList.add('on');
+  if(s.sid) fillSessionDetail(s.sid);
+}
+async function loadStravaDetail(sid){
+  const tok=await stravaToken(); if(!tok) return null;
+  try{
+    const [aR,zR]=await Promise.all([
+      fetch('https://www.strava.com/api/v3/activities/'+sid+'?include_all_efforts=false',{headers:{Authorization:'Bearer '+tok}}),
+      fetch('https://www.strava.com/api/v3/activities/'+sid+'/zones',{headers:{Authorization:'Bearer '+tok}})
+    ]);
+    return { act:aR.ok?await aR.json():{}, zones:zR.ok?await zR.json():[] };
+  }catch(e){ return null; }
+}
+async function fillSessionDetail(sid){
+  const data=await loadStravaDetail(sid);
+  const box=$('sess-detail'); if(!box) return;            // modal may have been closed
+  box.innerHTML = (data && renderSessionDetail(data)) || '';
+}
+function renderSessionDetail(data){
+  const act=data.act||{}, zones=data.zones||[]; let html='';
+  const hz=(zones||[]).find(z=>z && z.type==='heartrate');
+  if(hz && hz.distribution_buckets && hz.distribution_buckets.length){
+    const b=hz.distribution_buckets, total=b.reduce((a,x)=>a+(x.time||0),0)||1;
+    const col=['#3a86ff','#2ec27e','#ffd166','#fb8b24','#e5383b'];
+    html+='<div class="sechead" style="margin:8px 0 8px;">Heart Rate Zones</div>';
+    b.forEach((x,i)=>{ const pct=Math.round((x.time||0)/total*100), mins=Math.round((x.time||0)/60);
+      html+=`<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+        <div style="width:26px;font-size:11px;font-weight:800;color:#8a8a8a;">Z${i+1}</div>
+        <div style="flex:1;height:12px;background:#1a1a1a;border-radius:6px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${col[i]||'#666'};border-radius:6px;"></div></div>
+        <div style="width:64px;text-align:right;font-size:11px;color:#aaa;">${mins}m · ${pct}%</div></div>`; });
+  }
+  const sp=act.splits_metric;
+  if(sp && sp.length){
+    html+='<div class="sechead" style="margin:12px 0 8px;">Km Splits</div><div style="display:flex;flex-direction:column;gap:4px;max-height:34vh;overflow:auto;">';
+    sp.forEach((k,i)=>{ const hr=k.average_heartrate?Math.round(k.average_heartrate)+' bpm':'';
+      html+=`<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 11px;background:#141414;border:1px solid #242424;border-radius:10px;font-size:12.5px;">
+        <span style="color:#8a8a8a;font-weight:700;">${i+1} km</span><span style="color:#fff;font-weight:700;">${fmtPace(k.average_speed)}</span><span style="color:#fc4c02;">${hr}</span></div>`; });
+    html+='</div>';
+  }
+  if(act.calories) html+=`<div class="infonote" style="margin-top:10px;">🔥 ${Math.round(act.calories)} kcal${act.average_cadence?(' · '+Math.round(act.average_cadence*2)+' spm cadence'):''}</div>`;
+  return html;
 }
 function saveGeneralNote(){ const inp=$('prog-note-input'); if(inp){ HF.data.note=inp.value; HF.save(); nfToast('Note saved'); } }
 
