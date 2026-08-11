@@ -2722,8 +2722,8 @@ const HF = {
   KEY:'hitfat_hybrid_v1',
   userId:null, email:null,
   // owned: {programId:{date}}  scores: {engine,strength,stations,running}  wishlist: {programId:1}  purchases: [{id,title,price,date}]
-  data:{ track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[] },
-  _defaults(){ return { track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[] }; },
+  data:{ track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null },
+  _defaults(){ return { track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null }; },
   cacheKey(){ return this.KEY + (this.userId ? '_'+this.userId : ''); },
   setUser(id, email){ this.userId=id||null; this.email=email||null; },
   apply(obj){ // replace working data from a plain object (cloud or cache)
@@ -2733,6 +2733,7 @@ const HF = {
       d.prefs=Object.assign({},obj.prefs||{}); d.sessions=Object.assign({},obj.sessions||{}); d.note=obj.note||'';
       d.owned=Object.assign({},obj.owned||{}); d.scores=Object.assign({},obj.scores||{});
       d.wishlist=Object.assign({},obj.wishlist||{}); d.purchases=Array.isArray(obj.purchases)?obj.purchases.slice():[];
+      d.strava=obj.strava||null;
     }
     this.data=d;
   },
@@ -3573,14 +3574,21 @@ function handlePaidRedirect(){
 const STRAVA_ENABLED   = true;
 const STRAVA_CLIENT_ID = '271323';
 const STRAVA_REDIRECT  = 'https://hybrid.hitfat.io/.netlify/functions/strava-callback';
-function stravaData(){ try{ return JSON.parse(localStorage.getItem('hf_strava')||'null'); }catch(e){ return null; } }
+function stravaData(){
+  if(typeof HF!=='undefined' && HF.data && HF.data.strava && HF.data.strava.a) return HF.data.strava;   // cloud-synced source of truth
+  try{ return JSON.parse(localStorage.getItem('hf_strava')||'null'); }catch(e){ return null; }           // fallback (pre-adopt / local mode)
+}
+function setStrava(d){                                     // persist to Supabase (survives reloads + syncs across devices) + local cache
+  try{ HF.data.strava=d; HF.save(); }catch(e){}
+  try{ if(d) localStorage.setItem('hf_strava', JSON.stringify(d)); else localStorage.removeItem('hf_strava'); }catch(e){}
+}
 function stravaConnected(){ const d=stravaData(); return !!(d && d.a); }
 function connectStrava(){
   location.href='https://www.strava.com/oauth/authorize?client_id='+STRAVA_CLIENT_ID
     +'&redirect_uri='+encodeURIComponent(STRAVA_REDIRECT)
-    +'&response_type=code&approval_prompt=auto&scope=activity:read';
+    +'&response_type=code&approval_prompt=auto&scope=activity:read_all';   // read_all → also imports PRIVATE activities (Amazfit/Zepp often push as private)
 }
-function disconnectStrava(){ localStorage.removeItem('hf_strava'); nfToast('Strava disconnected.'); try{ renderProfile(); }catch(e){} }
+function disconnectStrava(){ setStrava(null); nfToast('Strava disconnected.'); try{ renderProfile(); }catch(e){} }
 function captureStravaToken(){
   try{
     if(location.hash && location.hash.indexOf('strava=')>-1){        // tokens returned in URL fragment (never hits a server)
@@ -3599,24 +3607,25 @@ async function stravaToken(){                                          // return
   try{
     const r=await fetch('/.netlify/functions/strava-refresh',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({refresh_token:d.r}) });
     const nd=await r.json();
-    if(nd && nd.a){ d.a=nd.a; d.r=nd.r||d.r; d.e=nd.e||d.e; localStorage.setItem('hf_strava', JSON.stringify(d)); return d.a; }
+    if(nd && nd.a){ d.a=nd.a; d.r=nd.r||d.r; d.e=nd.e||d.e; setStrava(d); return d.a; }
   }catch(e){}
   return d.a;
 }
-async function syncStrava(){
-  const tok=await stravaToken(); if(!tok){ nfToast('Connect Strava first.'); return; }
-  nfToast('Syncing from Strava…');
+async function syncStrava(silent){
+  const tok=await stravaToken(); if(!tok){ if(!silent) nfToast('Connect Strava first.'); return; }
+  if(!silent) nfToast('Syncing from Strava…');
   try{
-    const r=await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=20',{ headers:{ Authorization:'Bearer '+tok } });
+    const r=await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=30',{ headers:{ Authorization:'Bearer '+tok } });
     const acts=await r.json();
-    if(!Array.isArray(acts)){ nfToast('Strava sync failed — try reconnecting.'); return; }
+    if(!Array.isArray(acts)){ if(!silent) nfToast('Strava sync failed — try reconnecting.'); return; }
     let n=0;
     acts.forEach(a=>{ const key='strava-'+a.id;
       if(!HF.isDone(key)){ HF.markDone(key,{ date:a.start_date, strava:true, name:a.name, stype:(a.sport_type||a.type||'Workout'), mins:Math.round((a.moving_time||0)/60) }); n++; } });
-    const d=stravaData(); if(d){ d.synced=new Date().toISOString(); localStorage.setItem('hf_strava', JSON.stringify(d)); }
-    nfToast(n?('Imported '+n+' activit'+(n===1?'y':'ies')+' from Strava ✓'):'Strava — already up to date ✓');
+    const d=stravaData(); if(d){ d.synced=new Date().toISOString(); setStrava(d); }
+    if(n) nfToast('Imported '+n+' activit'+(n===1?'y':'ies')+' from Strava ✓');
+    else if(!silent) nfToast('Strava — already up to date ✓');
     try{ renderProfile(); if(curTab==='home') renderHome(); }catch(e){}
-  }catch(e){ console.error(e); nfToast('Strava sync failed.'); }
+  }catch(e){ console.error(e); if(!silent) nfToast('Strava sync failed.'); }
 }
 function renderStravaRow(){
   const el=$('pf-strava'); if(!el) return;
@@ -3632,11 +3641,21 @@ function renderStravaRow(){
 }
 function handleStravaReturn(){
   try{
+    // adopt a freshly-captured (or legacy) localStorage token into cloud-synced HF.data.strava
+    let local=null; try{ local=JSON.parse(localStorage.getItem('hf_strava')||'null'); }catch(e){}
+    if(local && local.a && !(HF.data.strava && HF.data.strava.a)){ HF.data.strava=local; HF.save(); }
     if(localStorage.getItem('hf_strava_justconnected')){ localStorage.removeItem('hf_strava_justconnected'); nfToast('Strava connected ✓'); syncStrava(); }
     const m=localStorage.getItem('hf_strava_msg');
     if(m){ localStorage.removeItem('hf_strava_msg');
       if(m==='denied') nfToast('Strava connection cancelled.');
       else if(m!=='connected') nfToast('Strava connection error — please try again.'); }
+    maybeAutoSyncStrava();
+  }catch(e){}
+}
+function maybeAutoSyncStrava(){       // silent auto-sync on app open, throttled to 30 min
+  try{ if(!stravaConnected()) return;
+    const d=stravaData(); const last=(d && d.synced)?Date.parse(d.synced):0;
+    if(Date.now()-last > 30*60*1000) syncStrava(true);
   }catch(e){}
 }
 
