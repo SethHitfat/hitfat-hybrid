@@ -2333,12 +2333,13 @@ function renderHome(){
       <div class="trow"><button class="go" onclick="openQuickWorkout(0)">▶ 10-Min Mobility</button></div></div>`;
   }
   // 2b) WORKOUT OF THE DAY (free daily rotation — traffic/return hook)
-  (function(){ const i=wodIndex(), q=QUICK_WORKOUTS[i], st=HF.streak();
+  (function(){ const r=todayReadiness(), i=suggestedWODIndex(r.mode), q=QUICK_WORKOUTS[i], st=HF.streak();
     $('home-wod').innerHTML=`<div class="sechead">Workout of the Day <span style="font-size:11px;color:#2ec27e;font-weight:800;letter-spacing:1px;">FREE</span></div>
       <div class="today">
-        <div class="tk">Free daily session · new one every day${st>0?` · 🔥 ${st}-day streak`:''}</div>
+        <div class="tk"><span style="color:${r.color};font-weight:800;">● ${r.label}</span>${st>0?` · 🔥 ${st}-day streak`:''}</div>
         <div class="tt">${q.title}</div>
         <div class="tm">${q.tag} · ${totalMins(q)} min · RPE ${q.rpe}</div>
+        <div style="font-size:11.5px;color:#8a8a8a;margin-top:3px;">${r.tip}</div>
         <div class="trow">
           <button class="go" onclick="openWOD()">▶ Start Free Workout</button>
           <button class="go sec" onclick="shareWOD()">Share</button>
@@ -3335,7 +3336,26 @@ function openQuickWorkout(i){ const q=QUICK_WORKOUTS[i]; if(q) openWorkoutObject
    changes at local midnight. WEEK-based spotlight rotates the "New This Week" card. */
 function dayOfYear(){ const d=new Date(); return Math.floor((d-new Date(d.getFullYear(),0,0))/86400000); }
 function wodIndex(){ return dayOfYear() % QUICK_WORKOUTS.length; }
-function openWOD(){ openQuickWorkout(wodIndex()); }
+function openWOD(){ openQuickWorkout(currentWODIndex()); }
+/* Adaptive WOD — pick session intensity from training-load readiness (Zepp-style "suggested session") */
+const WOD_RECOVER=[0,13,8,1];        // recovery / mobility / core (indices into QUICK_WORKOUTS)
+const WOD_PUSH=[3,6,7,9,11,12,5];    // engine / hybrid / strength / conditioning
+function todayReadiness(){
+  let acute=0, chronic=0;
+  try{ const wk=weeklyAgg(5); acute=wk[4].load; chronic=(wk.slice(0,4).reduce((a,b)=>a+b.load,0)/4)||0; }catch(e){}
+  const ratio= chronic>0 ? acute/chronic : (acute>0?1:0);
+  if(!acute && !chronic) return {mode:'steady', label:'Fresh start', color:'#8a8a8a', tip:'Ease in — pick today’s session and get moving.'};
+  if(chronic>0 && ratio>1.5) return {mode:'recover', label:'Ease up today', color:'#e5383b', tip:'Coach: load spiked — an easier session keeps you fresh &amp; injury-free.'};
+  if(chronic>0 && ratio>1.3) return {mode:'recover', label:'Keep it light', color:'#ffd166', tip:'Coach: ramping fast — go light today to absorb the work.'};
+  if(ratio<0.8) return {mode:'push', label:'Ready to build', color:'#3a86ff', tip:'Coach: you’ve got room — a harder session will push your fitness up.'};
+  return {mode:'steady', label:'Train as planned', color:'#2ec27e', tip:'Coach: nicely balanced — hit today’s session.'};
+}
+function suggestedWODIndex(mode){
+  if(mode==='recover') return WOD_RECOVER[dayOfYear()%WOD_RECOVER.length];
+  if(mode==='push') return WOD_PUSH[dayOfYear()%WOD_PUSH.length];
+  return wodIndex();
+}
+function currentWODIndex(){ return suggestedWODIndex(todayReadiness().mode); }
 const SPOTLIGHTS=[
   {badge:'AI · FREE', t:'HITFAT Rep Lab', m:'AI wall-ball depth judge · live count · shareable Depth Score', go:"location.href='lab.html'"},
   {badge:'FREE', t:'Target: Wall Balls', m:'3 focused sessions to keep wall balls unbroken', go:"switchTab('target')"},
@@ -3351,7 +3371,7 @@ function _wrapText(x,text,cx,y,maxW,lh){ const words=String(text).split(' '); le
     if(x.measureText(t).width>maxW && line){ x.fillText(line,cx,yy); line=words[i]; yy+=lh; } else line=t; }
   x.fillText(line,cx,yy); return yy; }
 function buildWODCard(){
-  const q=QUICK_WORKOUTS[wodIndex()], st=HF.streak();
+  const q=QUICK_WORKOUTS[currentWODIndex()], st=HF.streak();
   const c=document.createElement('canvas'); c.width=1080; c.height=1350; const x=c.getContext('2d');
   x.fillStyle='#000'; x.fillRect(0,0,1080,1350);
   const g=x.createRadialGradient(860,120,50,860,120,760); g.addColorStop(0,'rgba(255,224,0,.18)'); g.addColorStop(1,'transparent'); x.fillStyle=g; x.fillRect(0,0,1080,1350);
@@ -3381,7 +3401,7 @@ function shareWOD(){
     buildWODCard().toBlob(async (blob)=>{
       if(!blob){ nfToast('Could not build the card.'); return; }
       const file=new File([blob],'hitfat-wod.png',{type:'image/png'});
-      const q=QUICK_WORKOUTS[wodIndex()];
+      const q=QUICK_WORKOUTS[currentWODIndex()];
       const text=`Today's free Workout of the Day on HITFAT HYBRID — ${q.title} 💪 Train free at hybrid.hitfat.io`;
       if(navigator.canShare && navigator.canShare({files:[file]})){
         try{ await navigator.share({files:[file], title:'HITFAT Workout of the Day', text}); return; }
