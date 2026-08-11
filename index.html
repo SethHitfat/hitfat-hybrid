@@ -615,6 +615,7 @@
         <div id="home-wod"></div>
         <div id="home-progress"></div>
         <div id="home-countdown"></div>
+        <div id="home-races"></div>
         <div id="home-continue"></div>
         <div id="home-recommend"></div>
         <div id="home-quick"></div>
@@ -2350,6 +2351,7 @@ function renderHome(){
       </div>`;
   })();
   try{ renderChallenge(); }catch(e){ console.error(e); }   // 2c) 7-Day Hybrid Challenge (launch lead-magnet)
+  try{ renderRaces(); }catch(e){ console.error(e); }       // Races — discover & track MY/SEA races
   // 3) MY PROGRESS (stats + week streak strip)
   const wk=weekStats(); const done=homeDoneDaysThisWeek();
   const now=new Date(), off=(now.getDay()+6)%7, mon=new Date(now); mon.setDate(now.getDate()-off);
@@ -2728,8 +2730,8 @@ const HF = {
   KEY:'hitfat_hybrid_v1',
   userId:null, email:null,
   // owned: {programId:{date}}  scores: {engine,strength,stations,running}  wishlist: {programId:1}  purchases: [{id,title,price,date}]
-  data:{ track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[] },
-  _defaults(){ return { track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[] }; },
+  data:{ track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[], races:{} },
+  _defaults(){ return { track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[], races:{} }; },
   cacheKey(){ return this.KEY + (this.userId ? '_'+this.userId : ''); },
   setUser(id, email){ this.userId=id||null; this.email=email||null; },
   apply(obj){ // replace working data from a plain object (cloud or cache)
@@ -2739,7 +2741,7 @@ const HF = {
       d.prefs=Object.assign({},obj.prefs||{}); d.sessions=Object.assign({},obj.sessions||{}); d.note=obj.note||'';
       d.owned=Object.assign({},obj.owned||{}); d.scores=Object.assign({},obj.scores||{});
       d.wishlist=Object.assign({},obj.wishlist||{}); d.purchases=Array.isArray(obj.purchases)?obj.purchases.slice():[];
-      d.strava=obj.strava||null; d.sims=Array.isArray(obj.sims)?obj.sims.slice():[];
+      d.strava=obj.strava||null; d.sims=Array.isArray(obj.sims)?obj.sims.slice():[]; d.races=Object.assign({},obj.races||{});
     }
     this.data=d;
   },
@@ -3513,6 +3515,52 @@ const SPOTLIGHTS=[
   {badge:'FREE', t:'Target: Sled Push', m:'Build leg drive & the legs to run straight off the sled', go:"switchTab('target')"},
 ];
 function spotlightThisWeek(){ return SPOTLIGHTS[Math.floor(dayOfYear()/7) % SPOTLIGHTS.length]; }
+
+/* ---- Races — discover & track Malaysian / SEA hybrid races (localised, unlike global HYROX apps) ----
+   Curated list — easy to edit. Add a race: {id,name,date:'YYYY-MM-DD',dateEnd?,city,type,price?,url,tag,hyrox?} */
+const RACES=[
+  {id:'redbull-power', name:'Red Bull Power Race', date:'2026-09-13', city:'Kuala Lumpur', type:'Bodyweight strength & speed · National Showdown', price:'RM159', url:'https://time2win.at/event/1069', tag:'RACE'},
+  {id:'huntr-kl', name:'HUNTR Games KL', date:'2026-10-09', dateEnd:'2026-10-11', city:'MAEPS Hall C, Serdang', type:'Endurance & strength circuit · solo/doubles/relay', price:'from RM300', url:'https://huntrgames.com/get-tickets', tag:'RACE'},
+  {id:'kipmall', name:'KIPMALL Urban Fitness Race', date:'2026-10-10', dateEnd:'2026-10-11', city:'KIPMall Kota Warisan, Sepang', type:'Run + 10 functional stations', price:'RM10k prize pool', url:'https://t2u.asia/e/50911', tag:'HYROX-STYLE', hyrox:true},
+  {id:'pointbreak', name:'Point Break 2026', date:null, city:'Malaysia · date TBA', type:'Fitness race', price:'', url:'https://pointbreak2026.ubertickets.asia/', tag:'RACE'},
+  {id:'hyrox-kl', name:'AirAsia HYROX Kuala Lumpur', date:'2026-12-11', dateEnd:'2026-12-13', city:'MITEC, Kuala Lumpur', type:'HYROX · 8×1km run + 8 stations', price:'', url:'https://hyrox.com/find-my-race/', tag:'HYROX', hyrox:true},
+];
+function raceDateObj(r){ return r.date? new Date(r.date+'T08:00:00+08:00') : null; }
+function raceDaysLeft(r){ const d=raceDateObj(r); if(!d) return null; return Math.ceil((d-new Date())/86400000); }
+function fmtRaceDate(r){ if(!r.date) return 'Date TBA'; const d=new Date(r.date+'T00:00:00'), o={day:'numeric',month:'short'};
+  let s=d.toLocaleDateString(undefined,o); if(r.dateEnd){ const e=new Date(r.dateEnd+'T00:00:00'); s=d.getDate()+'–'+e.toLocaleDateString(undefined,o); } return s+' '+d.getFullYear(); }
+function raceCard(r){ const dl=raceDaysLeft(r), tracked=HF.data.races&&HF.data.races[r.id];
+  const when = dl===null?'Date TBA':(dl>0?('in '+dl+' days'):(dl===0?'TODAY 🔥':'past'));
+  return `<div onclick="openRace('${r.id}')" style="min-width:210px;max-width:210px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;">
+    <div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:9.5px;font-weight:800;letter-spacing:.5px;color:#fff;background:#fc4c02;padding:3px 7px;border-radius:6px;">${r.tag||'RACE'}</span>${tracked?'<span style="color:#FFE000;font-size:11px;font-weight:800;">★</span>':''}</div>
+    <div style="font-weight:800;font-size:14.5px;margin:9px 0 3px;line-height:1.15;">${r.name}</div>
+    <div style="font-size:11.5px;color:#FFE000;font-weight:700;">${fmtRaceDate(r)} · ${when}</div>
+    <div style="font-size:11px;color:#8a8a8a;margin-top:3px;">${r.city}</div></div>`;
+}
+function renderRaces(){
+  const el=$('home-races'); if(!el) return;
+  const list=RACES.slice().filter(r=>{ const dl=raceDaysLeft(r); return dl===null || dl>=-14; })
+    .sort((a,b)=>{ const da=raceDateObj(a), db=raceDateObj(b); if(!da) return 1; if(!db) return -1; return da-db; });
+  if(!list.length){ el.innerHTML=''; return; }
+  el.innerHTML=`<div class="sechead">Races <span style="font-size:11px;color:#fc4c02;font-weight:800;letter-spacing:1px;">MALAYSIA</span></div>
+    <div class="hscroll">${list.map(raceCard).join('')}</div>`;
+}
+function openRace(id){
+  const r=RACES.find(x=>x.id===id); if(!r) return;
+  const dl=raceDaysLeft(r), tracked=HF.data.races&&HF.data.races[id];
+  const pred = r.hyrox ? (function(){ try{ return hyroxPredict(); }catch(e){ return null; } })() : null;
+  $('modal-sheet').innerHTML=`<h3>${r.name}</h3>
+    <p class="msub">${fmtRaceDate(r)}${r.city?(' · '+r.city):''}</p>
+    ${(dl!=null&&dl>=0)?`<div class="today" style="text-align:center;padding:14px;"><div style="font-family:'Oswald';font-weight:700;font-size:40px;color:#FFE000;line-height:1;">${dl}</div><div class="tm" style="margin-top:4px;">days to go</div></div>`:''}
+    <div class="infonote" style="margin-top:8px;">${r.type||''}${r.price?(' · <b>'+r.price+'</b>'):''}</div>
+    ${pred?`<div class="infonote" style="margin-top:8px;">🏁 Your projected time: <b style="color:#FFE000;">${fmtDur(pred.total)}</b> <span style="color:#8a8a8a;">— from your training</span></div>`:''}
+    <div class="modalrow" style="gap:8px;">
+      <button class="cancel" onclick="trackRace('${id}')">${tracked?'★ Tracking':'☆ Track race'}</button>
+      ${r.url?`<button class="confirm" onclick="window.open('${r.url}','_blank')">Register ↗</button>`:`<button class="confirm" onclick="closeModal()">Close</button>`}
+    </div>`;
+  $('modal').classList.add('on');
+}
+function trackRace(id){ HF.data.races=HF.data.races||{}; if(HF.data.races[id]) delete HF.data.races[id]; else HF.data.races[id]=1; HF.save(); openRace(id); try{ renderRaces(); }catch(e){} }
 
 /* ---- Shareable WOD card (branded canvas → Web Share / download) — UGC traffic loop ---- */
 function _roundRectC(x,rx,ry,w,h,r){ x.beginPath();x.moveTo(rx+r,ry);x.arcTo(rx+w,ry,rx+w,ry+h,r);x.arcTo(rx+w,ry+h,rx,ry+h,r);x.arcTo(rx,ry+h,rx,ry,r);x.arcTo(rx,ry,rx+w,ry,r);x.closePath(); }
