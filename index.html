@@ -3,7 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Hitfat Hybrid</title>
+<title>HITFAT HYBRID · Train · Build · Race</title>
+<meta name="description" content="Free hybrid & HYROX training platform — Workout of the Day, Strava sync, HYROX race predictor, station benchmarks & a Malaysian race directory. Train free.">
+<!-- Social share preview (WhatsApp / IG / FB / X) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="HITFAT HYBRID">
+<meta property="og:title" content="HITFAT HYBRID — Train · Build · Race">
+<meta property="og:description" content="Free hybrid & HYROX training. Workout of the Day, Strava sync, HYROX race predictor & Malaysian races. Train free at hybrid.hitfat.io">
+<meta property="og:image" content="https://hybrid.hitfat.io/og-image.png">
+<meta property="og:url" content="https://hybrid.hitfat.io">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="HITFAT HYBRID — Train · Build · Race">
+<meta name="twitter:description" content="Free hybrid & HYROX training + Strava, HYROX race predictor & Malaysian races.">
+<meta name="twitter:image" content="https://hybrid.hitfat.io/og-image.png">
 <!-- App icons + install (PWA). Icon files live alongside index.html in the deploy folder. -->
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -586,8 +598,8 @@
 <body>
 <div class="app">
   <div class="topbar">
-    <div class="logo">HITFAT HYROX<small>TRAINING CLUB</small></div>
-    <div class="right"><span style="color:var(--dim);font-size:12px;font-weight:600;">EN</span><div class="av">●</div></div>
+    <div class="logo">HITFAT HYBRID<small>TRAINING CLUB</small></div>
+    <div class="right"><span style="color:var(--dim);font-size:12px;font-weight:600;">EN</span><div class="av" id="topav">●</div></div>
   </div>
 
   <!-- TAB NAVIGATION V3 (Home · Explore · Coaches · Progress · Profile) -->
@@ -779,6 +791,7 @@
         <div class="sechead">Connected Apps</div>
         <div id="pf-strava"></div>
         <div class="sechead">Settings</div>
+        <button class="pflink" onclick="openNameEditor()"><span>Your Name</span><span class="arr">›</span></button>
         <button class="pflink" onclick="openTrackSelect(true)"><span>Change Track</span><span class="arr">›</span></button>
         <button class="pflink" onclick="restartOnboarding()"><span>Redo Onboarding</span><span class="arr">›</span></button>
         <button class="pflink" onclick="showReadiness(true)"><span>View Readiness &amp; Safety Notice</span><span class="arr">›</span></button>
@@ -3218,6 +3231,18 @@ function renderSessionDetail(data){
 }
 function saveGeneralNote(){ const inp=$('prog-note-input'); if(inp){ HF.data.note=inp.value; HF.save(); nfToast('Note saved'); } }
 
+/* --- Name / greeting personalisation --- */
+function updateAvatar(){ try{ const a=$('topav'); if(a){ const n=((HF.data.prefs&&HF.data.prefs.name)||'').trim(); a.textContent=n?n[0].toUpperCase():'●'; a.style.color=n?'#FFE000':''; a.style.fontWeight=n?'800':''; } }catch(e){} }
+function openNameEditor(){
+  const cur=((HF.data.prefs&&HF.data.prefs.name)||'').replace(/"/g,'&quot;');
+  $('modal-sheet').innerHTML=`<h3>Your Name</h3>
+    <p class="msub">Shown on your Home greeting.</p>
+    <input id="name-input" value="${cur}" placeholder="e.g. Seth" maxlength="24" style="width:100%;background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:13px;color:#fff;font-weight:700;font-size:15px;margin:6px 0 4px;box-sizing:border-box;">
+    <div class="modalrow"><button class="cancel" onclick="closeModal()">Cancel</button><button class="confirm" onclick="saveName()">Save</button></div>`;
+  $('modal').classList.add('on');
+  setTimeout(function(){ const i=$('name-input'); if(i) i.focus(); },80);
+}
+function saveName(){ const i=$('name-input'); if(!i) return; HF.data.prefs=HF.data.prefs||{}; HF.data.prefs.name=(i.value||'').trim().slice(0,24); HF.save(); closeModal(); nfToast('Name saved ✓'); updateAvatar(); try{ renderProfile(); }catch(e){} try{ if(curTab==='home') renderHome(); }catch(e){} }
 /* --- Profile screen --- */
 function renderProfile(){
   const p=HF.data.prefs, race=HF.data.track==='race';
@@ -3451,6 +3476,7 @@ function startApp(){
     _appStarted=true;
     handlePaidRedirect();            // auto-unlock if the buyer just returned from BCL payment
     handleStravaReturn();            // finish Strava connect + auto-sync if just returned
+    updateAvatar();                  // topbar avatar shows the user's initial
   }catch(e){ console.error(e); }
 }
 async function onSignedIn(session){
