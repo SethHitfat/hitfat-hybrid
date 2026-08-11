@@ -754,6 +754,7 @@
         <div id="prog-load"></div>
         <div id="prog-trend"></div>
         <div id="prog-pb"></div>
+        <div id="prog-predict"></div>
         <div id="prog-sim"></div>
         <div class="sechead">Benchmark History</div>
         <div id="prog-bench"></div>
@@ -3017,6 +3018,31 @@ function renderSim(){
   }
   el.innerHTML=html;
 }
+/* ---- HYROX Race Time Predictor (run pace from Strava + station benchmarks from sims) ---- */
+const HYROX_STATION_DEFAULTS={ ski:255, sledpush:135, sledpull:165, burpee:270, row:255, farmers:105, lunge:240, wallball:360 }; // mid-pack estimates (sec)
+function hyroxPredict(){
+  const runs=Object.values(HF.data.sessions).filter(s=>s&&s.dist>0 && /run/i.test(s.stype||'') && s.spd>0);
+  if(!runs.length) return null;                                   // need at least one run to estimate pace
+  const avgSpd=runs.reduce((a,s)=>a+s.spd,0)/runs.length, runSecPerKm=1000/avgSpd;
+  const runTotal=runSecPerKm*8;
+  const pr=stationPRs(); let stationTotal=0, known=0;
+  HYROX_STATIONS.forEach(s=>{ const v=pr[s.k]||HYROX_STATION_DEFAULTS[s.k]; stationTotal+=v; if(pr[s.k])known++; });
+  const roxzone=8*40;                                             // ~40s per transition
+  return { total:runTotal+stationTotal+roxzone, runTotal, stationTotal, roxzone, runSecPerKm, known };
+}
+function renderPredictor(){
+  const el=$('prog-predict'); if(!el) return;
+  const p=hyroxPredict();
+  if(!p){ el.innerHTML=''; return; }
+  const pace=fmtPace(1000/p.runSecPerKm).replace(' /km','');
+  el.innerHTML=`<div class="sechead">HYROX Race Predictor <span style="font-size:11px;color:#8a8a8a;font-weight:600;">estimate</span></div>
+    <div class="today">
+      <div class="tk">Projected finish · AirAsia HYROX KL</div>
+      <div class="tt" style="color:#FFE000;font-size:30px;">${fmtDur(p.total)}</div>
+      <div class="tm">Run ${fmtDur(p.runTotal)} · Stations ${fmtDur(p.stationTotal)} · Roxzone ${fmtDur(p.roxzone)}</div>
+      <div style="font-size:11px;color:#8a8a8a;margin-top:7px;">From your avg run pace (${pace}/km) + ${p.known}/8 station PRs${p.known<8?' — rest are mid-pack estimates':''}. Log HYROX sims to sharpen it.</div>
+    </div>`;
+}
 function renderProgress(){
   const wk=weekStats();
   const el=$('prog-score'); if(el){ el.innerHTML=`<div class="sechead" style="margin-top:14px;">Hybrid Score</div>${scoreDashHTML()}
@@ -3028,7 +3054,7 @@ function renderProgress(){
     </div>
     <div class="trkbar" style="margin-top:6px;"><i style="width:${wk.pct}%"></i></div>
     <div class="trkmeta"><b>${wk.done}</b> / ${wk.target} planned sessions this week</div>`;
-  try{ renderLoad(); renderTrend(); renderPB(); renderSim(); }catch(e){ console.error(e); }
+  try{ renderLoad(); renderTrend(); renderPB(); renderPredictor(); renderSim(); }catch(e){ console.error(e); }
   const bm=nextBenchmark();
   $('prog-bench').innerHTML=`<div class="benchcard"><div class="bt">${bm.name}</div><div class="bm">${bm.when}</div></div>
     <div class="benchcard"><div class="bt">Weekly Consistency</div><div class="bm">${wk.done} done this week · ${HF.totalDone()} all-time</div></div>`;
