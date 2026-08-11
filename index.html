@@ -751,6 +751,8 @@
         <div class="hgroup"><div class="k">Your Training</div><h2>PROGRESS</h2><p>Your Hybrid Score, streak and history — all saved to your account.</p></div>
         <div id="prog-score"></div>
         <div id="prog-stats"></div>
+        <div id="prog-load"></div>
+        <div id="prog-trend"></div>
         <div class="sechead">Benchmark History</div>
         <div id="prog-bench"></div>
         <div class="sechead">Personal Notes</div>
@@ -2880,6 +2882,48 @@ function scoreDashHTML(){
     <div class="sb">${['engine','strength','stations','running'].map(bar).join('')}</div>
   </div>`;
 }
+/* ---- Training Load (acute:chronic ratio) + Weekly Volume trend (Zepp-inspired) ---- */
+function hfWeekStart(d){ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-((x.getDay()+6)%7)); return x; }   // Monday
+function sessionLoad(s){ const mins=s.mins||45; const it=s.rpe?(s.rpe/10):(s.hr?Math.max(0.4,Math.min(1.05,s.hr/180)):0.6); return Math.round(mins*it); }
+function weeklyAgg(weeks){
+  const thisMon=hfWeekStart(new Date()); const arr=[];
+  for(let i=weeks-1;i>=0;i--){ const ws=new Date(thisMon); ws.setDate(thisMon.getDate()-i*7); arr.push({ws:ws, mins:0, load:0, count:0}); }
+  Object.values(HF.data.sessions).forEach(s=>{ if(!s||!s.date) return; const d=new Date(s.date); if(isNaN(d)) return;
+    const t=hfWeekStart(d).getTime(); const b=arr.find(x=>x.ws.getTime()===t);
+    if(b){ b.mins+=(s.mins||45); b.load+=sessionLoad(s); b.count++; } });
+  return arr;
+}
+function renderLoad(){
+  const el=$('prog-load'); if(!el) return;
+  const wk=weeklyAgg(5), acute=wk[4].load, chronic=(wk.slice(0,4).reduce((a,b)=>a+b.load,0)/4)||0;
+  const ratio= chronic>0 ? acute/chronic : (acute>0?1:0);
+  let status,color,tip;
+  if(!acute && !chronic){ status='—'; color='#666'; tip='Log or sync a few sessions to see your training load.'; }
+  else if(chronic===0){ status='Building'; color='#3a86ff'; tip='Building your baseline — keep training consistently.'; }
+  else if(ratio<0.8){ status='Detraining'; color='#3a86ff'; tip='Load is dropping — add a session to hold fitness.'; }
+  else if(ratio<=1.3){ status='Optimal'; color='#2ec27e'; tip='Sweet spot — train as planned ✓'; }
+  else if(ratio<=1.5){ status='High'; color='#ffd166'; tip='Ramping fast — prioritise recovery this week.'; }
+  else { status='Spike'; color='#e5383b'; tip='⚠ Big jump in load — ease off to avoid injury.'; }
+  el.innerHTML=`<div class="sechead">Training Load <span style="font-size:11px;color:#8a8a8a;font-weight:600;">7-day</span></div>
+    <div class="dstat">
+      <div class="c"><b>${acute}</b><small>This Week</small></div>
+      <div class="c"><b style="color:${color};">${ratio?ratio.toFixed(2):'—'}</b><small>Load Ratio</small></div>
+      <div class="c"><b style="color:${color};font-size:16px;line-height:1.5;">${status}</b><small>Status</small></div>
+    </div>
+    <div class="infonote" style="margin-top:6px;">${tip}</div>`;
+}
+function renderTrend(){
+  const el=$('prog-trend'); if(!el) return;
+  const wk=weeklyAgg(8), max=Math.max(1,...wk.map(b=>b.mins));
+  const bars=wk.map((b,i)=>{ const h=Math.round(b.mins/max*100), now=(i===wk.length-1), lbl=b.ws.getDate()+'/'+(b.ws.getMonth()+1);
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+      <div style="font-size:9px;color:#8a8a8a;height:11px;">${b.mins||''}</div>
+      <div style="width:100%;max-width:26px;height:88px;background:#141414;border-radius:6px;display:flex;align-items:flex-end;overflow:hidden;">
+        <div style="width:100%;height:${h}%;background:${now?'#FFE000':'#3a3a3a'};border-radius:6px 6px 0 0;transition:height .3s;"></div></div>
+      <div style="font-size:8.5px;color:#6a6a6a;">${lbl}</div></div>`; }).join('');
+  el.innerHTML=`<div class="sechead">Weekly Volume <span style="font-size:11px;color:#8a8a8a;font-weight:600;">last 8 weeks · min</span></div>
+    <div style="display:flex;align-items:flex-end;gap:5px;padding:6px 2px 2px;">${bars}</div>`;
+}
 function renderProgress(){
   const wk=weekStats();
   const el=$('prog-score'); if(el){ el.innerHTML=`<div class="sechead" style="margin-top:14px;">Hybrid Score</div>${scoreDashHTML()}
@@ -2891,6 +2935,7 @@ function renderProgress(){
     </div>
     <div class="trkbar" style="margin-top:6px;"><i style="width:${wk.pct}%"></i></div>
     <div class="trkmeta"><b>${wk.done}</b> / ${wk.target} planned sessions this week</div>`;
+  try{ renderLoad(); renderTrend(); }catch(e){ console.error(e); }
   const bm=nextBenchmark();
   $('prog-bench').innerHTML=`<div class="benchcard"><div class="bt">${bm.name}</div><div class="bm">${bm.when}</div></div>
     <div class="benchcard"><div class="bt">Weekly Consistency</div><div class="bm">${wk.done} done this week · ${HF.totalDone()} all-time</div></div>`;
