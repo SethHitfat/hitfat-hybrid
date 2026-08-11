@@ -761,7 +761,7 @@
         <div class="sechead">Personal Notes</div>
         <textarea class="noteinput" id="prog-note-input" placeholder="Jot down how training is going, niggles to watch, goals for the week…"></textarea>
         <button class="ghostbtn" style="margin-top:10px;" onclick="saveGeneralNote()">Save Note</button>
-        <div class="sechead">Recent Sessions</div>
+        <div class="sechead">Training Calendar</div>
         <div id="prog-recent"></div>
       </div>
       <!-- SKRIN PROFILE -->
@@ -3043,6 +3043,46 @@ function renderPredictor(){
       <div style="font-size:11px;color:#8a8a8a;margin-top:7px;">From your avg run pace (${pace}/km) + ${p.known}/8 station PRs${p.known<8?' — rest are mid-pack estimates':''}. Log HYROX sims to sharpen it.</div>
     </div>`;
 }
+/* ---- Training Calendar (month view, interactive) ---- */
+let calMonth=null, calSelDay=null;
+function calInit(){ if(!calMonth){ const n=new Date(); calMonth=new Date(n.getFullYear(), n.getMonth(), 1); } }
+function calShift(delta){ calInit(); calMonth=new Date(calMonth.getFullYear(), calMonth.getMonth()+delta, 1); calSelDay=null; renderCalendar(); }
+function calSelect(key){ calSelDay=(calSelDay===key)?null:key; renderCalendar(); }
+function sessionsByDay(){ const map={}; Object.entries(HF.data.sessions).forEach(([k,s])=>{ if(!s||!s.date) return; const d=new Date(s.date); if(isNaN(d)) return;
+  const key=d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); (map[key]=map[key]||[]).push(Object.assign({key:k},s)); }); return map; }
+function _sessRow(s){ const d=new Date(s.date), dd=d.getDate()+'/'+(d.getMonth()+1);
+  return `<div class="prow" onclick="openSessionAnalysis('${s.key}')" style="cursor:pointer;"><div class="pd">${dd}</div>
+    <div class="pi"><div class="pt">${s.name||'Workout'}</div><div class="pm">${sessMeta(s)}</div></div>
+    <div class="pr">${s.rpe?('RPE '+s.rpe):'›'}</div></div>`; }
+function renderCalendar(){
+  const el=$('prog-recent'); if(!el) return; calInit();
+  const byDay=sessionsByDay(), y=calMonth.getFullYear(), m=calMonth.getMonth();
+  const monthName=calMonth.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+  const startOff=(new Date(y,m,1).getDay()+6)%7, daysInMonth=new Date(y,m+1,0).getDate();
+  const today=new Date(), isThisMonth=(today.getFullYear()===y&&today.getMonth()===m);
+  let mMin=0,mCount=0;
+  const wdh=['M','T','W','T','F','S','S'].map(w=>`<div style="text-align:center;font-size:10px;color:#6a6a6a;font-weight:700;">${w}</div>`).join('');
+  let cells=''; for(let i=0;i<startOff;i++) cells+='<div></div>';
+  for(let dd=1;dd<=daysInMonth;dd++){ const key=y+'-'+(m+1)+'-'+dd, arr=byDay[key]||[], load=arr.reduce((a,s)=>a+sessionLoad(s),0);
+    arr.forEach(s=>{mMin+=(s.mins||0);mCount++;});
+    const isToday=isThisMonth&&today.getDate()===dd, sel=(calSelDay===key);
+    let bg='transparent'; if(load>50) bg='#fc4c02'; else if(load>25) bg='rgba(252,76,2,.5)'; else if(load>0) bg='rgba(255,224,0,.22)';
+    cells+=`<div onclick="calSelect('${key}')" style="height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;color:${arr.length?'#fff':'#666'};background:${bg};border:${isToday?'1.5px solid #FFE000':(sel?'1.5px solid #fff':'1px solid transparent')};">${dd}</div>`;
+  }
+  let show; if(calSelDay){ show=byDay[calSelDay]||[]; }
+  else{ show=Object.entries(HF.data.sessions).map(([k,s])=>Object.assign({key:k},s)).filter(s=>{ if(!s.date) return false; const d=new Date(s.date); return d.getFullYear()===y&&d.getMonth()===m; }).sort((a,b)=>new Date(b.date)-new Date(a.date)); }
+  const listHtml = show.length ? show.map(_sessRow).join('') : `<div class="empty">${calSelDay?'No sessions on this day.':'No sessions this month.'}</div>`;
+  el.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <button onclick="calShift(-1)" style="background:#141414;border:1px solid #242424;color:#fff;width:34px;height:34px;border-radius:10px;font-size:16px;cursor:pointer;">‹</button>
+      <div style="font-family:'Oswald';font-weight:700;font-size:16px;letter-spacing:.5px;">${monthName.toUpperCase()}</div>
+      <button onclick="calShift(1)" style="background:#141414;border:1px solid #242424;color:#fff;width:34px;height:34px;border-radius:10px;font-size:16px;cursor:pointer;">›</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:5px;">${wdh}</div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;">${cells}</div>
+    <div class="trkmeta" style="margin:11px 0 2px;"><b>${mCount}</b> sessions · <b>${mMin}</b> min this month${calSelDay?' · <span style="color:var(--hyrox);cursor:pointer;" onclick="calSelect(\''+calSelDay+'\')">show all →</span>':''}</div>
+    <div style="margin-top:6px;">${listHtml}</div>`;
+}
 function renderProgress(){
   const wk=weekStats();
   const el=$('prog-score'); if(el){ el.innerHTML=`<div class="sechead" style="margin-top:14px;">Hybrid Score</div>${scoreDashHTML()}
@@ -3059,15 +3099,7 @@ function renderProgress(){
   $('prog-bench').innerHTML=`<div class="benchcard"><div class="bt">${bm.name}</div><div class="bm">${bm.when}</div></div>
     <div class="benchcard"><div class="bt">Weekly Consistency</div><div class="bm">${wk.done} done this week · ${HF.totalDone()} all-time</div></div>`;
   const inp=$('prog-note-input'); if(inp) inp.value=HF.data.note||'';
-  // recent completed sessions, newest first
-  const list=Object.entries(HF.data.sessions).map(([k,s])=>Object.assign({key:k}, s)).filter(s=>s.date)
-    .sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,20);
-  $('prog-recent').innerHTML = list.length ? list.map(s=>{
-    const d=new Date(s.date), dd=d.getDate()+'/'+(d.getMonth()+1);
-    return `<div class="prow" onclick="openSessionAnalysis('${s.key}')" style="cursor:pointer;"><div class="pd">${dd}</div>
-      <div class="pi"><div class="pt">${s.name||'Workout'}</div><div class="pm">${sessMeta(s)}</div></div>
-      <div class="pr">${s.rpe?('RPE '+s.rpe):'›'}</div></div>`;
-  }).join('') : `<div class="empty">No sessions logged yet. Complete a workout and it will appear here.</div>`;
+  try{ renderCalendar(); }catch(e){ console.error(e); }   // interactive month calendar + session list
 }
 /* ---- Session analysis (Zepp-style detail card from Strava data) ---- */
 function fmtDist(m){ if(!m||m<=0) return '—'; return (m>=1000)?(m/1000).toFixed(2)+' km':Math.round(m)+' m'; }
