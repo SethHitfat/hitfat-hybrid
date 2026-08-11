@@ -2,6 +2,10 @@
   publish = "."
   command = ""
 
+# Serverless functions (Strava OAuth token exchange/refresh — keep Client Secret server-side)
+[functions]
+  directory = "netlify/functions"
+
 # Always revalidate the app HTML/manifest so users get updates immediately
 # (fixes iOS Safari / PWA serving a stale cached version).
 [[headers]]

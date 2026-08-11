@@ -769,6 +769,8 @@
         <div id="pf-purchases"></div>
         <div class="sechead">Your Plan</div>
         <div id="pf-summary"></div>
+        <div class="sechead">Connected Apps</div>
+        <div id="pf-strava"></div>
         <div class="sechead">Settings</div>
         <button class="pflink" onclick="openTrackSelect(true)"><span>Change Track</span><span class="arr">›</span></button>
         <button class="pflink" onclick="restartOnboarding()"><span>Redo Onboarding</span><span class="arr">›</span></button>
@@ -2920,6 +2922,8 @@ function renderProfile(){
   }
   // sign-out only makes sense when signed in
   const so=$('pf-signout'); if(so) so.style.display = HF.userId ? 'flex' : 'none';
+  try{ renderStravaRow(); }catch(e){}   // Connected Apps → Strava
+
   // My Programs — owned/paid + the free plan you're following
   const mine=[];
   CATALOG_ORDER.forEach(id=>{ if(ownsProgram(id)&&CATALOG[id].access!=='free') mine.push(id); });
@@ -3134,6 +3138,7 @@ function startApp(){
     if(!HF.data.onboarded) startOnboarding();
     _appStarted=true;
     handlePaidRedirect();            // auto-unlock if the buyer just returned from BCL payment
+    handleStravaReturn();            // finish Strava connect + auto-sync if just returned
   }catch(e){ console.error(e); }
 }
 async function onSignedIn(session){
@@ -3561,8 +3566,83 @@ function handlePaidRedirect(){
   }catch(e){ console.error(e); }
 }
 
+/* ============================================================
+   ████  STRAVA CONNECT — auto-import runs & workouts  ████
+   OAuth handled by Netlify functions (Client Secret stays server-side).
+   Flip STRAVA_ENABLED=true after the Netlify env vars are set + tested. */
+const STRAVA_ENABLED   = false;
+const STRAVA_CLIENT_ID = '271323';
+const STRAVA_REDIRECT  = 'https://hybrid.hitfat.io/.netlify/functions/strava-callback';
+function stravaData(){ try{ return JSON.parse(localStorage.getItem('hf_strava')||'null'); }catch(e){ return null; } }
+function stravaConnected(){ const d=stravaData(); return !!(d && d.a); }
+function connectStrava(){
+  location.href='https://www.strava.com/oauth/authorize?client_id='+STRAVA_CLIENT_ID
+    +'&redirect_uri='+encodeURIComponent(STRAVA_REDIRECT)
+    +'&response_type=code&approval_prompt=auto&scope=activity:read';
+}
+function disconnectStrava(){ localStorage.removeItem('hf_strava'); nfToast('Strava disconnected.'); try{ renderProfile(); }catch(e){} }
+function captureStravaToken(){
+  try{
+    if(location.hash && location.hash.indexOf('strava=')>-1){        // tokens returned in URL fragment (never hits a server)
+      const p=JSON.parse(decodeURIComponent(location.hash.split('strava=')[1]));
+      if(p && p.a){ localStorage.setItem('hf_strava', JSON.stringify(p)); localStorage.setItem('hf_strava_justconnected','1'); }
+      history.replaceState(null,'', location.pathname + location.search);
+    }
+    const m=new URLSearchParams(location.search).get('strava');       // denied / error / notconfigured
+    if(m){ localStorage.setItem('hf_strava_msg', m); history.replaceState(null,'', location.pathname); }
+  }catch(e){}
+}
+async function stravaToken(){                                          // returns a valid access token, refreshing if needed
+  let d=stravaData(); if(!d || !d.a) return null;
+  const now=Math.floor(Date.now()/1000);
+  if(d.e && now < d.e-60) return d.a;
+  try{
+    const r=await fetch('/.netlify/functions/strava-refresh',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({refresh_token:d.r}) });
+    const nd=await r.json();
+    if(nd && nd.a){ d.a=nd.a; d.r=nd.r||d.r; d.e=nd.e||d.e; localStorage.setItem('hf_strava', JSON.stringify(d)); return d.a; }
+  }catch(e){}
+  return d.a;
+}
+async function syncStrava(){
+  const tok=await stravaToken(); if(!tok){ nfToast('Connect Strava first.'); return; }
+  nfToast('Syncing from Strava…');
+  try{
+    const r=await fetch('https://www.strava.com/api/v3/athlete/activities?per_page=20',{ headers:{ Authorization:'Bearer '+tok } });
+    const acts=await r.json();
+    if(!Array.isArray(acts)){ nfToast('Strava sync failed — try reconnecting.'); return; }
+    let n=0;
+    acts.forEach(a=>{ const key='strava-'+a.id;
+      if(!HF.isDone(key)){ HF.markDone(key,{ date:a.start_date, strava:true, name:a.name, stype:(a.sport_type||a.type||'Workout'), mins:Math.round((a.moving_time||0)/60) }); n++; } });
+    const d=stravaData(); if(d){ d.synced=new Date().toISOString(); localStorage.setItem('hf_strava', JSON.stringify(d)); }
+    nfToast(n?('Imported '+n+' activit'+(n===1?'y':'ies')+' from Strava ✓'):'Strava — already up to date ✓');
+    try{ renderProfile(); if(curTab==='home') renderHome(); }catch(e){}
+  }catch(e){ console.error(e); nfToast('Strava sync failed.'); }
+}
+function renderStravaRow(){
+  const el=$('pf-strava'); if(!el) return;
+  if(!STRAVA_ENABLED){ el.innerHTML=''; return; }
+  if(stravaConnected()){ const d=stravaData();
+    el.innerHTML=`<div class="pfrow"><span class="l">Strava</span><span class="v" style="color:#fc4c02;">● ${d.n||'Connected'}</span></div>
+      <button class="pflink" onclick="syncStrava()"><span>Sync activities now</span><span class="arr">↻</span></button>
+      <button class="pflink" onclick="disconnectStrava()"><span>Disconnect Strava</span><span class="arr">→</span></button>`;
+  } else {
+    el.innerHTML=`<button class="pflink" onclick="connectStrava()"><span>🔗 Connect Strava</span><span class="arr">›</span></button>
+      <div class="infonote" style="margin-top:2px;">Auto-import your runs &amp; workouts from Strava → feeds your streak &amp; Hybrid Score.</div>`;
+  }
+}
+function handleStravaReturn(){
+  try{
+    if(localStorage.getItem('hf_strava_justconnected')){ localStorage.removeItem('hf_strava_justconnected'); nfToast('Strava connected ✓'); syncStrava(); }
+    const m=localStorage.getItem('hf_strava_msg');
+    if(m){ localStorage.removeItem('hf_strava_msg');
+      if(m==='denied') nfToast('Strava connection cancelled.');
+      else if(m!=='connected') nfToast('Strava connection error — please try again.'); }
+  }catch(e){}
+}
+
 function boot(){
   capturePaidParam();              // stash ?paid=<id> before auth/OAuth redirect can strip it
+  captureStravaToken();            // stash Strava tokens returned in the URL fragment
   if(!document.getElementById('catlist')){ return setTimeout(boot,60); }
   if(!SUPA_READY){
     // Not configured (or opened as a local file / offline) → run in local mode
