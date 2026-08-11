@@ -3638,6 +3638,19 @@ function renderStravaRow(){
     el.innerHTML=`<button class="pflink" onclick="connectStrava()"><span>🔗 Connect Strava</span><span class="arr">›</span></button>
       <div class="infonote" style="margin-top:2px;">Auto-import your runs &amp; workouts from Strava → feeds your streak &amp; Hybrid Score.</div>`;
   }
+  // Smartwatch guide (Amazfit / Garmin / Apple Watch) — watches connect via Strava, HITFAT reads from Strava
+  el.innerHTML += `<button class="pflink" onclick="openWatchGuide()"><span>⌚ Amazfit &amp; other watches</span><span class="arr">›</span></button>
+    <div class="infonote" style="margin-top:2px;">Amazfit, Garmin, Apple Watch &amp; more — connect your watch to Strava and your workouts flow in automatically.</div>`;
+}
+function openWatchGuide(){
+  $('modal-sheet').innerHTML=`<h3>⌚ Connect your smartwatch</h3>
+    <p class="msub">HITFAT reads your training from <b>Strava</b>. Link your watch to Strava once — then every workout you record auto-imports here (runs, HYROX &amp; hybrid sessions).</p>
+    <div class="infonote"><b style="color:#fc4c02;">Amazfit</b> — open the <b>Zepp</b> app → <b>Profile</b> → <b>Add Account</b> → <b>Strava</b> → connect.</div>
+    <div class="infonote" style="margin-top:8px;"><b>Garmin</b> — Garmin Connect → Settings → <b>Connected Apps</b> → <b>Strava</b>.</div>
+    <div class="infonote" style="margin-top:8px;"><b>Apple Watch</b> — open the <b>Strava</b> app → allow <b>Apple Health</b> (or record with the Strava watch app).</div>
+    <div class="infonote" style="margin-top:8px;color:var(--dim2);">Recorded a workout in a sport mode? It syncs watch → Strava → HITFAT (tap “Sync activities now” to pull it in).</div>
+    <div class="modalrow"><button class="confirm" onclick="closeModal()">Got it</button></div>`;
+  $('modal').classList.add('on');
 }
 function handleStravaReturn(){
   try{
