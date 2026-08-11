@@ -3570,7 +3570,7 @@ function handlePaidRedirect(){
    ████  STRAVA CONNECT — auto-import runs & workouts  ████
    OAuth handled by Netlify functions (Client Secret stays server-side).
    Flip STRAVA_ENABLED=true after the Netlify env vars are set + tested. */
-const STRAVA_ENABLED   = false;
+const STRAVA_ENABLED   = true;
 const STRAVA_CLIENT_ID = '271323';
 const STRAVA_REDIRECT  = 'https://hybrid.hitfat.io/.netlify/functions/strava-callback';
 function stravaData(){ try{ return JSON.parse(localStorage.getItem('hf_strava')||'null'); }catch(e){ return null; } }
