@@ -2329,10 +2329,16 @@ function renderHome(){
   try{ renderInstallBanner(); }catch(e){}   // "Add to Home Screen" prompt (once, after sign-in)
   const race = HF.data.track==='race';
   const nameStr = HF.data.prefs.name?', '+HF.data.prefs.name:'';
-  // 1) GREETING
-  $('home-greet').innerHTML=`<div class="greet" style="margin:16px 2px 14px;">
-      <div class="hi">${greetWord()}${nameStr}</div>
-      <div class="who">${race?'Race Ready':'Hybrid Starter'} · ${prettyPlan()} · Week ${currentWeek()}</div></div>`;
+  // 1) GREETING + Hybrid Score hero (signature metric, prominent up top)
+  $('home-greet').innerHTML=`<div class="greet" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin:16px 2px 14px;">
+      <div style="min-width:0;">
+        <div class="hi">${greetWord()}${nameStr}</div>
+        <div class="who">${race?'Race Ready':'Hybrid Starter'} · Week ${currentWeek()}</div>
+      </div>
+      <div onclick="switchTab('progress')" style="text-align:center;cursor:pointer;flex:none;padding:4px 6px;">
+        <div style="font-family:'Oswald';font-weight:700;font-size:36px;color:#FFE000;line-height:.95;">${hybridScore()}</div>
+        <div style="font-size:9px;color:#8a8a8a;font-weight:800;letter-spacing:.6px;margin-top:2px;">HYBRID SCORE</div>
+      </div></div>`;
   // 2) TODAY'S TRAINING
   const nx=nextSession();
   if(nx){
