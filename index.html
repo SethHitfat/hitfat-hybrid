@@ -754,6 +754,7 @@
         <div id="prog-load"></div>
         <div id="prog-trend"></div>
         <div id="prog-pb"></div>
+        <div id="prog-sim"></div>
         <div class="sechead">Benchmark History</div>
         <div id="prog-bench"></div>
         <div class="sechead">Personal Notes</div>
@@ -2726,8 +2727,8 @@ const HF = {
   KEY:'hitfat_hybrid_v1',
   userId:null, email:null,
   // owned: {programId:{date}}  scores: {engine,strength,stations,running}  wishlist: {programId:1}  purchases: [{id,title,price,date}]
-  data:{ track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null },
-  _defaults(){ return { track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null }; },
+  data:{ track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[] },
+  _defaults(){ return { track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[] }; },
   cacheKey(){ return this.KEY + (this.userId ? '_'+this.userId : ''); },
   setUser(id, email){ this.userId=id||null; this.email=email||null; },
   apply(obj){ // replace working data from a plain object (cloud or cache)
@@ -2737,7 +2738,7 @@ const HF = {
       d.prefs=Object.assign({},obj.prefs||{}); d.sessions=Object.assign({},obj.sessions||{}); d.note=obj.note||'';
       d.owned=Object.assign({},obj.owned||{}); d.scores=Object.assign({},obj.scores||{});
       d.wishlist=Object.assign({},obj.wishlist||{}); d.purchases=Array.isArray(obj.purchases)?obj.purchases.slice():[];
-      d.strava=obj.strava||null;
+      d.strava=obj.strava||null; d.sims=Array.isArray(obj.sims)?obj.sims.slice():[];
     }
     this.data=d;
   },
@@ -2953,6 +2954,69 @@ function renderPB(){
   el.innerHTML=`<div class="sechead">Personal Bests <span style="font-size:11px;color:#8a8a8a;font-weight:600;">all-time</span></div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">${t.join('')}</div>`;
 }
+/* ---- HYROX Simulation logger + station benchmarks (HITFAT's unique HYROX layer) ---- */
+const HYROX_STATIONS=[
+  {k:'ski',name:'SkiErg',unit:'1000m'},
+  {k:'sledpush',name:'Sled Push',unit:'50m'},
+  {k:'sledpull',name:'Sled Pull',unit:'50m'},
+  {k:'burpee',name:'Burpee Broad Jump',unit:'80m'},
+  {k:'row',name:'Row',unit:'1000m'},
+  {k:'farmers',name:'Farmers Carry',unit:'200m'},
+  {k:'lunge',name:'Sandbag Lunges',unit:'100m'},
+  {k:'wallball',name:'Wall Balls',unit:'100 reps'},
+];
+function parseMS(v){ if(v==null) return 0; v=String(v).trim(); if(!v) return 0; const p=v.split(':'); return p.length===2 ? ((parseInt(p[0],10)||0)*60+(parseInt(p[1],10)||0)) : (parseInt(v,10)||0); }
+function openSimLogger(){
+  $('modal-sheet').innerHTML=`<h3>Log HYROX Simulation 🏁</h3>
+    <p class="msub">Enter your time for each station (m:ss). Leave blank to skip.</p>
+    <div style="max-height:50vh;overflow:auto;display:flex;flex-direction:column;gap:8px;margin:10px 0;">
+      ${HYROX_STATIONS.map(s=>`<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div><div style="font-weight:700;font-size:13.5px;">${s.name}</div><div style="font-size:11px;color:#8a8a8a;">${s.unit}</div></div>
+        <input id="sim-${s.k}" inputmode="numeric" placeholder="m:ss" style="width:80px;text-align:center;background:#141414;border:1px solid #2a2a2a;border-radius:10px;padding:9px;color:#fff;font-weight:700;font-family:'Oswald';"></div>`).join('')}
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #222;padding-top:10px;">
+        <div><div style="font-weight:700;font-size:13.5px;">Total run time</div><div style="font-size:11px;color:#8a8a8a;">8 × 1km, optional</div></div>
+        <input id="sim-run" inputmode="numeric" placeholder="mm:ss" style="width:80px;text-align:center;background:#141414;border:1px solid #2a2a2a;border-radius:10px;padding:9px;color:#fff;font-weight:700;font-family:'Oswald';"></div>
+    </div>
+    <div class="modalrow"><button class="cancel" onclick="closeModal()">Cancel</button><button class="confirm" onclick="saveSim()">Save Sim</button></div>`;
+  $('modal').classList.add('on');
+}
+function saveSim(){
+  const st={}; let any=false;
+  HYROX_STATIONS.forEach(s=>{ const el=$('sim-'+s.k); const v=parseMS(el&&el.value); if(v>0){ st[s.k]=v; any=true; } });
+  const runEl=$('sim-run'), run=parseMS(runEl&&runEl.value);
+  if(!any && !run){ nfToast('Enter at least one station time.'); return; }
+  const stTotal=Object.keys(st).reduce((a,k)=>a+st[k],0), total=stTotal+run;
+  HF.data.sims=HF.data.sims||[]; HF.data.sims.push({ date:new Date().toISOString(), st:st, run:run, total:total });
+  HF.save(); closeModal(); nfToast('HYROX sim saved 🏁'); try{ renderProgress(); }catch(e){}
+}
+function stationPRs(){ const pr={}; (HF.data.sims||[]).forEach(sim=>{ const st=sim.st||{}; Object.keys(st).forEach(k=>{ if(st[k]>0 && (pr[k]===undefined||st[k]<pr[k])) pr[k]=st[k]; }); }); return pr; }
+function renderSim(){
+  const el=$('prog-sim'); if(!el) return;
+  const sims=HF.data.sims||[], pr=stationPRs(), last=sims.length?sims[sims.length-1]:null;
+  let html=`<div class="sechead">HYROX Simulation <span style="font-size:11px;color:#fc4c02;font-weight:700;">STATION SPLITS</span></div>`;
+  if(!sims.length){
+    html+=`<div class="benchcard" onclick="openSimLogger()" style="cursor:pointer;"><div class="bt">Log your first HYROX sim 🏁</div><div class="bm">Track station splits, total time &amp; PRs — the HYROX data Strava can’t give you.</div></div>`;
+  } else {
+    html+=`<div class="benchcard"><div class="bt">Latest sim — ${last.total?fmtDur(last.total):'—'}</div><div class="bm">${new Date(last.date).toLocaleDateString()} · ${Object.keys(last.st||{}).length}/8 stations${last.run?(' · run '+fmtDur(last.run)):''}</div></div>`;
+    const maxT=Math.max(1,...HYROX_STATIONS.map(s=>(last.st&&last.st[s.k])||0));
+    html+='<div style="margin-top:8px;display:flex;flex-direction:column;gap:6px;">';
+    HYROX_STATIONS.forEach(s=>{ const v=last.st&&last.st[s.k]; if(!v) return; const w=Math.round(v/maxT*100), isPr=(pr[s.k]===v);
+      html+=`<div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:118px;font-size:11.5px;color:#ccc;flex:none;">${s.name}${isPr?' <span style="color:#FFE000;font-weight:800;">★</span>':''}</div>
+        <div style="flex:1;height:12px;background:#141414;border-radius:6px;overflow:hidden;"><div style="height:100%;width:${w}%;background:#fc4c02;border-radius:6px;"></div></div>
+        <div style="width:52px;text-align:right;font-size:11px;color:#fff;font-weight:700;">${fmtDur(v)}</div></div>`; });
+    html+='</div>';
+    const prKeys=Object.keys(pr);
+    if(prKeys.length>=4){
+      const prStations=prKeys.reduce((a,k)=>a+pr[k],0);
+      const bestRun=Math.min.apply(null,(sims.filter(x=>x.run>0).map(x=>x.run)).concat([Infinity]));
+      const proj=prStations+(isFinite(bestRun)?bestRun:0);
+      html+=`<div class="infonote" style="margin-top:10px;">🏆 <b>PR-stack projection:</b> ${fmtDur(proj)} <span style="color:#8a8a8a;">— your best time at every station${isFinite(bestRun)?' + best run':''} combined (${prKeys.length}/8 stations)</span></div>`;
+    }
+    html+=`<button class="ghostbtn" style="margin-top:10px;" onclick="openSimLogger()">＋ Log new sim</button>`;
+  }
+  el.innerHTML=html;
+}
 function renderProgress(){
   const wk=weekStats();
   const el=$('prog-score'); if(el){ el.innerHTML=`<div class="sechead" style="margin-top:14px;">Hybrid Score</div>${scoreDashHTML()}
@@ -2964,7 +3028,7 @@ function renderProgress(){
     </div>
     <div class="trkbar" style="margin-top:6px;"><i style="width:${wk.pct}%"></i></div>
     <div class="trkmeta"><b>${wk.done}</b> / ${wk.target} planned sessions this week</div>`;
-  try{ renderLoad(); renderTrend(); renderPB(); }catch(e){ console.error(e); }
+  try{ renderLoad(); renderTrend(); renderPB(); renderSim(); }catch(e){ console.error(e); }
   const bm=nextBenchmark();
   $('prog-bench').innerHTML=`<div class="benchcard"><div class="bt">${bm.name}</div><div class="bm">${bm.when}</div></div>
     <div class="benchcard"><div class="bt">Weekly Consistency</div><div class="bm">${wk.done} done this week · ${HF.totalDone()} all-time</div></div>`;
