@@ -621,15 +621,16 @@
   <div class="screen" id="screen">
       <!-- SKRIN HOME (personalized dashboard — dirender oleh renderHome()) -->
       <div id="home" class="pad" style="display:none;">
+        <div id="home-install"></div>
         <div id="home-greet"></div>
         <div id="home-today"></div>
         <div id="home-challenge"></div>
         <div id="home-wod"></div>
         <div id="home-progress"></div>
-        <div id="home-countdown"></div>
-        <div id="home-races"></div>
         <div id="home-continue"></div>
         <div id="home-recommend"></div>
+        <div id="home-countdown"></div>
+        <div id="home-races"></div>
         <div id="home-quick"></div>
         <div id="home-new"></div>
       </div>
@@ -1215,13 +1216,13 @@ function inWishlist(id){ return !!HF.data.wishlist[id]; }
 /* ---- HYBRID SCORE (0–100 across Engine / Strength / Stations / Running) ---- */
 const SCORE_KEYS = ['engine','strength','stations','running'];
 function seedScores(){
-  if(HF.data.scores && SCORE_KEYS.every(function(k){ return typeof HF.data.scores[k]==='number'; })) return;
-  const base = {Beginner:44, Intermediate:60, Advanced:74}[HF.data.prefs && HF.data.prefs.level] || 52;
-  HF.data.scores = { engine:base, strength:base+3, stations:base-5, running:base-1 };
-  // nudge up by training volume (each session +0.4, capped +18)
-  const bump = Math.min(18, Math.round((HF.totalDone()||0)*0.4));
-  SCORE_KEYS.forEach(function(k){ HF.data.scores[k]=Math.max(1, Math.min(99, HF.data.scores[k]+bump)); });
-  HF.save();
+  // Derived each time: starts low for beginners/first-timers, grows with training volume.
+  const lvl = HF.data.prefs && HF.data.prefs.level;
+  const base = {Beginner:26, Intermediate:42, Advanced:58}[lvl] || 28;   // first-timer ≈ high-20s, not 50
+  const bump = Math.min(38, Math.round((HF.totalDone()||0)*0.7));         // +0.7 per session, capped +38
+  const s = { engine:base+bump, strength:base+3+bump, stations:base-5+bump, running:base-1+bump };
+  SCORE_KEYS.forEach(function(k){ s[k]=Math.max(1, Math.min(99, s[k])); });
+  HF.data.scores = s;
 }
 function scoreBreakdown(){ seedScores(); const s=HF.data.scores||{}; const o={}; SCORE_KEYS.forEach(function(k){ o[k]=Math.round(s[k]||50); }); return o; }
 function hybridScore(){ const b=scoreBreakdown(); return Math.round(SCORE_KEYS.reduce(function(a,k){return a+b[k];},0)/SCORE_KEYS.length); }
@@ -2325,6 +2326,7 @@ function homeDoneDaysThisWeek(){
   return set;
 }
 function renderHome(){
+  try{ renderInstallBanner(); }catch(e){}   // "Add to Home Screen" prompt (once, after sign-in)
   const race = HF.data.track==='race';
   const nameStr = HF.data.prefs.name?', '+HF.data.prefs.name:'';
   // 1) GREETING
@@ -3630,6 +3632,27 @@ function openRace(id){
   $('modal').classList.add('on');
 }
 function trackRace(id){ HF.data.races=HF.data.races||{}; if(HF.data.races[id]) delete HF.data.races[id]; else HF.data.races[id]=1; HF.save(); openRace(id); try{ renderRaces(); }catch(e){} }
+
+/* ---- Install / Add to Home Screen (shown on Home after sign-in, once) ---- */
+window.addEventListener('beforeinstallprompt', function(e){ e.preventDefault(); window._deferredInstall=e; try{ if(typeof curTab!=='undefined' && curTab==='home') renderInstallBanner(); }catch(err){} });
+function isStandalone(){ try{ return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone===true; }catch(e){ return false; } }
+function isIOSdev(){ return /iphone|ipad|ipod/i.test(navigator.userAgent||''); }
+function dismissInstall(){ try{ localStorage.setItem('hf_install_dismissed','1'); }catch(e){} const el=$('home-install'); if(el) el.innerHTML=''; }
+function doInstall(){ const p=window._deferredInstall; if(!p) return; p.prompt(); const uc=p.userChoice; if(uc&&uc.finally){ uc.finally(function(){ window._deferredInstall=null; dismissInstall(); }); } else { window._deferredInstall=null; dismissInstall(); } }
+function renderInstallBanner(){
+  const el=$('home-install'); if(!el) return;
+  let dismissed=false; try{ dismissed=localStorage.getItem('hf_install_dismissed')==='1'; }catch(e){}
+  const canPrompt=!!window._deferredInstall, ios=isIOSdev();
+  if(isStandalone() || dismissed || (!canPrompt && !ios)){ el.innerHTML=''; return; }
+  el.innerHTML=`<div style="display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,#1c1905,#0a0a0a);border:1px solid #3a3208;border-radius:14px;padding:12px 14px;margin:14px 2px 0;">
+    <div style="flex:1;min-width:0;">
+      <div style="font-weight:800;font-size:13.5px;">📲 Install HITFAT HYBRID</div>
+      <div style="font-size:11.5px;color:#9a9a9a;margin-top:1px;">${canPrompt?'One tap — home-screen icon + full-screen.':'Tap <b>Share ⎋</b>, then <b>Add to Home Screen</b>.'}</div>
+    </div>
+    ${canPrompt?`<button class="go" style="width:auto;padding:9px 14px;flex:none;" onclick="doInstall()">Install</button>`:''}
+    <button onclick="dismissInstall()" aria-label="Dismiss" style="background:none;border:none;color:#777;font-size:20px;line-height:1;cursor:pointer;flex:none;padding:0 2px;">×</button>
+  </div>`;
+}
 
 /* ---- Shareable WOD card (branded canvas → Web Share / download) — UGC traffic loop ---- */
 function _roundRectC(x,rx,ry,w,h,r){ x.beginPath();x.moveTo(rx+r,ry);x.arcTo(rx+w,ry,rx+w,ry+h,r);x.arcTo(rx+w,ry+h,rx,ry+h,r);x.arcTo(rx,ry+h,rx,ry,r);x.arcTo(rx,ry,rx+w,ry,r);x.closePath(); }
