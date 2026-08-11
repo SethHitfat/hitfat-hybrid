@@ -2900,10 +2900,40 @@ function renderProgress(){
     .sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,20);
   $('prog-recent').innerHTML = list.length ? list.map(s=>{
     const d=new Date(s.date), dd=d.getDate()+'/'+(d.getMonth()+1);
-    return `<div class="prow"><div class="pd">${dd}</div>
-      <div class="pi"><div class="pt">${s.name||'Workout'}</div><div class="pm">${s.run?('⏱ '+s.run+' · '):''}${s.notes?('“'+s.notes+'”'):'Completed'}</div></div>
-      <div class="pr">${s.rpe?('RPE '+s.rpe):''}</div></div>`;
+    return `<div class="prow" onclick="openSessionAnalysis('${s.key}')" style="cursor:pointer;"><div class="pd">${dd}</div>
+      <div class="pi"><div class="pt">${s.name||'Workout'}</div><div class="pm">${sessMeta(s)}</div></div>
+      <div class="pr">${s.rpe?('RPE '+s.rpe):'›'}</div></div>`;
   }).join('') : `<div class="empty">No sessions logged yet. Complete a workout and it will appear here.</div>`;
+}
+/* ---- Session analysis (Zepp-style detail card from Strava data) ---- */
+function fmtDist(m){ if(!m||m<=0) return '—'; return (m>=1000)?(m/1000).toFixed(2)+' km':Math.round(m)+' m'; }
+function fmtPace(spd){ if(!spd||spd<=0) return '—'; const s=1000/spd, mm=Math.floor(s/60), ss=Math.round(s%60); return mm+':'+(ss<10?'0':'')+ss+' /km'; }
+function fmtDur(secs){ secs=Math.round(secs||0); const h=Math.floor(secs/3600), m=Math.floor((secs%3600)/60), s=secs%60; return h?(h+':'+(m<10?'0':'')+m+':'+(s<10?'0':'')+s):(m+':'+(s<10?'0':'')+s); }
+function sessMeta(s){
+  if(s.strava){ const p=[(s.mins||0)+' min'];
+    if(s.dist>0){ p.push(fmtDist(s.dist)); p.push(fmtPace(s.spd)); }
+    if(s.hr) p.push(Math.round(s.hr)+' bpm'); return p.join(' · '); }
+  return (s.run?('⏱ '+s.run+' · '):'')+(s.notes?('“'+s.notes+'”'):'Completed');
+}
+function _tile(v,l){ return `<div style="background:#141414;border:1px solid #242424;border-radius:14px;padding:13px 8px;text-align:center;"><div style="font-family:'Oswald';font-weight:700;font-size:22px;color:#fff;line-height:1;">${v}</div><div style="font-size:10px;color:#8a8a8a;font-weight:700;letter-spacing:.6px;margin-top:5px;">${l}</div></div>`; }
+function openSessionAnalysis(key){
+  const s=HF.data.sessions[key]; if(!s) return;
+  const d=new Date(s.date);
+  const dateStr=isNaN(d)?'':(d.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'})+' · '+d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}));
+  const isRun=(s.dist&&s.dist>0);
+  const t=[]; t.push(_tile(fmtDur((s.mins||0)*60),'DURATION'));
+  if(isRun){ t.push(_tile(fmtDist(s.dist),'DISTANCE')); t.push(_tile(fmtPace(s.spd),'AVG PACE')); }
+  if(s.hr) t.push(_tile(Math.round(s.hr),'AVG HR'));
+  if(s.hrmax) t.push(_tile(Math.round(s.hrmax),'MAX HR'));
+  if(s.elev>1) t.push(_tile(Math.round(s.elev)+'m','ELEV'));
+  if(s.rpe) t.push(_tile('RPE '+s.rpe,'EFFORT'));
+  const basic=t.length<=1;
+  $('modal-sheet').innerHTML=`<h3>${s.name||'Workout'}</h3>
+    <p class="msub">${s.stype?s.stype+' · ':''}${dateStr}</p>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0;">${t.join('')}</div>
+    <div class="infonote">${s.strava?'<span style="color:#fc4c02;">● Synced from Strava</span>':'Logged in HITFAT'}${basic?' — no detailed metrics recorded for this session':''}</div>
+    ${s.sid?`<div class="modalrow"><button class="cancel" onclick="closeModal()">Close</button><button class="confirm" onclick="window.open('https://www.strava.com/activities/${s.sid}','_blank');closeModal();">View on Strava ↗</button></div>`:`<div class="modalrow"><button class="confirm" onclick="closeModal()">Close</button></div>`}`;
+  $('modal').classList.add('on');
 }
 function saveGeneralNote(){ const inp=$('prog-note-input'); if(inp){ HF.data.note=inp.value; HF.save(); nfToast('Note saved'); } }
 
@@ -3619,8 +3649,13 @@ async function syncStrava(silent){
     const acts=await r.json();
     if(!Array.isArray(acts)){ if(!silent) nfToast('Strava sync failed — try reconnecting.'); return; }
     let n=0;
-    acts.forEach(a=>{ const key='strava-'+a.id;
-      if(!HF.isDone(key)){ HF.markDone(key,{ date:a.start_date, strava:true, name:a.name, stype:(a.sport_type||a.type||'Workout'), mins:Math.round((a.moving_time||0)/60) }); n++; } });
+    acts.forEach(a=>{ const key='strava-'+a.id; const ex=HF.data.sessions[key]; const isNew=!ex;
+      if(isNew || ex.sid===undefined){                       // import new, or enrich older imports that lack detail
+        HF.markDone(key,{ date:a.start_date, strava:true, sid:a.id, name:a.name, stype:(a.sport_type||a.type||'Workout'),
+          mins:Math.round((a.moving_time||0)/60), dist:a.distance||0, elap:a.elapsed_time||0,
+          hr:a.average_heartrate||0, hrmax:a.max_heartrate||0, spd:a.average_speed||0, elev:a.total_elevation_gain||0 });
+        if(isNew) n++;
+      } });
     const d=stravaData(); if(d){ d.synced=new Date().toISOString(); setStrava(d); }
     if(n) nfToast('Imported '+n+' activit'+(n===1?'y':'ies')+' from Strava ✓');
     else if(!silent) nfToast('Strava — already up to date ✓');
