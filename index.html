@@ -756,6 +756,7 @@
         <div id="prog-trend"></div>
         <div id="prog-pb"></div>
         <div id="prog-predict"></div>
+        <div id="prog-pace"></div>
         <div id="prog-sim"></div>
         <div class="sechead">Benchmark History</div>
         <div id="prog-bench"></div>
@@ -2730,8 +2731,8 @@ const HF = {
   KEY:'hitfat_hybrid_v1',
   userId:null, email:null,
   // owned: {programId:{date}}  scores: {engine,strength,stations,running}  wishlist: {programId:1}  purchases: [{id,title,price,date}]
-  data:{ track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[], races:{} },
-  _defaults(){ return { track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[], races:{} }; },
+  data:{ track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[], races:{}, raceGoal:'' },
+  _defaults(){ return { track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[], races:{}, raceGoal:'' }; },
   cacheKey(){ return this.KEY + (this.userId ? '_'+this.userId : ''); },
   setUser(id, email){ this.userId=id||null; this.email=email||null; },
   apply(obj){ // replace working data from a plain object (cloud or cache)
@@ -2741,7 +2742,7 @@ const HF = {
       d.prefs=Object.assign({},obj.prefs||{}); d.sessions=Object.assign({},obj.sessions||{}); d.note=obj.note||'';
       d.owned=Object.assign({},obj.owned||{}); d.scores=Object.assign({},obj.scores||{});
       d.wishlist=Object.assign({},obj.wishlist||{}); d.purchases=Array.isArray(obj.purchases)?obj.purchases.slice():[];
-      d.strava=obj.strava||null; d.sims=Array.isArray(obj.sims)?obj.sims.slice():[]; d.races=Object.assign({},obj.races||{});
+      d.strava=obj.strava||null; d.sims=Array.isArray(obj.sims)?obj.sims.slice():[]; d.races=Object.assign({},obj.races||{}); d.raceGoal=obj.raceGoal||'';
     }
     this.data=d;
   },
@@ -3085,6 +3086,47 @@ function renderCalendar(){
     <div class="trkmeta" style="margin:11px 0 2px;"><b>${mCount}</b> sessions · <b>${mMin}</b> min this month${calSelDay?' · <span style="color:var(--hyrox);cursor:pointer;" onclick="calSelect(\''+calSelDay+'\')">show all →</span>':''}</div>
     <div style="margin-top:6px;">${listHtml}</div>`;
 }
+/* ---- PaceMe — goal finish time → target run pace + per-station splits ---- */
+function parseHMS(v){ if(v==null) return 0; v=String(v).trim(); if(!v) return 0; const p=v.split(':').map(x=>parseInt(x,10)||0); if(p.length===3) return p[0]*3600+p[1]*60+p[2]; if(p.length===2) return p[0]*60+p[1]; return p[0]; }
+function renderPaceMe(){
+  const el=$('prog-pace'); if(!el) return;
+  el.innerHTML=`<div class="sechead">PaceMe <span style="font-size:11px;color:#8a8a8a;font-weight:600;">race plan</span></div>
+    <div class="today">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="flex:1;"><div style="font-weight:700;font-size:13px;">Goal finish time</div><div style="font-size:11px;color:#8a8a8a;">e.g. 1:15:00</div></div>
+        <input id="pace-goal" inputmode="numeric" placeholder="h:mm:ss" value="${HF.data.raceGoal||''}" style="width:104px;text-align:center;background:#141414;border:1px solid #2a2a2a;border-radius:10px;padding:9px;color:#fff;font-weight:700;font-family:'Oswald';">
+        <button class="go sec" style="width:auto;padding:9px 16px;flex:none;" onclick="calcPaceMe()">Plan</button>
+      </div>
+      <div id="pace-out" style="margin-top:10px;"></div>
+    </div>`;
+  if(HF.data.raceGoal) calcPaceMe();
+}
+function calcPaceMe(){
+  const inp=$('pace-goal'), out=$('pace-out'); if(!out) return;
+  const G=parseHMS(inp&&inp.value);
+  if(!G){ out.innerHTML='<div class="infonote">Enter a goal time, e.g. <b>1:15:00</b>, then tap Plan.</div>'; return; }
+  HF.data.raceGoal=inp.value; HF.save();
+  const pred=(function(){ try{ return hyroxPredict(); }catch(e){ return null; } })();
+  let runTotal, stationTotal, rox, perStation;
+  if(pred && pred.total>0){
+    const f=G/pred.total; runTotal=pred.runTotal*f; stationTotal=pred.stationTotal*f; rox=pred.roxzone*f;
+    const pr=stationPRs(); perStation=HYROX_STATIONS.map(s=>({name:s.name, t:(pr[s.k]||HYROX_STATION_DEFAULTS[s.k])*f}));
+  } else {
+    runTotal=G*0.55; stationTotal=G*0.38; rox=G*0.07;
+    const tot=HYROX_STATIONS.reduce((a,s)=>a+HYROX_STATION_DEFAULTS[s.k],0);
+    perStation=HYROX_STATIONS.map(s=>({name:s.name, t:stationTotal*(HYROX_STATION_DEFAULTS[s.k]/tot)}));
+  }
+  const runPace=runTotal/8;
+  out.innerHTML=`<div class="dstat">
+      <div class="c"><b style="color:#FFE000;">${fmtDur(Math.round(runPace))}</b><small>RUN /KM</small></div>
+      <div class="c"><b>${fmtDur(Math.round(stationTotal))}</b><small>STATIONS</small></div>
+      <div class="c"><b>${fmtDur(Math.round(rox))}</b><small>ROXZONE</small></div>
+    </div>
+    <div style="margin-top:8px;display:flex;flex-direction:column;gap:4px;">
+      ${perStation.map(p=>`<div style="display:flex;justify-content:space-between;padding:6px 11px;background:#141414;border:1px solid #242424;border-radius:9px;font-size:12px;"><span style="color:#ccc;">${p.name}</span><span style="color:#fff;font-weight:700;">${fmtDur(Math.round(p.t))}</span></div>`).join('')}
+    </div>
+    <div class="infonote" style="margin-top:8px;">Hit these to finish in <b style="color:#FFE000;">${fmtDur(G)}</b>. ${pred?'Scaled from your current training.':'Standard split — sync runs &amp; log a HYROX sim to personalise it.'}</div>`;
+}
 function renderProgress(){
   const wk=weekStats();
   const el=$('prog-score'); if(el){ el.innerHTML=`<div class="sechead" style="margin-top:14px;">Hybrid Score</div>${scoreDashHTML()}
@@ -3096,7 +3138,7 @@ function renderProgress(){
     </div>
     <div class="trkbar" style="margin-top:6px;"><i style="width:${wk.pct}%"></i></div>
     <div class="trkmeta"><b>${wk.done}</b> / ${wk.target} planned sessions this week</div>`;
-  try{ renderLoad(); renderTrend(); renderPB(); renderPredictor(); renderSim(); }catch(e){ console.error(e); }
+  try{ renderLoad(); renderTrend(); renderPB(); renderPredictor(); renderPaceMe(); renderSim(); }catch(e){ console.error(e); }
   const bm=nextBenchmark();
   $('prog-bench').innerHTML=`<div class="benchcard"><div class="bt">${bm.name}</div><div class="bm">${bm.when}</div></div>
     <div class="benchcard"><div class="bt">Weekly Consistency</div><div class="bm">${wk.done} done this week · ${HF.totalDone()} all-time</div></div>`;
@@ -3523,6 +3565,7 @@ const RACES=[
   {id:'huntr-kl', name:'HUNTR Games KL', date:'2026-10-09', dateEnd:'2026-10-11', city:'MAEPS Hall C, Serdang', type:'Endurance & strength circuit · solo/doubles/relay', price:'from RM300', url:'https://huntrgames.com/get-tickets', tag:'RACE'},
   {id:'kipmall', name:'KIPMALL Urban Fitness Race', date:'2026-10-10', dateEnd:'2026-10-11', city:'KIPMall Kota Warisan, Sepang', type:'Run + 10 functional stations', price:'RM10k prize pool', url:'https://t2u.asia/e/50911', tag:'HYROX-STYLE', hyrox:true},
   {id:'pointbreak', name:'Point Break 2026', date:'2026-09-20', city:'KL Gateway Mall, Kuala Lumpur', type:'Fitness race · 8am–8pm', price:'', url:'https://pointbreak2026.ubertickets.asia/', tag:'RACE'},
+  {id:'hyrox-bkk', name:'HYROX Bangkok', date:'2026-08-14', dateEnd:'2026-08-16', city:'QSNCC, Bangkok 🇹🇭', type:'HYROX · 8×1km run + 8 stations', price:'', url:'https://hyrox.com/find-my-race/', tag:'HYROX', hyrox:true},
   {id:'hyrox-kl', name:'AirAsia HYROX Kuala Lumpur', date:'2026-12-11', dateEnd:'2026-12-13', city:'MITEC, Kuala Lumpur', type:'HYROX · 8×1km run + 8 stations', price:'', url:'https://hyrox.com/find-my-race/', tag:'HYROX', hyrox:true},
 ];
 function raceDateObj(r){ return r.date? new Date(r.date+'T08:00:00+08:00') : null; }
