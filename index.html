@@ -753,6 +753,7 @@
         <div id="prog-stats"></div>
         <div id="prog-load"></div>
         <div id="prog-trend"></div>
+        <div id="prog-pb"></div>
         <div class="sechead">Benchmark History</div>
         <div id="prog-bench"></div>
         <div class="sechead">Personal Notes</div>
@@ -2925,6 +2926,33 @@ function renderTrend(){
   el.innerHTML=`<div class="sechead">Weekly Volume <span style="font-size:11px;color:#8a8a8a;font-weight:600;">last 8 weeks · min</span></div>
     <div style="display:flex;align-items:flex-end;gap:5px;padding:6px 2px 2px;">${bars}</div>`;
 }
+/* ---- Personal Bests (from synced Strava data) ---- */
+function personalBests(){
+  const ss=Object.values(HF.data.sessions).filter(s=>s&&s.date);
+  const runsTagged=ss.filter(s=>s.dist>0 && /run/i.test(s.stype||''));
+  const distRuns=runsTagged.length?runsTagged:ss.filter(s=>s.dist>0);
+  let longest=null; distRuns.forEach(s=>{ if(!longest||s.dist>longest.dist) longest=s; });
+  let fastest=null; distRuns.filter(s=>s.dist>=2000 && s.spd>0).forEach(s=>{ if(!fastest||s.spd>fastest.spd) fastest=s; });
+  let longestSess=null; ss.forEach(s=>{ if(!longestSess||(s.mins||0)>(longestSess.mins||0)) longestSess=s; });
+  const weeks={}; ss.forEach(s=>{ const d=new Date(s.date); if(isNaN(d)) return; const t=hfWeekStart(d).getTime(); weeks[t]=(weeks[t]||0)+(s.mins||45); });
+  let bigWeek=0; Object.values(weeks).forEach(v=>{ if(v>bigWeek) bigWeek=v; });
+  const totDist=ss.reduce((a,s)=>a+(s.dist||0),0), totMin=ss.reduce((a,s)=>a+(s.mins||0),0);
+  return {longest, fastest, longestSess, bigWeek, totDist, totMin, count:ss.length};
+}
+function renderPB(){
+  const el=$('prog-pb'); if(!el) return;
+  const pb=personalBests(); if(!pb.count){ el.innerHTML=''; return; }
+  const t=[];
+  if(pb.longest) t.push(_tile(fmtDist(pb.longest.dist),'LONGEST RUN'));
+  if(pb.fastest) t.push(_tile(fmtPace(pb.fastest.spd).replace(' /km',''),'BEST PACE /KM'));
+  if(pb.longestSess && pb.longestSess.mins) t.push(_tile(fmtDur(pb.longestSess.mins*60),'LONGEST SESSION'));
+  if(pb.bigWeek) t.push(_tile(pb.bigWeek+'m','BIGGEST WEEK'));
+  if(pb.totDist>1000) t.push(_tile((pb.totDist/1000).toFixed(0)+'km','TOTAL DISTANCE'));
+  if(pb.totMin) t.push(_tile(Math.round(pb.totMin/60)+'h','TOTAL TIME'));
+  if(!t.length){ el.innerHTML=''; return; }
+  el.innerHTML=`<div class="sechead">Personal Bests <span style="font-size:11px;color:#8a8a8a;font-weight:600;">all-time</span></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">${t.join('')}</div>`;
+}
 function renderProgress(){
   const wk=weekStats();
   const el=$('prog-score'); if(el){ el.innerHTML=`<div class="sechead" style="margin-top:14px;">Hybrid Score</div>${scoreDashHTML()}
@@ -2936,7 +2964,7 @@ function renderProgress(){
     </div>
     <div class="trkbar" style="margin-top:6px;"><i style="width:${wk.pct}%"></i></div>
     <div class="trkmeta"><b>${wk.done}</b> / ${wk.target} planned sessions this week</div>`;
-  try{ renderLoad(); renderTrend(); }catch(e){ console.error(e); }
+  try{ renderLoad(); renderTrend(); renderPB(); }catch(e){ console.error(e); }
   const bm=nextBenchmark();
   $('prog-bench').innerHTML=`<div class="benchcard"><div class="bt">${bm.name}</div><div class="bm">${bm.when}</div></div>
     <div class="benchcard"><div class="bt">Weekly Consistency</div><div class="bm">${wk.done} done this week · ${HF.totalDone()} all-time</div></div>`;
