@@ -2382,7 +2382,7 @@ function renderHome(){
     ws+=`<div class="wcell ${i===off?'today':''} ${done.has(i)?'ddone':''}"><small>${names[i]}</small><b>${done.has(i)?'✓':dt.getDate()}</b></div>`; }
   $('home-progress').innerHTML=`<div class="sechead">My Progress</div>
     <div class="dstat">
-      <div class="c" onclick="switchTab('progress')" style="cursor:pointer;"><b>${hybridScore()}</b><small>Hybrid Score</small></div>
+      <div class="c"><b>${HF.totalDone()}</b><small>Total Sessions</small></div>
       <div class="c"><b>${HF.streak()}</b><small>Day Streak</small></div>
       <div class="c"><b>${wk.pct}%</b><small>This Week</small></div>
     </div>
