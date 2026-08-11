@@ -864,7 +864,7 @@
 <!-- Onboarding / track / readiness overlay -->
 <div class="ovl" id="ob"><div class="ovl-in" id="ob-in"></div></div>
 <!-- Generic bottom-sheet modal (mark complete, confirm reset, etc.) -->
-<div class="modal" id="modal"><div class="sheet" id="modal-sheet"></div></div>
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()"><div class="sheet" id="modal-sheet"></div></div>
 
 <!-- ============ AUTH / LOGIN (Supabase) ============ -->
 <div id="auth"><div class="auth-in">
@@ -3625,10 +3625,8 @@ function openRace(id){
     ${(dl!=null&&dl>=0)?`<div class="today" style="text-align:center;padding:14px;"><div style="font-family:'Oswald';font-weight:700;font-size:40px;color:#FFE000;line-height:1;">${dl}</div><div class="tm" style="margin-top:4px;">days to go</div></div>`:''}
     <div class="infonote" style="margin-top:8px;">${r.type||''}${r.price?(' · <b>'+r.price+'</b>'):''}</div>
     ${pred?`<div class="infonote" style="margin-top:8px;">🏁 Your projected time: <b style="color:#FFE000;">${fmtDur(pred.total)}</b> <span style="color:#8a8a8a;">— from your training</span></div>`:''}
-    <div class="modalrow" style="gap:8px;">
-      <button class="cancel" onclick="trackRace('${id}')">${tracked?'★ Tracking':'☆ Track race'}</button>
-      ${r.url?`<button class="confirm" onclick="window.open('${r.url}','_blank')">Register ↗</button>`:`<button class="confirm" onclick="closeModal()">Close</button>`}
-    </div>`;
+    <button onclick="trackRace('${id}')" style="width:100%;padding:11px;border-radius:12px;border:1px solid ${tracked?'#FFE000':'#2a2a2a'};background:#141414;color:${tracked?'#FFE000':'#fff'};font-weight:700;cursor:pointer;margin:2px 0 8px;">${tracked?'★ Tracking — tap to remove':'☆ Track this race'}</button>
+    <div class="modalrow"><button class="cancel" onclick="closeModal()">Close</button>${r.url?`<button class="confirm" onclick="window.open('${r.url}','_blank')">Register ↗</button>`:''}</div>`;
   $('modal').classList.add('on');
 }
 function trackRace(id){ HF.data.races=HF.data.races||{}; if(HF.data.races[id]) delete HF.data.races[id]; else HF.data.races[id]=1; HF.save(); openRace(id); try{ renderRaces(); }catch(e){} }
