@@ -645,10 +645,8 @@
         <div id="home-wod"></div>
         <div id="home-continue"></div>
         <div id="home-recommend"></div>
-        <div id="home-countdown"></div>
         <div id="home-races"></div>
         <div id="home-quick"></div>
-        <div id="home-new"></div>
       </div>
     <div class="pad">
       <!-- SKRIN 1: WORKOUT LIBRARY -->
@@ -2446,54 +2444,38 @@ function renderHome(){
   })();
   try{ renderChallenge(); }catch(e){ console.error(e); }   // 2c) 7-Day Hybrid Challenge (launch lead-magnet)
   try{ renderRaces(); }catch(e){ console.error(e); }       // Races — discover & track MY/SEA races
-  // 3) HYBRID SCORE — radar chart hero (replaces the old stat/week strip block)
-  $('home-progress').innerHTML=`<div class="sechead">Hybrid Score</div>${scoreRadarHTML()}`;
-  // 4) COUNTDOWN (race → KL / starter → Hybrid Sim)
-  if(race){
-    $('home-countdown').innerHTML=`<div class="cdmini" onclick="switchTab('store');openProgramDetail('road-kl','home')">
-      <div class="cl">AirAsia HYROX KL · 11–13 Dec 2026</div>
-      <div class="ch">Road to HYROX KL</div>
-      <div class="cn"><b id="kl-mini-home">—</b><span>days to the event (11 Dec)</span></div>
-      <div class="cnote">Your race date &amp; start time depend on your category.</div></div>`;
-    tickKL(); if(window.klTicker) clearInterval(window.klTicker); window.klTicker=setInterval(tickKL,1000);
-  } else {
-    if(window.klTicker){ clearInterval(window.klTicker); window.klTicker=null; }
-    $('home-countdown').innerHTML=`<div class="cdmini" style="cursor:default;">
-      <div class="cl">HITFAT Hybrid Simulation</div><div class="ch">Your Finish Line</div>
-      <div class="cn"><b style="font-size:18px;">Date to be announced</b></div>
-      <div class="cnote">Build toward the HITFAT Hybrid Simulation — the date will be announced here.</div></div>`;
-  }
-  // 5) CONTINUE YOUR PROGRAM
-  const ownedP=CATALOG_ORDER.filter(id=>ownsProgram(id)&&CATALOG[id].access!=='free');
-  const contId = ownedP[0] || 'hybrid-starter'; // free users continue the free Hybrid Starter plan
-  const cp=CATALOG[contId];
-  $('home-continue').innerHTML=`<div class="sechead">Continue Your Program</div>
-    <div class="today" style="cursor:pointer;" onclick="${ownsProgram(contId)?`openProgramContent('${contId}')`:`openProgramDetail('${contId}','home')`}">
-      <div class="tk">${cp.tag} · ${cp.level}</div>
-      <div class="tt">${cp.title}</div>
-      <div class="tm">Week ${currentWeek()} of ${cp.weeks} · ${wk.pct}% this week</div>
-      <div class="trkbar" style="margin:10px 0 2px;"><i style="width:${wk.pct}%"></i></div>
+  // 3) HYBRID SCORE — rings hero + a single compact stat strip (no separate My Progress block)
+  const wk=weekStats();
+  $('home-progress').innerHTML=`<div class="sechead">Hybrid Score</div>${scoreRadarHTML()}
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      ${[[HF.streak(),'DAY STREAK'],[wk.pct+'%','THIS WEEK'],[HF.totalDone(),'SESSIONS']]
+        .map(x=>`<div style="flex:1;text-align:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 6px;">
+          <div style="font-family:'Oswald';font-weight:700;font-size:19px;color:#fff;line-height:1;">${x[0]}</div>
+          <div style="font-size:9px;color:#8a8a8a;font-weight:700;letter-spacing:.5px;margin-top:5px;">${x[1]}</div></div>`).join('')}
     </div>`;
-  // 6) RECOMMENDED FOR YOU (weakness + funnel)
-  const weak=weakestArea(), b=scoreBreakdown();
+  // 4) FOR YOU — current program progress + recommendations (countdown removed: the Races
+  //    section already carries the KL countdown, so it was duplicated information)
+  if(window.klTicker){ clearInterval(window.klTicker); window.klTicker=null; }
+  const ownedP=CATALOG_ORDER.filter(id=>ownsProgram(id)&&CATALOG[id].access!=='free');
+  const contId = ownedP[0] || 'hybrid-starter';
+  const cp=CATALOG[contId];
+  const weak=weakestArea();
   const recIds=[];
   if(!ownsProgram('first-timer') && CATALOG['first-timer']) recIds.push('first-timer');
   recIds.push(race?'race-12':'build-engine');
   recIds.push('station-builder');
-  $('home-recommend').innerHTML=`<div class="sechead">Recommended For You</div>
-    <div class="benchcard" onclick="switchTab('explore');setFilter('weakness')" style="cursor:pointer;margin-bottom:12px;">
-      <div class="bt">Weakest: ${AREA_LABEL[weak]} — ${b[weak]}/100</div>
-      <div class="bm">Train this to raise your Hybrid Score fastest →</div></div>
-    <div class="hscroll">${recIds.filter((v,i,a)=>a.indexOf(v)===i).map(id=>programCard(id)).join('')}</div>`;
+  $('home-continue').innerHTML='';
+  $('home-recommend').innerHTML=`<div class="sechead">For You</div>
+    <div class="frow" onclick="${ownsProgram(contId)?`openProgramContent('${contId}')`:`openProgramDetail('${contId}','home')`}">
+      <div class="th" style="background-image:url('${cp.img}')"></div>
+      <div class="tx"><div class="t">${cp.title}</div>
+        <div class="m">Week ${currentWeek()} of ${cp.weeks} · ${wk.pct}% this week</div>
+        <div class="trkbar" style="height:5px;margin:7px 0 0;"><i style="width:${wk.pct}%"></i></div></div>
+      <div class="chev">›</div></div>
+    <div class="hscroll" style="margin-top:12px;">${recIds.filter((v,i,a)=>a.indexOf(v)===i).map(id=>programCard(id)).join('')}</div>`;
   // 7) QUICK WORKOUTS
   $('home-quick').innerHTML=`<div class="sechead">Quick Workouts <span style="font-size:11px;color:#2ec27e;font-weight:800;letter-spacing:1px;">FREE</span></div>
     <div class="hscroll">${QUICK_WORKOUTS.map((_,i)=>quickCard(i)).join('')}</div>`;
-  // 8) NEW THIS WEEK (weekly-rotating free spotlight)
-  const sp=spotlightThisWeek();
-  $('home-new').innerHTML=`<div class="sechead">New This Week</div>
-    <div class="pcard full" onclick="${sp.go}" style="cursor:pointer;">
-      <div class="top" style="height:110px;background:radial-gradient(420px 200px at 82% -10%,rgba(255,224,0,.22),transparent 60%),linear-gradient(155deg,#1d1d1d 0%,#0a0a0a 100%);"><div class="edge"></div><span class="badge free">${sp.badge}</span></div>
-      <div class="info"><div class="t">${sp.t}</div><div class="m">${sp.m}</div></div></div>`;
   // temp diagnostics (debug device-specific nav placement) — remove after nav confirmed OK
   setTimeout(function(){ try{
     const d=$('home-diag'); if(!d) return;
@@ -2501,7 +2483,7 @@ function renderHome(){
     const tr=t?t.getBoundingClientRect():null, ar=a?a.getBoundingClientRect():null;
     const vh=getComputedStyle(document.documentElement).getPropertyValue('--vh').trim()||'—';
     const nd=window._navDiag||{};
-    d.textContent='N19 · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')
+    d.textContent='N20 · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')
       +' · sat '+(nd.sat!=null?nd.sat:'?')+' · sab '+(nd.sab!=null?nd.sab:'?')+' · navb '+(nd.navb!=null?nd.navb:'?')
       +' · pwa '+(_standaloneVH()?'y':'n')
       +(ar?(' · app '+Math.round(ar.height)+'@'+Math.round(ar.top)) : '')
@@ -3419,7 +3401,7 @@ function renderProfile(){
   // build + viewport diagnostics (helps debug device-specific layout issues)
   try{ const bt=$('build-tag'); if(bt){
     const vh=getComputedStyle(document.documentElement).getPropertyValue('--vh').trim()||'—';
-    bt.textContent='build 2026.08.12-N19 · vh '+vh+' · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')+' · pwa '+(_standaloneVH()?'yes':'no');
+    bt.textContent='build 2026.08.12-N20 · vh '+vh+' · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')+' · pwa '+(_standaloneVH()?'yes':'no');
   } }catch(e){}
   try{ renderStravaRow(); }catch(e){}   // Connected Apps → Strava
 
@@ -3877,25 +3859,44 @@ function chalKey(i){ return 'chal-'+(i+1); }
 function challengeDone(){ let n=0; for(let i=0;i<CHALLENGE_7.length;i++){ if(HF.isDone(chalKey(i))) n++; } return n; }
 function nextChallengeIdx(){ for(let i=0;i<CHALLENGE_7.length;i++){ if(!HF.isDone(chalKey(i))) return i; } return -1; }
 function openChallengeDay(i){ const c=CHALLENGE_7[i]; const q=QUICK_WORKOUTS[c.q]; if(q) openWorkoutObject(q,'Day '+(i+1)+' · 7-Day Challenge',chalKey(i),'home'); }
-function renderChallenge(){
-  const total=CHALLENGE_7.length, done=challengeDone(), pct=Math.round(done/total*100), nxt=nextChallengeIdx(), complete=done>=total;
-  const rows=CHALLENGE_7.map((c,i)=>{ const q=QUICK_WORKOUTS[c.q], isD=HF.isDone(chalKey(i)), isNext=(i===nxt);
-    return `<div onclick="openChallengeDay(${i})" style="display:flex;align-items:center;gap:10px;padding:9px 11px;background:${isD?'rgba(46,194,126,.10)':'#141414'};border:1px solid ${isD?'rgba(46,194,126,.35)':'#242424'};border-radius:12px;cursor:pointer;">
+function challengeRowsHTML(){
+  const nxt=nextChallengeIdx();
+  return CHALLENGE_7.map((c,i)=>{ const q=QUICK_WORKOUTS[c.q], isD=HF.isDone(chalKey(i)), isNext=(i===nxt);
+    return `<div onclick="closeModal();openChallengeDay(${i})" style="display:flex;align-items:center;gap:10px;padding:9px 11px;background:${isD?'rgba(46,194,126,.10)':'#141414'};border:1px solid ${isD?'rgba(46,194,126,.35)':'#242424'};border-radius:12px;cursor:pointer;margin-bottom:7px;">
       <div style="width:26px;height:26px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;background:${isD?'#2ec27e':(isNext?'#FFE000':'#222')};color:${(isD||isNext)?'#000':'#888'};">${isD?'✓':(i+1)}</div>
-      <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:13.5px;">Day ${i+1} · ${c.label}</div><div style="font-size:11.5px;color:#8a8a8a;">${q.tag} · ${totalMins(q)} min</div></div>
+      <div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:13.5px;">Day ${i+1} · ${c.label}</div><div style="font-size:11.5px;color:#8a8a8a;">${q.tag} · ${totalMins(q)} min</div></div>
       <div style="font-size:12px;font-weight:700;color:${isD?'#2ec27e':(isNext?'#FFE000':'#666')};">${isD?'Done':(isNext?'Start':'▶')}</div>
     </div>`; }).join('');
-  $('home-challenge').innerHTML=`<div class="sechead">7-Day Hybrid Challenge <span style="font-size:11px;color:#2ec27e;font-weight:800;letter-spacing:1px;">FREE</span></div>
-    <div class="today">
-      <div class="tk">${complete?'Challenge complete 🏆':'Free · one short session a day · build the habit'}</div>
-      <div class="tt">${complete?'You finished all 7 days!':(done?`Day ${nxt+1} up next`:'Start Day 1 today')}</div>
-      <div style="height:8px;background:#222;border-radius:6px;overflow:hidden;margin:9px 0 5px;"><div style="height:100%;width:${pct}%;background:#FFE000;border-radius:6px;transition:width .3s;"></div></div>
-      <div class="tm">${done}/${total} days complete</div>
-      <div style="margin-top:11px;display:flex;flex-direction:column;gap:7px;">${rows}</div>
-      <div class="trow" style="margin-top:13px;">
-        ${complete?`<button class="go" onclick="openProgramDetail('first-timer')">Level up ▸ HYROX First Timer</button>`
-                  :`<button class="go" onclick="openChallengeDay(${nxt<0?0:nxt})">${done?'Continue Challenge':'Start Day 1'}</button>`}
-        <button class="go sec" onclick="shareChallenge()">Share</button>
+}
+function openChallengeList(){
+  const done=challengeDone(), total=CHALLENGE_7.length;
+  $('modal-sheet').innerHTML=`<h3>7-Day Hybrid Challenge</h3>
+    <p class="msub">${done}/${total} days complete · one short session a day.</p>
+    <div style="max-height:56vh;overflow:auto;margin:10px 0 4px;">${challengeRowsHTML()}</div>
+    <div class="modalrow"><button class="cancel" onclick="closeModal()">Close</button><button class="confirm" onclick="shareChallenge()">Share</button></div>`;
+  $('modal').classList.add('on');
+}
+function renderChallenge(){
+  const total=CHALLENGE_7.length, done=challengeDone(), pct=Math.round(done/total*100),
+        nxt=nextChallengeIdx(), complete=done>=total;
+  const q = complete ? null : QUICK_WORKOUTS[CHALLENGE_7[nxt<0?0:nxt].q];
+  $('home-challenge').innerHTML=`<div class="sechead">7-Day Challenge <span style="font-size:11px;color:#2ec27e;font-weight:800;letter-spacing:1px;">FREE</span></div>
+    <div class="today" style="padding:15px 15px 14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div style="min-width:0;">
+          <div class="tt" style="font-size:19px;">${complete?'Challenge complete 🏆':'Day '+((nxt<0?0:nxt)+1)+' · '+CHALLENGE_7[nxt<0?0:nxt].label}</div>
+          <div class="tm">${complete?'All 7 days done — level up next':q.tag+' · '+totalMins(q)+' min'}</div>
+        </div>
+        <div style="text-align:right;flex:none;">
+          <div style="font-family:'Oswald';font-weight:700;font-size:22px;color:#FFE000;line-height:1;">${done}<span style="color:#666;font-size:15px;">/${total}</span></div>
+          <div style="font-size:9px;color:#8a8a8a;font-weight:700;letter-spacing:.5px;margin-top:3px;">DAYS</div>
+        </div>
+      </div>
+      <div class="trkbar" style="margin:11px 0 0;"><i style="width:${pct}%"></i></div>
+      <div class="trow" style="margin-top:12px;">
+        ${complete?`<button class="go" onclick="openProgramDetail('first-timer')">Level up ▸</button>`
+                  :`<button class="go" onclick="openChallengeDay(${nxt<0?0:nxt})">${done?'Continue':'Start Day 1'}</button>`}
+        <button class="go sec" onclick="openChallengeList()">All 7 days</button>
       </div>
     </div>`;
 }
