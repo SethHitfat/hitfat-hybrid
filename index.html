@@ -3886,12 +3886,6 @@ function renderTimerList(elId){ const el=$(elId); if(!el) return;
 const SI=(n,t,rpe)=>({n,t,rpe:rpe||null});
 const SB=(type,cap,items,note)=>({type,cap:cap||null,items,note:note||''});
 const SX=(id,title,tag,est,coll,equip,blocks)=>({id,title,tag,est,coll,equip,blocks});
-const COLLECTIONS=[
-  {id:'race',     name:'Race Simulation', desc:'Full & half HYROX sims',  img:IMG.complete},
-  {id:'engine',   name:'Engine Builder',  desc:'Intervals, EMOM, threshold', img:IMG.engine},
-  {id:'stations', name:'Station Work',    desc:'Sled, wall balls, carries', img:IMG.power},
-  {id:'quick',    name:'Quick Hits',      desc:'Under 20 minutes',        img:IMG.found},
-];
 const SESSIONS=[
   SX('hx-full','HYROX Full Simulation','Race Sim',81,'race',['Ski Erg','Sled','Row','Wall Ball','Sandbag'],[
     SB('For Time',null,[SI('Run','1 km'),SI('SkiErg','1000 m'),SI('Run','1 km'),SI('Sled Push','50 m'),SI('Run','1 km'),SI('Sled Pull','50 m'),
@@ -3978,13 +3972,6 @@ function openTimerHome(){
 function sessionMoveCount(x){ return x.blocks.reduce((a,b)=>a+b.items.length*(b.type==='Rounds'&&b.cap?b.cap:1),0); }
 
 /* ---- browse ---- */
-function renderCollections(elId){ const el=$(elId); if(!el) return;
-  el.innerHTML=`<div class="hscroll">${COLLECTIONS.map(c=>`
-    <div class="coll" onclick="openCollection('${c.id}')">
-      <div class="im" style="background-image:url('${c.img}')"></div>
-      <div class="cn"><div class="t">${c.name}</div><div class="d">${c.desc} · ${SESSIONS.filter(s=>s.coll===c.id).length} sessions</div></div>
-    </div>`).join('')}</div>`;
-}
 function sessionRow(x){ return `<div class="wrow" onclick="openTSession('${x.id}')">
     <div class="num">⏱</div>
     <div class="tx"><div class="t">${x.title}</div><div class="m">${x.tag} · ${x.est} min · ${x.blocks[0].type}</div></div>
@@ -3993,17 +3980,6 @@ function renderSessionList(elId, coll){ const el=$(elId); if(!el) return;
   const list = coll ? SESSIONS.filter(x=>x.coll===coll) : SESSIONS.slice(0,6);
   el.innerHTML = list.map(sessionRow).join('');
 }
-function openCollection(cid){
-  const c=COLLECTIONS.find(x=>x.id===cid); if(!c) return;
-  $('modal-sheet').innerHTML=`<h3>${c.name}</h3><p class="msub">${c.desc}</p>
-    <div style="max-height:58vh;overflow:auto;margin:10px 0 4px;">${SESSIONS.filter(x=>x.coll===cid).map(x=>
-      `<div class="wrow" onclick="closeModal();openTSession('${x.id}')"><div class="num">⏱</div>
-        <div class="tx"><div class="t">${x.title}</div><div class="m">${x.tag} · ${x.est} min · ${x.blocks[0].type}</div></div>
-        <div class="chev">›</div></div>`).join('')}</div>
-    <div class="modalrow"><button class="confirm" onclick="closeModal()">Close</button></div>`;
-  $('modal').classList.add('on');
-}
-
 /* ---- session detail ---- */
 function blockFooter(b){
   if(b.type==='AMRAP') return `↻ As many rounds as possible in ${b.cap}m`;
