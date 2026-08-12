@@ -38,7 +38,9 @@
   html,body{height:100%;min-height:600px;}
   body{background:radial-gradient(1000px 500px at 85% -10%,#1c1905 0%,transparent 55%),var(--bg);color:var(--txt);font-family:'Inter',system-ui,sans-serif;overflow:hidden;}
   /* fixed to the viewport so the bottom nav always sits at the very bottom on every iOS (no dvh/vh gap) */
-  .app{position:fixed;top:0;right:0;bottom:0;left:0;margin:0 auto;width:100%;max-width:440px;display:flex;flex-direction:column;overflow:hidden;}
+  /* app height = JS-measured real viewport (--vh). iOS standalone/black-translucent misreports
+     the height of fixed inset:0 elements (ends ~90pt early → nav floated high on iPhone only). */
+  .app{position:fixed;top:0;right:0;left:0;margin:0 auto;width:100%;max-width:440px;height:100vh;height:100dvh;height:var(--vh,100dvh);display:flex;flex-direction:column;overflow:hidden;}
   .app, .app *{color:inherit;transform:none !important;writing-mode:horizontal-tb !important;float:none !important;}
   .hgroup h2,.dtitle,.pname,.card .ttl,.catcard .ttl{color:#fff !important;}
   .hgroup .k,.ptar{color:var(--hitfat) !important;}
@@ -893,6 +895,16 @@
 <!-- Supabase client (loaded from CDN — needs internet + a hosted URL for Google login) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+/* ---- True viewport height (fixes iPhone-only "nav floats high" bug) ----
+   iOS misreports the layout height for fixed inset:0 elements in standalone/
+   black-translucent mode, so .app ended early. Measure the REAL height in JS
+   and expose it as --vh; .app{height:var(--vh)} then always reaches the true bottom. */
+function setVH(){ try{ document.documentElement.style.setProperty('--vh', window.innerHeight+'px'); }catch(e){} }
+setVH();
+window.addEventListener('resize', setVH);
+window.addEventListener('orientationchange', function(){ setTimeout(setVH,120); });
+if(window.visualViewport) window.visualViewport.addEventListener('resize', setVH);
+
 /* ============================================================
    ████  PUSTAKA VIDEO  ████  (ID Vimeo dikongsi semua workout)
    ============================================================ */
