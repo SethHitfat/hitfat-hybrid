@@ -539,7 +539,7 @@
   #auth{position:fixed;inset:0;z-index:10002;background:radial-gradient(900px 480px at 80% -10%,#1c1905 0%,transparent 55%),var(--bg);display:none;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;}
   #auth.on{display:flex;}
   .auth-in{max-width:440px;width:100%;margin:0 auto;flex:1;display:flex;flex-direction:column;justify-content:center;padding:calc(30px + env(safe-area-inset-top,0px)) 24px calc(30px + env(safe-area-inset-bottom,0px));}
-  .auth-in .logo{font-family:'Oswald';font-weight:700;font-size:22px;letter-spacing:3px;color:#fff;text-align:center;}
+  .auth-in .logo{font-family:'Inter',system-ui,sans-serif;font-weight:800;font-size:24px;letter-spacing:-.4px;color:#fff;text-align:center;}
   .auth-in .logo small{display:block;font-size:9px;letter-spacing:4px;color:var(--hyrox);font-weight:600;margin-top:4px;}
   .auth-in h1{font-family:'Oswald';font-weight:700;font-size:26px;letter-spacing:.4px;text-transform:uppercase;text-align:center;margin:26px 0 6px;}
   .auth-in .lead{color:var(--dim);font-size:13.5px;line-height:1.5;text-align:center;margin-bottom:24px;}
@@ -935,7 +935,7 @@
 
 <!-- ============ AUTH / LOGIN (Supabase) ============ -->
 <div id="auth"><div class="auth-in">
-  <div class="logo">HITFAT HYROX<small>TRAINING CLUB</small></div>
+  <div class="logo"><span>HITFAT</span> <span class="y">HYBRID</span></div>
   <h1 id="auth-title">Sign In</h1>
   <div class="lead" id="auth-lead">Log in to sync your plan and progress across devices.</div>
   <button class="gbtn" onclick="signInGoogle()">
