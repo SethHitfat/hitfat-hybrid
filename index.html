@@ -77,6 +77,8 @@
   .tabs{position:absolute;left:0;right:0;bottom:var(--navb, max(14px, env(safe-area-inset-bottom,14px)));margin:0 auto;width:calc(100% - 24px);max-width:414px;z-index:60;display:flex;align-items:center;gap:2px;background:rgba(24,24,26,.78);-webkit-backdrop-filter:blur(24px) saturate(1.6);backdrop-filter:blur(24px) saturate(1.6);border:1px solid rgba(255,255,255,.10);border-radius:26px;padding:6px 6px 9px;box-shadow:0 12px 40px rgba(0,0,0,.55);}
   .tab{flex:1;background:none;border:none;color:var(--dim);font-family:'Inter',system-ui,sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.1px;text-transform:none;padding:7px 2px 6px;cursor:pointer;border-radius:16px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:color .15s,background .15s;}
   .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  /* Activity-style score rings: sweep in on first paint */
+  .aring{transition:stroke-dashoffset 1s cubic-bezier(.22,.9,.3,1);}
   /* brand mark used in place of an outline icon (Programs tab) */
   /* hero mark: larger than the outline icons; negative margins keep the pill the same height */
   .tab .ticon{width:30px;height:30px;object-fit:contain;opacity:.55;margin:-4px 0 -3px;transition:opacity .15s,transform .15s;}
@@ -2499,7 +2501,7 @@ function renderHome(){
     const tr=t?t.getBoundingClientRect():null, ar=a?a.getBoundingClientRect():null;
     const vh=getComputedStyle(document.documentElement).getPropertyValue('--vh').trim()||'—';
     const nd=window._navDiag||{};
-    d.textContent='N18 · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')
+    d.textContent='N19 · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')
       +' · sat '+(nd.sat!=null?nd.sat:'?')+' · sab '+(nd.sab!=null?nd.sab:'?')+' · navb '+(nd.navb!=null?nd.navb:'?')
       +' · pwa '+(_standaloneVH()?'y':'n')
       +(ar?(' · app '+Math.round(ar.height)+'@'+Math.round(ar.top)) : '')
@@ -2982,8 +2984,46 @@ function scoreDashHTML(){
     <div class="sb">${['engine','strength','stations','running'].map(bar).join('')}</div>
   </div>`;
 }
-/* ---- Hybrid Score radar (Home hero) — 4-axis spider chart, richer than the Progress bars ---- */
+/* ---- Hybrid Score rings (Home hero) — Apple-Activity-style concentric rings ---- */
+const RING_META=[
+  {k:'engine',   c:'#FFE000'},
+  {k:'strength', c:'#FF9500'},
+  {k:'stations', c:'#FF375F'},
+  {k:'running',  c:'#30D5C8'},
+];
 function scoreRadarHTML(){
+  const s=hybridScore(), b=scoreBreakdown(), weak=weakestArea();
+  const S=180, c=S/2, sw=13, radii=[76,58,40,22];
+  let rings='';
+  RING_META.forEach((m,i)=>{
+    const r=radii[i], C=2*Math.PI*r, val=Math.max(0,Math.min(100,b[m.k]));
+    rings+=`<circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="${sw}"/>`
+      +`<circle class="aring" id="aring-${i}" cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${m.c}" stroke-width="${sw}"
+          stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${C.toFixed(1)}"
+          data-off="${(C*(1-val/100)).toFixed(1)}" transform="rotate(-90 ${c} ${c})" opacity=".95"/>`;
+  });
+  const legend=RING_META.map(m=>`<div style="display:flex;align-items:center;gap:7px;margin-bottom:9px;">
+      <span style="width:9px;height:9px;border-radius:50%;background:${m.c};flex:none;box-shadow:0 0 8px ${m.c}66;"></span>
+      <span style="flex:1;font-size:12px;color:${m.k===weak?'#fff':'#9a9a9a'};font-weight:${m.k===weak?'700':'600'};">${AREA_LABEL[m.k]}</span>
+      <b style="font-family:'Oswald';font-size:15px;color:#fff;">${b[m.k]}</b>
+    </div>`).join('');
+  setTimeout(function(){ try{ RING_META.forEach(function(_,i){ const el=document.getElementById('aring-'+i);
+    if(el) el.setAttribute('stroke-dashoffset', el.getAttribute('data-off')); }); }catch(e){} }, 60);   // animate on paint
+  return `<div class="today" style="display:flex;align-items:center;gap:14px;padding:16px 14px;">
+    <div style="position:relative;flex:0 0 auto;width:158px;height:158px;">
+      <svg viewBox="0 0 ${S} ${S}" style="width:100%;height:100%;filter:drop-shadow(0 0 10px rgba(255,224,0,.18));">${rings}</svg>
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;">
+        <div style="font-family:'Oswald';font-weight:700;font-size:40px;color:#fff;line-height:.9;">${s}</div>
+        <div style="font-size:8px;color:#8a8a8a;font-weight:800;letter-spacing:.8px;margin-top:3px;">HYBRID</div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:0;">
+      ${legend}
+      <button class="go sec" style="width:100%;padding:9px;font-size:11.5px;margin-top:2px;" onclick="switchTab('explore');setFilter('weakness')">Train ${AREA_LABEL[weak]} →</button>
+    </div>
+  </div>`;
+}
+function scoreRadarHTML_polygon(){
   const s=hybridScore(), b=scoreBreakdown(), weak=weakestArea();
   const keys=['engine','strength','stations','running'];           // top, right, bottom, left
   const S=190, c=S/2, R=66;                                        // viewBox size, centre, max radius
@@ -3379,7 +3419,7 @@ function renderProfile(){
   // build + viewport diagnostics (helps debug device-specific layout issues)
   try{ const bt=$('build-tag'); if(bt){
     const vh=getComputedStyle(document.documentElement).getPropertyValue('--vh').trim()||'—';
-    bt.textContent='build 2026.08.12-N18 · vh '+vh+' · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')+' · pwa '+(_standaloneVH()?'yes':'no');
+    bt.textContent='build 2026.08.12-N19 · vh '+vh+' · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')+' · pwa '+(_standaloneVH()?'yes':'no');
   } }catch(e){}
   try{ renderStravaRow(); }catch(e){}   // Connected Apps → Strava
 
