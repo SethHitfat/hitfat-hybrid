@@ -78,6 +78,43 @@
   .tabs{position:absolute;left:0;right:0;bottom:var(--navb, max(14px, env(safe-area-inset-bottom,14px)));margin:0 auto;width:calc(100% - 24px);max-width:414px;z-index:60;display:flex;align-items:center;gap:2px;background:rgba(24,24,26,.78);-webkit-backdrop-filter:blur(24px) saturate(1.6);backdrop-filter:blur(24px) saturate(1.6);border:1px solid rgba(255,255,255,.10);border-radius:26px;padding:6px 6px 9px;box-shadow:0 12px 40px rgba(0,0,0,.55);}
   .tab{flex:1;background:none;border:none;color:var(--dim);font-family:'Inter',system-ui,sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.1px;text-transform:none;padding:7px 2px 6px;cursor:pointer;border-radius:16px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:color .15s,background .15s;}
   .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  /* ===== Sessions: collections, session detail, count-up player (Roxfit-style) ===== */
+  .coll{position:relative;flex:0 0 auto;width:168px;border-radius:16px;overflow:hidden;cursor:pointer;background:#141414;}
+  .coll .im{height:110px;background:#141414 center/cover no-repeat;}
+  .coll .cn{padding:10px 11px 12px;}
+  .coll .cn .t{font-size:14px;font-weight:700;color:#fff;letter-spacing:-.2px;}
+  .coll .cn .d{font-size:11.5px;color:var(--dim);margin-top:2px;line-height:1.3;}
+
+  .sblock{border:1px solid rgba(255,255,255,.10);border-radius:16px;padding:13px 12px 12px;margin-bottom:14px;}
+  .sblock .bh{display:flex;align-items:center;gap:8px;justify-content:center;margin:-22px auto 12px;width:fit-content;background:var(--bg);padding:0 10px;}
+  .sblock .bh .bt{font-size:12px;font-weight:800;letter-spacing:.4px;color:var(--hyrox);text-transform:uppercase;}
+  .sitem{display:flex;align-items:center;gap:11px;margin-bottom:7px;}
+  .sitem .n{flex:none;width:26px;height:26px;border-radius:50%;background:var(--surface2);display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--dim);}
+  .sitem .b{flex:1;min-width:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;}
+  .sitem .b .t{font-size:15px;font-weight:600;color:#fff;letter-spacing:-.2px;}
+  .sitem .b .m{font-size:12.5px;color:var(--dim);margin-top:2px;}
+  .sblock .bf{text-align:center;font-size:11.5px;font-weight:700;letter-spacing:.3px;color:var(--hyrox);text-transform:uppercase;margin-top:10px;}
+
+  /* count-up player */
+  #tplay{position:fixed;inset:0;z-index:10005;background:radial-gradient(700px 420px at 50% 8%,#1b1808 0%,#0a0a0a 55%,#000 100%);display:none;flex-direction:column;padding:calc(14px + env(safe-area-inset-top,0px)) 16px calc(14px + env(safe-area-inset-bottom,0px));}
+  #tplay.on{display:flex;}
+  #tplay .tph{display:flex;align-items:center;justify-content:space-between;}
+  #tplay .tph .md{font-size:15px;font-weight:700;color:var(--hyrox);}
+  #tplay .tph .tot{font-family:'Oswald';font-size:20px;font-weight:700;color:var(--hyrox);font-variant-numeric:tabular-nums;}
+  #tplay .stack{flex:1;display:flex;flex-direction:column;justify-content:center;gap:9px;overflow:hidden;}
+  #tplay .past{background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:12px 14px;opacity:.5;}
+  #tplay .past .t{font-size:14.5px;font-weight:600;color:#fff;}
+  #tplay .past .m{font-size:12px;color:var(--dim);margin-top:1px;}
+  #tplay .cur{background:var(--surface);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:20px 16px 16px;text-align:center;}
+  #tplay .cur .chip{display:inline-block;font-size:12px;font-weight:700;color:#cfcfcf;background:var(--surface2);padding:5px 11px;border-radius:9px;}
+  #tplay .cur .nm{font-size:30px;font-weight:800;letter-spacing:-.6px;color:#fff;margin-top:11px;line-height:1.15;}
+  #tplay .cur .tg{font-size:17px;color:var(--dim);margin-top:5px;}
+  #tplay .cur .clk{font-family:'Oswald';font-size:60px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;line-height:1;margin:12px 0 14px;}
+  #tplay .cur .nx{width:100%;background:var(--hyrox);color:var(--hyrox-ink);border:none;border-radius:99px;padding:15px;font-size:16px;font-weight:800;cursor:pointer;}
+  #tplay .prev{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:11px 14px;font-size:13px;color:var(--dim);margin-top:10px;}
+  #tplay .tpf{display:flex;align-items:center;justify-content:space-between;gap:14px;background:rgba(24,24,26,.92);border:1px solid rgba(255,255,255,.10);border-radius:24px;padding:10px 18px;margin-top:12px;}
+  #tplay .tpf button{background:none;border:none;color:#cfcfcf;font-size:20px;cursor:pointer;}
+  #tplay .tpf .pp{width:58px;height:58px;border-radius:50%;background:#e8e8e8;color:#111;font-size:20px;display:grid;place-items:center;}
   /* ===== Home v4 (reference concept): header · day strip · activity cards · plan cards ===== */
   .hhdr{display:flex;align-items:center;gap:12px;margin:14px 2px 18px;}
   .hhdr .av2{width:46px;height:46px;border-radius:50%;background:var(--surface2);border:1px solid var(--line);display:grid;place-items:center;font-family:'Oswald';font-weight:700;font-size:19px;color:var(--hyrox);flex:none;}
@@ -812,7 +849,7 @@
       </div>
       <!-- SKRIN EXPLORE (V3 discovery) -->
       <div id="explore" style="display:none;">
-        <div class="hgroup"><div class="k">Discover</div><h2>EXPLORE</h2><p>Free workouts, structured programs and race prep — all in one place.</p></div>
+        <div class="hgroup"><div class="k">Train</div><h2>SESSIONS</h2><p>Timed sessions, collections, free workouts and the full video library.</p></div>
         <div class="filters" id="ex-filters"></div>
         <div id="ex-body"></div>
       </div>
@@ -904,6 +941,7 @@
         <div class="grid" id="grid"></div>
       </div>
       <!-- SKRIN 3: BUTIRAN -->
+      <div id="tsess" class="pad" style="display:none;"><div id="ts-body"></div></div>
       <div id="detail" style="display:none;">
         <button class="back" id="d-back" onclick="backToList()">← Back</button>
         <div class="hero"><span class="label" id="d-label">Workout</span></div>
@@ -926,7 +964,7 @@
        .app is pinned inset:0, so this row ALWAYS sits at the true bottom — deterministic, no iOS fixed-position quirks. -->
   <div class="tabs" id="tabs">
     <button class="tab active" id="tab-home" onclick="switchTab('home')"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>Home</button>
-    <button class="tab" id="tab-explore" onclick="switchTab('explore')"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="M21 21l-4.5-4.5"/></svg>Explore</button>
+    <button class="tab" id="tab-explore" onclick="switchTab('explore')"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="M21 21l-4.5-4.5"/></svg>Sessions</button>
     <button class="tab" id="tab-store" onclick="switchTab('store')"><img class="ticon" src="icon-programs.png" alt="" width="24" height="24">Programs</button>
     <button class="tab" id="tab-progress" onclick="switchTab('progress')"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3M20 16V6"/></svg>Progress</button>
     <button class="tab" id="tab-profile" onclick="switchTab('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Profile</button>
@@ -956,6 +994,17 @@
 <!-- Onboarding / track / readiness overlay -->
 <div class="ovl" id="ob"><div class="ovl-in" id="ob-in"></div></div>
 <!-- Generic bottom-sheet modal (mark complete, confirm reset, etc.) -->
+<!-- Count-up session player (Roxfit-style: tap Next when the movement is done) -->
+<div id="tplay">
+  <div class="tph"><div class="md" id="tp-mode">—</div><div class="tot" id="tp-total">00:00</div></div>
+  <div class="stack" id="tp-stack"></div>
+  <div class="prev" id="tp-prev" style="display:none;"><span>Prev <b id="tp-prevt" style="color:#fff;font-family:'Oswald';">00:00</b></span><button onclick="tpUndo()" style="background:none;border:none;color:#cfcfcf;font-size:16px;cursor:pointer;">↶</button></div>
+  <div class="tpf">
+    <button onclick="tpUndo()" title="Undo">↶</button>
+    <button class="pp" id="tp-pp" onclick="tpToggle()">❚❚</button>
+    <button onclick="tpFinish()" title="Finish">✓</button>
+  </div>
+</div>
 <div class="modal" id="modal" onclick="if(event.target===this)closeModal()"><div class="sheet" id="modal-sheet"></div></div>
 
 <!-- ============ AUTH / LOGIN (Supabase) ============ -->
@@ -2079,7 +2128,7 @@ function switchTab(tab){
   curTab=tab;
   $('tabs').style.display='flex'; // always restore the bottom nav when landing on a main tab
   // hide every screen
-  ['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail','store'].forEach(id=>{ const e=$(id); if(e) e.style.display='none'; });
+  ['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail','store','tsess'].forEach(id=>{ const e=$(id); if(e) e.style.display='none'; });
   if(window.klTicker && tab!=='pro' && tab!=='home' && tab!=='explore'){ clearInterval(window.klTicker); window.klTicker=null; }
   ['tab-home','tab-programs','tab-plans','tab-pro','tab-target','tab-kl','tab-progress','tab-profile','tab-explore','tab-coaches','tab-store'].forEach(id=>{ const b=$(id); if(b&&b.classList) b.classList.remove('active'); });
   const setActive=id=>{ const b=$(id); if(b&&b.classList) b.classList.add('active'); };
@@ -3813,6 +3862,169 @@ function renderTimerList(elId){ const el=$(elId); if(!el) return;
       <div class="tx"><div class="t">${w.title}</div><div class="m">${w.tag} · ${totalMins(w)} min · RPE ${w.rpe}</div></div>
       <div class="chev">›</div></div>`).join('');
 }
+/* ============================================================
+   ████  SESSIONS · COLLECTIONS · COUNT-UP PLAYER  ████
+   A second training format alongside the video library: a session is just a list of
+   movements with targets (distance / reps), executed by a count-up clock — tap Next
+   when a movement is done. Authoring needs no per-move durations.
+   ============================================================ */
+const SI=(n,t,rpe)=>({n,t,rpe:rpe||null});
+const SB=(type,cap,items,note)=>({type,cap:cap||null,items,note:note||''});
+const SX=(id,title,tag,est,coll,equip,blocks)=>({id,title,tag,est,coll,equip,blocks});
+const COLLECTIONS=[
+  {id:'race',     name:'Race Simulation', desc:'Full & half HYROX sims',  img:IMG.complete},
+  {id:'engine',   name:'Engine Builder',  desc:'Intervals, EMOM, threshold', img:IMG.engine},
+  {id:'stations', name:'Station Work',    desc:'Sled, wall balls, carries', img:IMG.power},
+  {id:'quick',    name:'Quick Hits',      desc:'Under 20 minutes',        img:IMG.found},
+];
+const SESSIONS=[
+  SX('hx-full','HYROX Full Simulation','Race Sim',81,'race',['Ski Erg','Sled','Row','Wall Ball','Sandbag'],[
+    SB('For Time',null,[SI('Run','1 km'),SI('SkiErg','1000 m'),SI('Run','1 km'),SI('Sled Push','50 m'),SI('Run','1 km'),SI('Sled Pull','50 m'),
+      SI('Run','1 km'),SI('Burpee Broad Jump','80 m'),SI('Run','1 km'),SI('Row','1000 m'),SI('Run','1 km'),SI('Farmers Carry','200 m'),
+      SI('Run','1 km'),SI('Sandbag Lunges','100 m'),SI('Run','1 km'),SI('Wall Balls','100 reps')],'Race pace — keep the roxzone tight.')]),
+  SX('hx-half','HYROX Half Simulation','Race Sim',42,'race',['Ski Erg','Sled','Row','Wall Ball'],[
+    SB('For Time',null,[SI('Run','1 km'),SI('SkiErg','500 m'),SI('Run','1 km'),SI('Sled Push','25 m'),SI('Run','1 km'),SI('Row','500 m'),
+      SI('Run','1 km'),SI('Wall Balls','50 reps')],'Half distances — practise pacing and transitions.')]),
+  SX('hx-stations','Stations Only Sim','Race Sim',34,'race',['Ski Erg','Sled','Row','Sandbag','Wall Ball'],[
+    SB('For Time',null,[SI('SkiErg','1000 m'),SI('Sled Push','50 m'),SI('Sled Pull','50 m'),SI('Burpee Broad Jump','80 m'),
+      SI('Row','1000 m'),SI('Farmers Carry','200 m'),SI('Sandbag Lunges','100 m'),SI('Wall Balls','100 reps')],'All 8 stations back to back — no runs.')]),
+  SX('amrap-30','AMRAP 30 · Hybrid','AMRAP',30,'engine',['Ski Erg','Sled','Kettlebell','Wall Ball'],[
+    SB('AMRAP',30,[SI('SkiErg','500 m',7),SI('Sled Push','25 m',7),SI('KB Farmers Carry','100 m',7),SI('Run','200 m',4),SI('Wall Balls','30 reps',9)],
+      'Steady, repeatable rounds — count them and beat it next time.')]),
+  SX('emom-20','EMOM 20 · Engine','EMOM',20,'engine',['Machine or Run'],[
+    SB('EMOM',20,[SI('Row / Ski','12 cal'),SI('Burpees','10 reps'),SI('Run','200 m'),SI('Air Squats','20 reps')],
+      'One movement per minute — the rest of the minute is your recovery.')]),
+  SX('thr-4x4','4 × 4 Threshold','Intervals',28,'engine',['Machine or Run'],[
+    SB('Rounds',4,[SI('Hard effort','4:00 @ RPE 9'),SI('Easy recovery','3:00 @ RPE 4')],'Same pace on the last rep as the first.')]),
+  SX('comp-run','Compromised Run Blocks','Running',24,'engine',['Run + Stations'],[
+    SB('Rounds',6,[SI('Station effort','60 s'),SI('Run','400 m'),SI('Rest','60 s')],'Short quick steps for the first 50 m off the station.')]),
+  SX('st-ladder','Station Ladder','Stations',22,'stations',['HYROX Stations'],[
+    SB('Rounds',4,[SI('SkiErg','250 m'),SI('Sled Push','25 m'),SI('Farmers Carry','100 m'),SI('Wall Balls','20 reps'),SI('Rest','60 s')],
+      'Keep transitions tight — the ladder builds fast.')]),
+  SX('st-sled','Sled & Carry Builder','Stations',26,'stations',['Sled','Kettlebell'],[
+    SB('Rounds',5,[SI('Sled Push','25 m'),SI('Sled Pull','25 m'),SI('Farmers Carry','100 m'),SI('Rest','90 s')],'Heavy but unbroken lengths.')]),
+  SX('st-wall','Wall Ball Capacity','Stations',18,'stations',['Wall Ball'],[
+    SB('Rounds',5,[SI('Wall Balls','25 reps unbroken'),SI('Run','150 m'),SI('Rest','60 s')],'Protect the unbroken set — drop reps before you drop form.')]),
+  SX('q-tabata','Tabata Finisher','Tabata',8,'quick',['Bodyweight'],[
+    SB('Rounds',8,[SI('Burpees','20 s'),SI('Rest','10 s'),SI('Squat Jumps','20 s'),SI('Rest','10 s')],'Max quality reps in every 20 seconds.')]),
+  SX('q-core','10 Min Core Blast','Core',10,'quick',['Bodyweight'],[
+    SB('AMRAP',10,[SI('Sit Ups','15 reps'),SI('Russian Twists','20 reps'),SI('Plank','40 s'),SI('Leg Raises','12 reps')],'Move continuously.')]),
+  SX('q-engine','15 Min Engine','Engine',15,'quick',['Machine or Run'],[
+    SB('Rounds',5,[SI('Hard effort','2:00 @ RPE 8'),SI('Easy','1:00 @ RPE 4')],'Repeatable — no hero first rep.')]),
+];
+function sessionById(id){ return SESSIONS.find(x=>x.id===id); }
+function sessionMoveCount(x){ return x.blocks.reduce((a,b)=>a+b.items.length*(b.type==='Rounds'&&b.cap?b.cap:1),0); }
+
+/* ---- browse ---- */
+function renderCollections(elId){ const el=$(elId); if(!el) return;
+  el.innerHTML=`<div class="hscroll">${COLLECTIONS.map(c=>`
+    <div class="coll" onclick="openCollection('${c.id}')">
+      <div class="im" style="background-image:url('${c.img}')"></div>
+      <div class="cn"><div class="t">${c.name}</div><div class="d">${c.desc} · ${SESSIONS.filter(s=>s.coll===c.id).length} sessions</div></div>
+    </div>`).join('')}</div>`;
+}
+function sessionRow(x){ return `<div class="wrow" onclick="openTSession('${x.id}')">
+    <div class="num">⏱</div>
+    <div class="tx"><div class="t">${x.title}</div><div class="m">${x.tag} · ${x.est} min · ${x.blocks[0].type}</div></div>
+    <div class="chev">›</div></div>`; }
+function renderSessionList(elId, coll){ const el=$(elId); if(!el) return;
+  const list = coll ? SESSIONS.filter(x=>x.coll===coll) : SESSIONS.slice(0,6);
+  el.innerHTML = list.map(sessionRow).join('');
+}
+function openCollection(cid){
+  const c=COLLECTIONS.find(x=>x.id===cid); if(!c) return;
+  $('modal-sheet').innerHTML=`<h3>${c.name}</h3><p class="msub">${c.desc}</p>
+    <div style="max-height:58vh;overflow:auto;margin:10px 0 4px;">${SESSIONS.filter(x=>x.coll===cid).map(x=>
+      `<div class="wrow" onclick="closeModal();openTSession('${x.id}')"><div class="num">⏱</div>
+        <div class="tx"><div class="t">${x.title}</div><div class="m">${x.tag} · ${x.est} min · ${x.blocks[0].type}</div></div>
+        <div class="chev">›</div></div>`).join('')}</div>
+    <div class="modalrow"><button class="confirm" onclick="closeModal()">Close</button></div>`;
+  $('modal').classList.add('on');
+}
+
+/* ---- session detail ---- */
+function blockFooter(b){
+  if(b.type==='AMRAP') return `↻ As many rounds as possible in ${b.cap}m`;
+  if(b.type==='EMOM')  return `↻ Every minute on the minute for ${b.cap}m`;
+  if(b.type==='Rounds')return `↻ Repeat for ${b.cap} rounds`;
+  return `↻ For time — complete every movement`;
+}
+function openTSession(id){
+  const x=sessionById(id); if(!x) return; window._tsess=id;
+  ['home','explore','store','progress','profile','categories','list','plans','pro','target','progdetail','detail','tsess']
+    .forEach(i=>{ const e=$(i); if(e) e.style.display='none'; });
+  $('tsess').style.display='block'; $('tabs').style.display='none'; curTab='tsess';
+  $('ts-body').innerHTML=`
+    <button class="back" onclick="switchTab('explore')">← Sessions</button>
+    <div class="hgroup"><div class="k">${x.tag}</div><h2>${x.title}</h2>
+      <p>${x.equip.join(' · ')} · est. ${x.est} min</p></div>
+    ${x.blocks.map(b=>`<div class="sblock">
+      <div class="bh"><span class="bt">${b.type}${b.cap?(b.type==='Rounds'?' × '+b.cap:' · '+b.cap+'m'):''}</span></div>
+      ${b.items.map((it,i)=>`<div class="sitem"><div class="n">${i+1}</div>
+        <div class="b"><div class="t">${it.n}</div><div class="m">${it.t}${it.rpe?(' · RPE '+it.rpe):''}</div></div></div>`).join('')}
+      <div class="bf">${blockFooter(b)}</div>
+      ${b.note?`<div class="infonote" style="margin-top:10px;">${b.note}</div>`:''}
+    </div>`).join('')}
+    <button class="go" style="width:100%;background:var(--hyrox);color:var(--hyrox-ink);border:none;border-radius:99px;padding:16px;font-weight:800;font-size:16px;cursor:pointer;margin-top:6px;" onclick="tpStart('${x.id}')">Get Started</button>`;
+  $('screen').scrollTop=0;
+}
+
+/* ---- count-up player ---- */
+let tp=null, tpTick=null;
+function tpFlat(x){ const out=[];
+  x.blocks.forEach(b=>{ const rounds=(b.type==='Rounds'&&b.cap)?b.cap:1;
+    for(let r=1;r<=rounds;r++) b.items.forEach(it=>out.push({n:it.n,t:it.t,rpe:it.rpe,mode:b.type,round:rounds>1?r:null,rounds:rounds>1?rounds:null})); });
+  return out; }
+function tpFmt(ms){ const s=Math.max(0,Math.floor(ms/1000)), m=Math.floor(s/60), ss=s%60;
+  return (m<10?'0':'')+m+':'+(ss<10?'0':'')+ss; }
+function tpStart(id){ const x=sessionById(id); if(!x) return;
+  tp={ id:id, title:x.title, flat:tpFlat(x), i:0, splits:[], t0:Date.now(), mark:Date.now(), paused:false, pausedAt:0 };
+  $('tplay').classList.add('on'); tpRender();
+  clearInterval(tpTick); tpTick=setInterval(tpRender,250);
+}
+function tpRender(){ if(!tp) return;
+  const cur=tp.flat[tp.i]; if(!cur) return tpFinish();
+  $('tp-mode').textContent='▷ '+cur.mode+(cur.round?('  ·  Round '+cur.round+'/'+cur.rounds):'');
+  const now = tp.paused ? tp.pausedAt : Date.now();
+  $('tp-total').textContent = tpFmt(now-tp.t0);
+  const past = tp.flat.slice(Math.max(0,tp.i-2), tp.i);
+  $('tp-stack').innerHTML =
+    past.map(m=>`<div class="past"><div class="t">${m.n}</div><div class="m">${m.t}</div></div>`).join('') +
+    `<div class="cur">
+       <div class="chip">E${tp.i+1}/${tp.flat.length}</div>
+       <div class="nm">${cur.n}</div>
+       <div class="tg">${cur.t}${cur.rpe?(' · RPE '+cur.rpe):''}</div>
+       <div class="clk">${tpFmt(now-tp.mark)}</div>
+       <button class="nx" onclick="tpNext()">${tp.i===tp.flat.length-1?'Finish':'Next'}</button>
+     </div>`;
+  const p=$('tp-prev');
+  if(tp.splits.length){ p.style.display='flex'; $('tp-prevt').textContent=tpFmt(tp.splits[tp.splits.length-1].ms); }
+  else p.style.display='none';
+}
+function tpNext(){ if(!tp) return;
+  const now = tp.paused ? tp.pausedAt : Date.now();
+  tp.splits.push({ n:tp.flat[tp.i].n, ms:now-tp.mark });
+  if(tp.i>=tp.flat.length-1) return tpFinish();
+  tp.i++; tp.mark=now; try{ beep(660,0.12); }catch(e){} tpRender();
+}
+function tpUndo(){ if(!tp||!tp.splits.length) return;
+  const last=tp.splits.pop(); tp.i=Math.max(0,tp.i-1);
+  tp.mark=(tp.paused?tp.pausedAt:Date.now())-last.ms; tpRender();
+}
+function tpToggle(){ if(!tp) return;
+  if(tp.paused){ const d=Date.now()-tp.pausedAt; tp.t0+=d; tp.mark+=d; tp.paused=false; $('tp-pp').textContent='❚❚'; }
+  else { tp.pausedAt=Date.now(); tp.paused=true; $('tp-pp').textContent='▶'; }
+  tpRender();
+}
+function tpFinish(){ if(!tp) return;
+  const now = tp.paused ? tp.pausedAt : Date.now();
+  const mins=Math.max(1,Math.round((now-tp.t0)/60000));
+  HF.markDone('sess-'+tp.id+'-'+Date.now(), { name:tp.title, mins:mins });
+  clearInterval(tpTick); tpTick=null; $('tplay').classList.remove('on');
+  nfToast(tp.title+' complete — '+tpFmt(now-tp.t0)+' ✓'); tp=null;
+  try{ if(curTab==='home') renderHome(); }catch(e){}
+}
+
 /* ---- Quick Workouts (FREE) — built from the existing movement library ---- */
 const QW=(title,tag,rpe,equip,desc,blocks)=>({title,tag,rpe,equip:equip||['Bodyweight'],desc,blocks,free:true});
 const QUICK_WORKOUTS=[
@@ -4167,7 +4379,8 @@ function renderExplore(){
       <div class="catcard" onclick="switchTab('target')" style="margin-bottom:12px;"><div class="body"><div class="ttl">Target Sessions</div><div class="cnt">Fix a weak station or quality</div></div><div class="arr">›</div></div>
       <div class="catcard" onclick="switchTab('programs')"><div class="body"><div class="ttl">Workout Library</div><div class="cnt">Free sessions by category</div></div><div class="arr">›</div></div></div>`;
   } else if(exFilter==='quick'){
-    h+=sec('Timer Sessions — FREE', `<div id="ex-timer"></div>`);
+    h+=sec('Collections', `<div id="ex-coll"></div>`);
+    h+=sec('Sessions', `<div id="ex-sess"></div>`, "switchTab('explore');setFilter('all')");
     h+=sec('Quick Workouts — FREE', QUICK_WORKOUTS.map((q,i)=>`<div class="wrow" onclick="openQuickWorkout(${i})">
       <div class="tx"><div class="t">${q.title}</div><div class="m">${q.tag} · ${totalMins(q)} min · RPE ${q.rpe}</div></div>
       <div class="freepill">Free</div><div class="chev">›</div></div>`).join(''));
@@ -4183,7 +4396,7 @@ function renderExplore(){
     h+=coachesSoonHTML();
   }
   $('ex-body').innerHTML=h;
-  try{ renderTimerList('ex-timer'); }catch(e){}
+  try{ renderCollections('ex-coll'); renderSessionList('ex-sess'); }catch(e){}
   $('screen').scrollTop=0;
 }
 
