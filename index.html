@@ -3659,7 +3659,7 @@ function doReset(){
 let _ob={goal:null, track:null, level:null, days:null, equip:null, ack:false};
 function startOnboarding(){
   // sensible defaults so nothing is null — user only NEEDS to choose a track + tick readiness
-  _ob={goal:HF.data.prefs.goal||null, track:HF.data.track||null, level:HF.data.prefs.level||'Intermediate', days:HF.data.prefs.days||4, equip:HF.data.prefs.equip||'Full equipment', ack:!!HF.data.readiness};
+  _ob={goal:HF.data.prefs.goal||null, track:HF.data.track||null, level:HF.data.prefs.level||'Intermediate', days:HF.data.prefs.days||4, equip:HF.data.prefs.equip||'Full equipment', ack:!!HF.data.readiness, name:HF.data.prefs.name||'', phone:HF.data.prefs.phone||''};
   $('ob').classList.add('on'); renderOb(); $('ob').scrollTop=0;
 }
 function obPick(field,val,track){ _ob[field]=val; if(track) _ob.track=track; renderOb(); }
@@ -3710,6 +3710,13 @@ function renderOb(){
       <div class="ri"><span class="d">●</span><span>Stop if you experience chest pain, dizziness, unusual shortness of breath or sharp pain.</span></div>
       <div class="ri"><span class="d">●</span><span>Seek professional medical advice if you have an existing condition, injury, or concerns about starting exercise.</span></div>
     </div>
+    <div class="qh" style="margin-top:22px;">Your details</div>
+    <input id="ob-name" value="${(_ob.name||'').replace(/"/g,'&quot;')}" oninput="_ob.name=this.value" maxlength="24" placeholder="Your name"
+      style="width:100%;background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:13px;color:#fff;font-weight:600;font-size:14.5px;margin-bottom:9px;box-sizing:border-box;">
+    <input id="ob-phone" type="tel" inputmode="tel" value="${(_ob.phone||'').replace(/"/g,'&quot;')}" oninput="_ob.phone=this.value" maxlength="18" placeholder="WhatsApp number (optional)"
+      style="width:100%;background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:13px;color:#fff;font-weight:600;font-size:14.5px;box-sizing:border-box;">
+    <div class="cnote" style="margin-top:8px;">We'll only message you about race dates, your program access and important updates — never spam.</div>
+
     <div class="ackrow ${_ob.ack?'on':''}" onclick="obToggleAck()"><div class="box"><span>✓</span></div>
       <div>I have read the readiness notice and understand I train at my own pace and responsibility.</div></div>
 
@@ -3725,8 +3732,12 @@ function finishOnboarding(){
   HF.data.track=_ob.track;
   HF.data.prefs=Object.assign({}, HF.data.prefs, {
     goal:_ob.goal||(_ob.track==='race'?'Prepare for HYROX KL':'Build Hybrid Fitness'),
-    level:_ob.level||'Intermediate', days:_ob.days||4, equip:_ob.equip||'Full equipment'});
+    level:_ob.level||'Intermediate', days:_ob.days||4, equip:_ob.equip||'Full equipment',
+    name:(_ob.name||HF.data.prefs.name||'').trim().slice(0,24),
+    phone:(_ob.phone||HF.data.prefs.phone||'').trim().slice(0,18)});
   HF.data.readiness=true; HF.data.onboarded=true; HF.save();
+  try{ sb && sb.auth.getSession().then(function(r){ if(r&&r.data&&r.data.session) syncProfile(r.data.session); }); }catch(e){}
+  try{ updateAvatar(); }catch(e){}
   $('ob').classList.remove('on');
   switchTab('home');
 }
