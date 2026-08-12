@@ -654,11 +654,11 @@
   .ring::before{content:"";position:absolute;inset:0;margin:auto;width:78px;height:78px;border-radius:50%;background:#0e0e0e;}
   .ring .rv{position:relative;text-align:center;}
   .ring .rv b{font-family:'Oswald';font-size:30px;font-weight:700;line-height:1;color:#fff;}
-  .ring .rv small{display:block;font-size:9px;letter-spacing:1.5px;color:var(--dim);text-transform:uppercase;margin-top:2px;}
+  .ring .rv small{display:block;font-size:8.5px;letter-spacing:.8px;color:var(--dim);text-transform:uppercase;margin-top:3px;font-weight:700;}
   .scorewrap .sb{flex:1;}
   .sbar{margin-bottom:9px;}
-  .sbar .l{display:flex;justify-content:space-between;font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:#cfcfcf;margin-bottom:4px;}
-  .sbar .l b{color:var(--hyrox);font-family:'Oswald';}
+  .sbar .l{display:flex;justify-content:space-between;font-size:12.5px;font-weight:600;letter-spacing:0;text-transform:none;color:#cfcfcf;margin-bottom:5px;}
+  .sbar .l b{color:#fff;font-family:'Oswald';font-size:14px;}
   .sbar .t{height:6px;border-radius:99px;background:#242424;overflow:hidden;}
   .sbar .t i{display:block;height:100%;background:var(--hyrox);border-radius:99px;}
   /* program detail (V3) */
@@ -862,7 +862,7 @@
         <div class="sechead">Connected Apps</div>
         <div id="pf-strava"></div>
         <div class="sechead">Settings</div>
-        <button class="pflink" onclick="openNameEditor()"><span>Your Name</span><span class="arr">›</span></button>
+        <button class="pflink" onclick="openNameEditor()"><span>Name &amp; photo</span><span class="arr">›</span></button>
         <button class="pflink" onclick="openTrackSelect(true)"><span>Change Track</span><span class="arr">›</span></button>
         <button class="pflink" onclick="restartOnboarding()"><span>Redo Onboarding</span><span class="arr">›</span></button>
         <button class="pflink" onclick="showReadiness(true)"><span>View Readiness &amp; Safety Notice</span><span class="arr">›</span></button>
@@ -2471,7 +2471,7 @@ function renderHome(){
 
   // 1) HEADER — avatar · greeting · score chip
   $('home-hdr').innerHTML=`<div class="hhdr">
-      <div class="av2">${nm?nm[0].toUpperCase():'H'}</div>
+      <div onclick="switchTab('profile')" style="cursor:pointer;flex:none;">${avatarHTML(46)}</div>
       <div class="w2"><div class="n">Hi${nm?', '+nm:''}</div><div class="s">${greetWord()} — ${race?'Race Ready':'Hybrid Starter'}</div></div>
       <div class="chip" onclick="switchTab('progress')">
         <b style="font-family:'Oswald';font-size:17px;color:var(--hyrox);line-height:1;">${hybridScore()}</b>
@@ -3362,7 +3362,7 @@ function calcPaceMe(){
 }
 function renderProgress(){
   const wk=weekStats();
-  const el=$('prog-score'); if(el){ el.innerHTML=`<div class="sechead" style="margin-top:14px;">Hybrid Score</div>${scoreRadarHTML()}
+  const el=$('prog-score'); if(el){ el.innerHTML=`<div class="sechead" style="margin-top:14px;">Hybrid Score</div>${scoreDashHTML()}
     <div class="infonote" style="margin-bottom:6px;">Weakest area: <b>${AREA_LABEL[weakestArea()]}</b> — <span onclick="switchTab('explore');setFilter('weakness')" style="color:var(--hyrox);cursor:pointer;">train it →</span></div>`; }
   $('prog-stats').innerHTML=`<div class="sechead">Activity</div><div class="dstat">
       <div class="c"><b>${HF.totalDone()}</b><small>Total Sessions</small></div>
@@ -3457,19 +3457,56 @@ function openNameEditor(){
   const cur=((HF.data.prefs&&HF.data.prefs.name)||'').replace(/"/g,'&quot;');
   $('modal-sheet').innerHTML=`<h3>Your Name</h3>
     <p class="msub">Shown on your Home greeting.</p>
-    <input id="name-input" value="${cur}" placeholder="e.g. Seth" maxlength="24" style="width:100%;background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:13px;color:#fff;font-weight:700;font-size:15px;margin:6px 0 4px;box-sizing:border-box;">
+    <input id="name-input" value="${cur}" placeholder="e.g. Seth" maxlength="24" style="width:100%;background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:13px;color:#fff;font-weight:700;font-size:15px;margin:6px 0 10px;box-sizing:border-box;">
+    <div style="display:flex;align-items:center;gap:11px;margin-bottom:4px;">
+      ${avatarHTML(44)}
+      <button class="go sec" style="flex:1;padding:10px;font-size:12.5px;" onclick="closeModal();pickAvatar()">${(HF.data.prefs&&HF.data.prefs.avatar)?'Change photo':'Add photo'}</button>
+      ${(HF.data.prefs&&HF.data.prefs.avatar)?`<button class="go sec" style="flex:none;padding:10px 13px;font-size:12.5px;color:#ff6b6b !important;" onclick="closeModal();removeAvatar()">Remove</button>`:''}
+    </div>
     <div class="modalrow"><button class="cancel" onclick="closeModal()">Cancel</button><button class="confirm" onclick="saveName()">Save</button></div>`;
   $('modal').classList.add('on');
   setTimeout(function(){ const i=$('name-input'); if(i) i.focus(); },80);
 }
 function saveName(){ const i=$('name-input'); if(!i) return; HF.data.prefs=HF.data.prefs||{}; HF.data.prefs.name=(i.value||'').trim().slice(0,24); HF.save(); closeModal(); nfToast('Name saved ✓'); updateAvatar(); try{ renderProfile(); }catch(e){} try{ if(curTab==='home') renderHome(); }catch(e){} }
+/* profile photo: picked from the device, downscaled to a 256px square so it stays small enough
+   to live inside the synced user_data JSON */
+function avatarHTML(size){
+  const a=(HF.data.prefs&&HF.data.prefs.avatar)||'', nm=((HF.data.prefs&&HF.data.prefs.name)||'').trim();
+  const st=`width:${size}px;height:${size}px;font-size:${Math.round(size*0.4)}px;`;
+  return a ? `<div class="av2" style="${st}background:url('${a}') center/cover no-repeat;border:1px solid var(--line);"></div>`
+           : `<div class="av2" style="${st}">${nm?nm[0].toUpperCase():'H'}</div>`;
+}
+function pickAvatar(){
+  let inp=document.getElementById('avatar-input');
+  if(!inp){ inp=document.createElement('input'); inp.type='file'; inp.accept='image/*'; inp.id='avatar-input';
+    inp.style.display='none'; document.body.appendChild(inp);
+    inp.addEventListener('change', function(){
+      const f=inp.files&&inp.files[0]; if(!f) return;
+      const r=new FileReader();
+      r.onload=function(e){ const img=new Image();
+        img.onload=function(){
+          const S=256, c=document.createElement('canvas'); c.width=S; c.height=S; const x=c.getContext('2d');
+          const side=Math.min(img.width,img.height);                     // centre-crop to a square
+          x.drawImage(img,(img.width-side)/2,(img.height-side)/2,side,side,0,0,S,S);
+          HF.data.prefs=HF.data.prefs||{}; HF.data.prefs.avatar=c.toDataURL('image/jpeg',0.82);
+          HF.save(); nfToast('Photo updated ✓');
+          try{ renderProfile(); }catch(e){} try{ if(curTab==='home') renderHome(); }catch(e){}
+        };
+        img.src=e.target.result; };
+      r.readAsDataURL(f); inp.value='';
+    });
+  }
+  inp.click();
+}
+function removeAvatar(){ if(HF.data.prefs){ delete HF.data.prefs.avatar; HF.save(); nfToast('Photo removed'); try{ renderProfile(); }catch(e){} try{ if(curTab==='home') renderHome(); }catch(e){} } }
 /* identity card: avatar, name, track + the three headline numbers */
 function profileIdentityHTML(cloud){
   const nm=((HF.data.prefs&&HF.data.prefs.name)||'').trim();
   const race=HF.data.track==='race', wk=weekStats();
   return `<div class="today" style="padding:16px 15px;margin-bottom:12px;">
     <div style="display:flex;align-items:center;gap:13px;">
-      <div class="av2" style="width:54px;height:54px;font-size:22px;">${nm?nm[0].toUpperCase():'H'}</div>
+      <div onclick="pickAvatar()" style="cursor:pointer;position:relative;flex:none;">${avatarHTML(54)}
+        <span style="position:absolute;right:-2px;bottom:-2px;width:20px;height:20px;border-radius:50%;background:var(--hyrox);color:var(--hyrox-ink);font-size:11px;display:grid;place-items:center;border:2px solid #0e0e0e;">✎</span></div>
       <div style="flex:1;min-width:0;">
         <div style="font-size:18px;font-weight:700;letter-spacing:-.3px;color:#fff;">${nm||'Your name'}</div>
         <div style="font-size:13px;color:var(--dim);margin-top:2px;">${race?'Race Ready':'Hybrid Starter'} · Week ${currentWeek()}</div>
