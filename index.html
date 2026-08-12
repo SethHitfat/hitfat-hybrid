@@ -54,7 +54,7 @@
 
   .screen{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
   .screen::-webkit-scrollbar{display:none;}
-  .pad{padding:6px 18px 24px;} /* nav is in-flow below the scroll area now — no big clearance needed */
+  .pad{padding:6px 18px calc(104px + env(safe-area-inset-bottom,0px));} /* clear the floating pill nav */
 
   .hgroup{margin:16px 2px 16px;}
   .hgroup .k{font-family:'Inter',system-ui,sans-serif;font-size:12.5px;font-weight:600;letter-spacing:.4px;text-transform:none;}
@@ -65,8 +65,10 @@
   /* tab navigation */
   /* nav pinned directly to the viewport bottom so it is ALWAYS flush at the bottom on iPhone */
   /* floating pill nav (Apple Fitness+ style) — glass capsule that floats above the bottom */
-  /* in-flow pill: last flex child of .app (inset:0), so it can ONLY sit at the true bottom */
-  .tabs{position:relative;flex:none;width:calc(100% - 24px);max-width:414px;margin:6px auto max(30px, calc(10px + env(safe-area-inset-bottom,0px)));display:flex;align-items:center;gap:2px;background:rgba(24,24,26,.96);border:1px solid rgba(255,255,255,.10);border-radius:26px;padding:6px 6px;box-shadow:0 12px 40px rgba(0,0,0,.6);}
+  /* floating glass pill (Apple Fitness+): absolutely positioned INSIDE .app (whose height is the
+     JS-measured --vh), so it overlays the content — content scrolls behind it, no black band below.
+     absolute-in-.app avoids the iOS position:fixed viewport bug entirely. */
+  .tabs{position:absolute;left:0;right:0;bottom:max(26px, calc(10px + env(safe-area-inset-bottom,0px)));margin:0 auto;width:calc(100% - 24px);max-width:414px;z-index:60;display:flex;align-items:center;gap:2px;background:rgba(24,24,26,.78);-webkit-backdrop-filter:blur(24px) saturate(1.6);backdrop-filter:blur(24px) saturate(1.6);border:1px solid rgba(255,255,255,.10);border-radius:26px;padding:6px 6px;box-shadow:0 12px 40px rgba(0,0,0,.55);}
   .tab{flex:1;background:none;border:none;color:var(--dim);font-family:'Inter',system-ui,sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.1px;text-transform:none;padding:7px 2px 6px;cursor:pointer;border-radius:16px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:color .15s,background .15s;}
   .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
   .tab.active{color:var(--hyrox);background:rgba(255,224,0,.12);}
