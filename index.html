@@ -626,6 +626,7 @@
         <div id="home-races"></div>
         <div id="home-quick"></div>
         <div id="home-new"></div>
+        <div id="home-diag" style="font-size:9px;color:#555;text-align:center;padding:10px 0 0;"></div>
       </div>
     <div class="pad">
       <!-- SKRIN 1: WORKOUT LIBRARY -->
@@ -2464,6 +2465,17 @@ function renderHome(){
     <div class="pcard full" onclick="${sp.go}" style="cursor:pointer;">
       <div class="top" style="height:110px;background:radial-gradient(420px 200px at 82% -10%,rgba(255,224,0,.22),transparent 60%),linear-gradient(155deg,#1d1d1d 0%,#0a0a0a 100%);"><div class="edge"></div><span class="badge free">${sp.badge}</span></div>
       <div class="info"><div class="t">${sp.t}</div><div class="m">${sp.m}</div></div></div>`;
+  // temp diagnostics (debug device-specific nav placement) — remove after nav confirmed OK
+  setTimeout(function(){ try{
+    const d=$('home-diag'); if(!d) return;
+    const t=$('tabs'), a=document.querySelector('.app');
+    const tr=t?t.getBoundingClientRect():null, ar=a?a.getBoundingClientRect():null;
+    const vh=getComputedStyle(document.documentElement).getPropertyValue('--vh').trim()||'—';
+    d.textContent='N9 · vh '+vh+' · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')
+      +' · pwa '+(_standaloneVH()?'y':'n')
+      +(ar?(' · app '+Math.round(ar.height)+'@'+Math.round(ar.top)) : '')
+      +(tr?(' · tabs↓ '+Math.round(tr.bottom)) : '');
+  }catch(e){} }, 300);
 }
 
 /* ---- Road to HYROX KL · event hub ----
@@ -3301,7 +3313,7 @@ function renderProfile(){
   // build + viewport diagnostics (helps debug device-specific layout issues)
   try{ const bt=$('build-tag'); if(bt){
     const vh=getComputedStyle(document.documentElement).getPropertyValue('--vh').trim()||'—';
-    bt.textContent='build 2026.08.12-N8 · vh '+vh+' · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')+' · pwa '+(_standaloneVH()?'yes':'no');
+    bt.textContent='build 2026.08.12-N9 · vh '+vh+' · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')+' · pwa '+(_standaloneVH()?'yes':'no');
   } }catch(e){}
   try{ renderStravaRow(); }catch(e){}   // Connected Apps → Strava
 
