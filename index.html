@@ -434,13 +434,15 @@
   .cdmini .cn span{font-size:11px;color:var(--dim);font-weight:600;}
   .cdmini .cnote{font-size:10.5px;color:var(--dim2);margin-top:6px;line-height:1.4;}
   .today{position:relative;border-radius:16px;border:1px solid var(--line);background:linear-gradient(155deg,#1a1a1a 0%,#0e0e0e 60%,#080808 100%);padding:16px 16px 15px;margin:2px 0 6px;overflow:hidden;}
-  .today::before{content:"";position:absolute;top:0;left:0;width:4px;height:100%;background:var(--hyrox);}
-  .today .tk{font-family:'Oswald';font-size:11px;letter-spacing:2px;color:var(--hyrox);font-weight:700;text-transform:uppercase;}
-  .today .tt{font-family:'Oswald';font-size:20px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:#fff;margin:6px 0 4px;line-height:1.05;}
+  /* the yellow spine + filled CTA are reserved for the ONE hero card (Today) so the page has a clear focal point */
+  .today.hero::before{content:"";position:absolute;top:0;left:0;width:4px;height:100%;background:var(--hyrox);}
+  .today .tk{font-family:'Inter',system-ui,sans-serif;font-size:11px;letter-spacing:.6px;color:var(--hyrox);font-weight:700;text-transform:uppercase;}
+  .today .tt{font-family:'Inter',system-ui,sans-serif;font-size:19px;font-weight:700;letter-spacing:-.3px;text-transform:none;color:#fff;margin:5px 0 4px;line-height:1.2;}
   .today .tm{font-size:12px;color:var(--dim);font-weight:600;margin-bottom:13px;}
   .today .trow{display:flex;gap:9px;}
-  .today .go{flex:1;background:var(--hyrox);color:var(--hyrox-ink) !important;border:none;border-radius:99px;padding:13px;font-family:'Oswald';font-weight:700;font-size:14px;letter-spacing:1.5px;cursor:pointer;text-transform:uppercase;}
-  .today .go.sec{flex:0 0 auto;background:var(--surface2);color:#fff !important;border:1px solid var(--line);padding:13px 18px;}
+  .today .go{flex:1;background:var(--surface2);color:#fff !important;border:1px solid rgba(255,255,255,.14);border-radius:99px;padding:13px;font-family:'Inter',system-ui,sans-serif;font-weight:700;font-size:13.5px;letter-spacing:0;cursor:pointer;text-transform:none;}
+  .today.hero .go{background:var(--hyrox);color:var(--hyrox-ink) !important;border:none;}
+  .today .go.sec{flex:0 0 auto;background:transparent;color:#cfcfcf !important;border:1px solid var(--line);padding:13px 18px;}
   .dstat{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:6px 0 4px;}
   .dstat .c{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 10px;text-align:center;}
   .dstat .c b{display:block;font-family:'Oswald';font-size:26px;font-weight:700;color:var(--hyrox);line-height:1;}
@@ -636,7 +638,6 @@
   <div class="screen" id="screen">
       <!-- SKRIN HOME (personalized dashboard — dirender oleh renderHome()) -->
       <div id="home" class="pad" style="display:none;">
-        <div id="home-diag" style="font-size:9px;color:#777;text-align:center;padding:4px 0 2px;"></div>
         <div id="home-install"></div>
         <div id="home-greet"></div>
         <div id="home-today"></div>
@@ -813,8 +814,7 @@
         <button class="pflink danger" onclick="confirmReset()"><span>Reset Progress</span><span class="arr">↺</span></button>
         <button class="pflink" id="pf-signout" onclick="signOut()"><span>Sign Out</span><span class="arr">→</span></button>
         <div class="attribution">
-          Programming designed by a HYROX Performance Coach (Level 1).<br>Delivered by HITFAT. Structured hybrid training &amp; race-preparation support.<br><span style="color:var(--dim2)">Not an official HYROX programme.</span><br><span id="build-tag" style="color:var(--dim2);font-size:10px;">build 2026.08.12-N8</span>
-        </div>
+          Programming designed by a HYROX Performance Coach (Level 1).<br>Delivered by HITFAT. Structured hybrid training &amp; race-preparation support.<br><span style="color:var(--dim2)">Not an official HYROX programme.</span>        </div>
       </div>
       <!-- SKRIN PRO WORKOUT DETAIL -->
       <div id="prodetail" style="display:none;">
@@ -2404,17 +2404,23 @@ function renderHome(){
   try{ renderInstallBanner(); }catch(e){}   // "Add to Home Screen" prompt (once, after sign-in)
   const race = HF.data.track==='race';
   const nameStr = HF.data.prefs.name?', '+HF.data.prefs.name:'';
-  // 1) GREETING (score now lives in the Hybrid Score radar below — no duplicate)
-  $('home-greet').innerHTML=`<div class="greet" style="margin:16px 2px 14px;">
-      <div class="hi">${greetWord()}${nameStr}</div>
-      <div class="who">${race?'Race Ready':'Hybrid Starter'} · ${HF.streak()}-day streak · Week ${currentWeek()}</div>
-    </div>`;
+  // 1) GREETING + compact score chip (the full Hybrid Score lives in the Progress tab)
+  $('home-greet').innerHTML=`<div class="greet" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 2px 16px;">
+      <div style="min-width:0;">
+        <div class="hi">${greetWord()}${nameStr}</div>
+        <div class="who">${race?'Race Ready':'Hybrid Starter'} · ${HF.streak()}-day streak</div>
+      </div>
+      <div onclick="switchTab('progress')" style="flex:none;display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:7px 12px;cursor:pointer;">
+        <b style="font-family:'Oswald';font-size:17px;color:#FFE000;line-height:1;">${hybridScore()}</b>
+        <span style="font-size:11px;color:#8a8a8a;font-weight:600;">Score</span>
+        <span style="color:#5a5a5a;font-size:14px;line-height:1;">›</span>
+      </div></div>`;
   // 2) TODAY'S TRAINING
   const nx=nextSession();
   if(nx){
     const wo=CATEGORIES[nx.c].workouts[nx.w];
     $('home-today').innerHTML=`<div class="sechead" style="margin-top:2px;">Today's Training</div>
-      <div class="today">
+      <div class="today hero">
         <div class="tk">${nx.phase} · Day ${nx.day} · ${prettyPlan()}</div>
         <div class="tt">${wo.title}</div>
         <div class="tm">RPE ${wo.rpe} · ${totalMins(wo)} min · ▶ video-guided</div>
@@ -2424,7 +2430,7 @@ function renderHome(){
         </div></div>`;
   } else {
     $('home-today').innerHTML=`<div class="sechead" style="margin-top:2px;">Today's Training</div>
-      <div class="today"><div class="tk">Rest &amp; Recovery</div><div class="tt">Recovery Day</div>
+      <div class="today hero"><div class="tk">Rest &amp; Recovery</div><div class="tt">Recovery Day</div>
       <div class="tm">Take a mobility or easy-walk day, hydrate and let the work settle.</div>
       <div class="trow"><button class="go" onclick="openQuickWorkout(0)">▶ 10-Min Mobility</button></div></div>`;
   }
@@ -2444,15 +2450,8 @@ function renderHome(){
   })();
   try{ renderChallenge(); }catch(e){ console.error(e); }   // 2c) 7-Day Hybrid Challenge (launch lead-magnet)
   try{ renderRaces(); }catch(e){ console.error(e); }       // Races — discover & track MY/SEA races
-  // 3) HYBRID SCORE — rings hero + a single compact stat strip (no separate My Progress block)
   const wk=weekStats();
-  $('home-progress').innerHTML=`<div class="sechead">Hybrid Score</div>${scoreRadarHTML()}
-    <div style="display:flex;gap:8px;margin-top:8px;">
-      ${[[HF.streak(),'DAY STREAK'],[wk.pct+'%','THIS WEEK'],[HF.totalDone(),'SESSIONS']]
-        .map(x=>`<div style="flex:1;text-align:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 6px;">
-          <div style="font-family:'Oswald';font-weight:700;font-size:19px;color:#fff;line-height:1;">${x[0]}</div>
-          <div style="font-size:9px;color:#8a8a8a;font-weight:700;letter-spacing:.5px;margin-top:5px;">${x[1]}</div></div>`).join('')}
-    </div>`;
+  $('home-progress').innerHTML='';   // Hybrid Score moved to the Progress tab
   // 4) FOR YOU — current program progress + recommendations (countdown removed: the Races
   //    section already carries the KL countdown, so it was duplicated information)
   if(window.klTicker){ clearInterval(window.klTicker); window.klTicker=null; }
@@ -2476,20 +2475,6 @@ function renderHome(){
   // 7) QUICK WORKOUTS
   $('home-quick').innerHTML=`<div class="sechead">Quick Workouts <span style="font-size:11px;color:#2ec27e;font-weight:800;letter-spacing:1px;">FREE</span></div>
     <div class="hscroll">${QUICK_WORKOUTS.map((_,i)=>quickCard(i)).join('')}</div>`;
-  // temp diagnostics (debug device-specific nav placement) — remove after nav confirmed OK
-  setTimeout(function(){ try{
-    const d=$('home-diag'); if(!d) return;
-    const t=$('tabs'), a=document.querySelector('.app');
-    const tr=t?t.getBoundingClientRect():null, ar=a?a.getBoundingClientRect():null;
-    const vh=getComputedStyle(document.documentElement).getPropertyValue('--vh').trim()||'—';
-    const nd=window._navDiag||{};
-    d.textContent='N20 · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')
-      +' · sat '+(nd.sat!=null?nd.sat:'?')+' · sab '+(nd.sab!=null?nd.sab:'?')+' · navb '+(nd.navb!=null?nd.navb:'?')
-      +' · pwa '+(_standaloneVH()?'y':'n')
-      +(ar?(' · app '+Math.round(ar.height)+'@'+Math.round(ar.top)) : '')
-      +(tr?(' · tabs↓ '+Math.round(tr.bottom)) : '');
-  }catch(e){} }, 300);
-}
 
 /* ---- Road to HYROX KL · event hub ----
    AirAsia HYROX Kuala Lumpur · MITEC · event dates 11–13 December 2026.
@@ -3281,7 +3266,7 @@ function calcPaceMe(){
 }
 function renderProgress(){
   const wk=weekStats();
-  const el=$('prog-score'); if(el){ el.innerHTML=`<div class="sechead" style="margin-top:14px;">Hybrid Score</div>${scoreDashHTML()}
+  const el=$('prog-score'); if(el){ el.innerHTML=`<div class="sechead" style="margin-top:14px;">Hybrid Score</div>${scoreRadarHTML()}
     <div class="infonote" style="margin-bottom:6px;">Weakest area: <b>${AREA_LABEL[weakestArea()]}</b> — <span onclick="switchTab('explore');setFilter('weakness')" style="color:var(--hyrox);cursor:pointer;">train it →</span></div>`; }
   $('prog-stats').innerHTML=`<div class="sechead">Activity</div><div class="dstat">
       <div class="c"><b>${HF.totalDone()}</b><small>Total Sessions</small></div>
@@ -3398,11 +3383,6 @@ function renderProfile(){
   }
   // sign-out only makes sense when signed in
   const so=$('pf-signout'); if(so) so.style.display = HF.userId ? 'flex' : 'none';
-  // build + viewport diagnostics (helps debug device-specific layout issues)
-  try{ const bt=$('build-tag'); if(bt){
-    const vh=getComputedStyle(document.documentElement).getPropertyValue('--vh').trim()||'—';
-    bt.textContent='build 2026.08.12-N20 · vh '+vh+' · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')+' · pwa '+(_standaloneVH()?'yes':'no');
-  } }catch(e){}
   try{ renderStravaRow(); }catch(e){}   // Connected Apps → Strava
 
   // My Programs — owned/paid + the free plan you're following
