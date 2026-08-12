@@ -210,6 +210,16 @@
 
   /* senarai workout = kad 2 lajur */
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  /* workout list rows (category screen) — same language as .frow */
+  #grid{display:flex;flex-direction:column;gap:8px;}
+  .wrow{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 13px;cursor:pointer;transition:transform .12s;}
+  .wrow:active{transform:scale(.99);}
+  .wrow .num{flex:none;width:30px;height:30px;border-radius:9px;background:var(--surface2);display:grid;place-items:center;font-family:'Oswald';font-weight:700;font-size:14px;color:var(--dim);}
+  .wrow .tx{flex:1;min-width:0;}
+  .wrow .tx .t{font-family:'Inter',system-ui,sans-serif;font-size:15px;font-weight:600;letter-spacing:-.2px;color:#fff;line-height:1.25;}
+  .wrow .tx .m{font-size:12.5px;color:var(--dim);margin-top:2px;font-weight:500;}
+  .wrow .rpe{flex:none;font-size:11px;font-weight:700;color:var(--hyrox);background:rgba(255,224,0,.10);border:1px solid rgba(255,224,0,.22);padding:4px 9px;border-radius:99px;}
+  .wrow .chev{flex:none;color:#5a5a5a;font-size:16px;}
   .card{position:relative;border-radius:var(--r);overflow:hidden;cursor:pointer;background:linear-gradient(155deg,#1a1a1a 0%,#0e0e0e 60%,#080808 100%);aspect-ratio:3/4;border:1px solid var(--line);transition:transform .12s;padding:14px 13px 13px;display:flex;flex-direction:column;justify-content:space-between;}
   .card:active{transform:scale(.97);}
   .card::before{content:"";position:absolute;top:0;left:0;width:4px;height:100%;background:var(--hyrox);opacity:.85;}
@@ -2700,17 +2710,14 @@ function openCategory(i){
   catIdx=i; const c=CATEGORIES[i];
   $('categories').style.display='none'; $('detail').style.display='none'; $('plans').style.display='none'; $('tabs').style.display='none'; $('list').style.display='block';
   $('l-cat').textContent='Program'; $('l-title').textContent=c.name; $('l-desc').textContent=c.desc;
-  $('grid').innerHTML=c.workouts.map((w,wi)=>{
-    const gnum=(w.title.match(/#?(\d+)\b/)||[])[1]||(wi+1);
-    return `
-    <div class="card" onclick="openDetail(${i},${wi})">
-      <div class="gx">${gnum}</div>
-      <div class="rpebadge">RPE ${w.rpe}</div>
-      <div class="body">
-        <div class="ttl">${w.title}</div>
-        <div class="meta"><span>${w.equip.length} equip</span> <span class="dot">·</span> <span>${totalMins(w)} min</span></div>
-      </div>
-    </div>`;}).join('');
+  $('grid').innerHTML=c.workouts.map((w,wi)=>`
+    <div class="wrow" onclick="openDetail(${i},${wi})">
+      <div class="num">${wi+1}</div>
+      <div class="tx"><div class="t">${w.title}</div>
+        <div class="m">${w.equip.length} equip · ${totalMins(w)} min</div></div>
+      <div class="rpe">RPE ${w.rpe}</div>
+      <div class="chev">›</div>
+    </div>`).join('');
   $('screen').scrollTop=0;
 }
 
