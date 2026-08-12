@@ -77,6 +77,9 @@
   .tabs{position:absolute;left:0;right:0;bottom:var(--navb, max(14px, env(safe-area-inset-bottom,14px)));margin:0 auto;width:calc(100% - 24px);max-width:414px;z-index:60;display:flex;align-items:center;gap:2px;background:rgba(24,24,26,.78);-webkit-backdrop-filter:blur(24px) saturate(1.6);backdrop-filter:blur(24px) saturate(1.6);border:1px solid rgba(255,255,255,.10);border-radius:26px;padding:6px 6px 9px;box-shadow:0 12px 40px rgba(0,0,0,.55);}
   .tab{flex:1;background:none;border:none;color:var(--dim);font-family:'Inter',system-ui,sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.1px;text-transform:none;padding:7px 2px 6px;cursor:pointer;border-radius:16px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:color .15s,background .15s;}
   .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  /* brand mark used in place of an outline icon (Programs tab) */
+  .tab .ticon{width:24px;height:24px;object-fit:contain;opacity:.5;transition:opacity .15s;}
+  .tab.active .ticon{opacity:1;}
   .tab.active{color:var(--hyrox);background:rgba(255,224,0,.12);}
   .tab.emblem{flex:0 0 64px;padding:0;}
   .tab.emblem .em{width:54px;height:54px;border-radius:50%;margin-top:-27px;background:transparent;border:1.5px solid var(--line);padding:0;display:flex;}
@@ -861,7 +864,7 @@
   <div class="tabs" id="tabs">
     <button class="tab active" id="tab-home" onclick="switchTab('home')"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>Home</button>
     <button class="tab" id="tab-explore" onclick="switchTab('explore')"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="M21 21l-4.5-4.5"/></svg>Explore</button>
-    <button class="tab" id="tab-store" onclick="switchTab('store')"><svg viewBox="0 0 24 24"><path d="M4 7h16l-1 13H5L4 7z"/><path d="M8.5 7V5.5a3.5 3.5 0 0 1 7 0V7"/></svg>Programs</button>
+    <button class="tab" id="tab-store" onclick="switchTab('store')"><img class="ticon" src="icon-programs.png" alt="" width="24" height="24">Programs</button>
     <button class="tab" id="tab-progress" onclick="switchTab('progress')"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3M20 16V6"/></svg>Progress</button>
     <button class="tab" id="tab-profile" onclick="switchTab('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Profile</button>
     <button class="tab" id="tab-pro" style="display:none" onclick="switchTab('pro')"></button>
@@ -2511,7 +2514,7 @@ function renderHome(){
     const tr=t?t.getBoundingClientRect():null, ar=a?a.getBoundingClientRect():null;
     const vh=getComputedStyle(document.documentElement).getPropertyValue('--vh').trim()||'—';
     const nd=window._navDiag||{};
-    d.textContent='N14 · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')
+    d.textContent='N15 · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')
       +' · sat '+(nd.sat!=null?nd.sat:'?')+' · sab '+(nd.sab!=null?nd.sab:'?')+' · navb '+(nd.navb!=null?nd.navb:'?')
       +' · pwa '+(_standaloneVH()?'y':'n')
       +(ar?(' · app '+Math.round(ar.height)+'@'+Math.round(ar.top)) : '')
@@ -3354,7 +3357,7 @@ function renderProfile(){
   // build + viewport diagnostics (helps debug device-specific layout issues)
   try{ const bt=$('build-tag'); if(bt){
     const vh=getComputedStyle(document.documentElement).getPropertyValue('--vh').trim()||'—';
-    bt.textContent='build 2026.08.12-N14 · vh '+vh+' · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')+' · pwa '+(_standaloneVH()?'yes':'no');
+    bt.textContent='build 2026.08.12-N15 · vh '+vh+' · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')+' · pwa '+(_standaloneVH()?'yes':'no');
   } }catch(e){}
   try{ renderStravaRow(); }catch(e){}   // Connected Apps → Strava
 
