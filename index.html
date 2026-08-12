@@ -78,11 +78,6 @@
   .tabs{position:absolute;left:0;right:0;bottom:var(--navb, max(14px, env(safe-area-inset-bottom,14px)));margin:0 auto;width:calc(100% - 24px);max-width:414px;z-index:60;display:flex;align-items:center;gap:2px;background:rgba(24,24,26,.78);-webkit-backdrop-filter:blur(24px) saturate(1.6);backdrop-filter:blur(24px) saturate(1.6);border:1px solid rgba(255,255,255,.10);border-radius:26px;padding:6px 6px 9px;box-shadow:0 12px 40px rgba(0,0,0,.55);}
   .tab{flex:1;background:none;border:none;color:var(--dim);font-family:'Inter',system-ui,sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.1px;text-transform:none;padding:7px 2px 6px;cursor:pointer;border-radius:16px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:color .15s,background .15s;}
   .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
-  /* brand splash */
-  #splash{position:fixed;inset:0;z-index:99999;background:#000;display:flex;align-items:center;justify-content:center;transition:opacity .45s ease;}
-  #splash .sp-img{position:absolute;inset:0;background:#000 url('splash.jpg') center/cover no-repeat;}
-  #splash.off{opacity:0;pointer-events:none;}
-
   /* ===== Home v4 (reference concept): header · day strip · activity cards · plan cards ===== */
   .hhdr{display:flex;align-items:center;gap:12px;margin:14px 2px 18px;}
   .hhdr .av2{width:46px;height:46px;border-radius:50%;background:var(--surface2);border:1px solid var(--line);display:grid;place-items:center;font-family:'Oswald';font-weight:700;font-size:19px;color:var(--hyrox);flex:none;}
@@ -225,6 +220,7 @@
   .wrow .tx .m{font-size:12.5px;color:var(--dim);margin-top:2px;font-weight:500;}
   .wrow .rpe{flex:none;font-size:11px;font-weight:700;color:var(--hyrox);background:rgba(255,224,0,.10);border:1px solid rgba(255,224,0,.22);padding:4px 9px;border-radius:99px;}
   .wrow .chev{flex:none;color:#5a5a5a;font-size:16px;}
+  .wrow .freepill{flex:none;font-size:11px;font-weight:700;color:#2ec27e;background:rgba(46,194,126,.12);border:1px solid rgba(46,194,126,.30);padding:4px 9px;border-radius:99px;}
   .card{position:relative;border-radius:var(--r);overflow:hidden;cursor:pointer;background:linear-gradient(155deg,#1a1a1a 0%,#0e0e0e 60%,#080808 100%);aspect-ratio:3/4;border:1px solid var(--line);transition:transform .12s;padding:14px 13px 13px;display:flex;flex-direction:column;justify-content:space-between;}
   .card:active{transform:scale(.97);}
   .card::before{content:"";position:absolute;top:0;left:0;width:4px;height:100%;background:var(--hyrox);opacity:.85;}
@@ -688,8 +684,6 @@
 </style>
 </head>
 <body>
-<!-- Brand splash: covers the app until auth/boot decides what to show -->
-<div id="splash"><div class="sp-img"></div></div>
 <div class="app">
 
   <!-- tab nav moved to BODY level (before </body>) so its position:fixed is viewport-relative,
@@ -984,8 +978,6 @@
    black-translucent mode, so .app ended early. Measure the REAL height in JS
    and expose it as --vh; .app{height:var(--vh)} then always reaches the true bottom. */
 function _standaloneVH(){ try{ return window.navigator.standalone===true || (window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches); }catch(e){ return false; } }
-function hideSplash(){ try{ const s=document.getElementById('splash'); if(!s||s.dataset.gone) return; s.dataset.gone='1';
-  s.classList.add('off'); setTimeout(function(){ s.style.display='none'; }, 500); }catch(e){} }
 function setVH(){ try{
   var h=window.innerHeight;
   if(_standaloneVH()){
@@ -3640,7 +3632,7 @@ function closeOb(){ $('ob').classList.remove('on'); }
 
 /* ============ AUTH SCREEN LOGIC (Supabase) ============ */
 let _authMode='signin'; // 'signin' | 'signup'
-function showAuth(){ hideSplash(); $('auth').classList.add('on'); }
+function showAuth(){ $('auth').classList.add('on'); }
 function hideAuth(){ $('auth').classList.remove('on'); }
 function authMsg(text, kind){ const m=$('auth-msg'); if(m){ m.textContent=text||''; m.className='authmsg'+(kind?' '+kind:''); } }
 function authToggle(){
@@ -3702,7 +3694,6 @@ function startApp(){
     switchTab('home');
     if(!HF.data.onboarded) startOnboarding();
     _appStarted=true;
-    hideSplash();
     handlePaidRedirect();            // auto-unlock if the buyer just returned from BCL payment
     handleStravaReturn();            // finish Strava connect + auto-sync if just returned
     updateAvatar();                  // topbar avatar shows the user's initial
@@ -4073,7 +4064,9 @@ function renderExplore(){
       <div class="catcard" onclick="switchTab('target')" style="margin-bottom:12px;"><div class="body"><div class="ttl">Target Sessions</div><div class="cnt">Fix a weak station or quality</div></div><div class="arr">›</div></div>
       <div class="catcard" onclick="switchTab('programs')"><div class="body"><div class="ttl">Workout Library</div><div class="cnt">Free sessions by category</div></div><div class="arr">›</div></div></div>`;
   } else if(exFilter==='quick'){
-    h+=sec('Quick Workouts — FREE', QUICK_WORKOUTS.map((q,i)=>`<div class="pcard full" onclick="openQuickWorkout(${i})"><div class="info" style="padding:15px 16px;"><span class="badge free">Free</span><div class="t" style="margin-top:9px;">${q.title}</div><div class="m">${q.tag} · ${totalMins(q)} min · RPE ${q.rpe}</div></div></div>`).join(''));
+    h+=sec('Quick Workouts — FREE', QUICK_WORKOUTS.map((q,i)=>`<div class="wrow" onclick="openQuickWorkout(${i})">
+      <div class="tx"><div class="t">${q.title}</div><div class="m">${q.tag} · ${totalMins(q)} min · RPE ${q.rpe}</div></div>
+      <div class="freepill">Free</div><div class="chev">›</div></div>`).join(''));
   } else if(exFilter==='programs'){
     h+=sec('All Programs', CATALOG_ORDER.map(id=>programCard(id,true)).join(''));
   } else if(exFilter==='race'){
@@ -4356,7 +4349,6 @@ function maybeAutoSyncStrava(){       // silent auto-sync on app open, throttled
 }
 
 function boot(){
-  setTimeout(hideSplash, 4000);   // safety: never trap the user behind the splash
   capturePaidParam();              // stash ?paid=<id> before auth/OAuth redirect can strip it
   captureStravaToken();            // stash Strava tokens returned in the URL fragment
   if(!document.getElementById('catlist')){ return setTimeout(boot,60); }
