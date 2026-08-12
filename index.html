@@ -2404,16 +2404,11 @@ function renderHome(){
   try{ renderInstallBanner(); }catch(e){}   // "Add to Home Screen" prompt (once, after sign-in)
   const race = HF.data.track==='race';
   const nameStr = HF.data.prefs.name?', '+HF.data.prefs.name:'';
-  // 1) GREETING + Hybrid Score hero (signature metric, prominent up top)
-  $('home-greet').innerHTML=`<div class="greet" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin:16px 2px 14px;">
-      <div style="min-width:0;">
-        <div class="hi">${greetWord()}${nameStr}</div>
-        <div class="who">${race?'Race Ready':'Hybrid Starter'} · Week ${currentWeek()}</div>
-      </div>
-      <div onclick="switchTab('progress')" style="text-align:center;cursor:pointer;flex:none;padding:4px 6px;">
-        <div style="font-family:'Oswald';font-weight:700;font-size:36px;color:#FFE000;line-height:.95;">${hybridScore()}</div>
-        <div style="font-size:9px;color:#8a8a8a;font-weight:800;letter-spacing:.6px;margin-top:2px;">HYBRID SCORE</div>
-      </div></div>`;
+  // 1) GREETING (score now lives in the Hybrid Score radar below — no duplicate)
+  $('home-greet').innerHTML=`<div class="greet" style="margin:16px 2px 14px;">
+      <div class="hi">${greetWord()}${nameStr}</div>
+      <div class="who">${race?'Race Ready':'Hybrid Starter'} · ${HF.streak()}-day streak · Week ${currentWeek()}</div>
+    </div>`;
   // 2) TODAY'S TRAINING
   const nx=nextSession();
   if(nx){
@@ -2449,19 +2444,8 @@ function renderHome(){
   })();
   try{ renderChallenge(); }catch(e){ console.error(e); }   // 2c) 7-Day Hybrid Challenge (launch lead-magnet)
   try{ renderRaces(); }catch(e){ console.error(e); }       // Races — discover & track MY/SEA races
-  // 3) MY PROGRESS (stats + week streak strip)
-  const wk=weekStats(); const done=homeDoneDaysThisWeek();
-  const now=new Date(), off=(now.getDay()+6)%7, mon=new Date(now); mon.setDate(now.getDate()-off);
-  const names=['M','T','W','T','F','S','S']; let ws='';
-  for(let i=0;i<7;i++){ const dt=new Date(mon); dt.setDate(mon.getDate()+i);
-    ws+=`<div class="wcell ${i===off?'today':''} ${done.has(i)?'ddone':''}"><small>${names[i]}</small><b>${done.has(i)?'✓':dt.getDate()}</b></div>`; }
-  $('home-progress').innerHTML=`<div class="sechead">My Progress</div>
-    <div class="dstat">
-      <div class="c"><b>${HF.totalDone()}</b><small>Total Sessions</small></div>
-      <div class="c"><b>${HF.streak()}</b><small>Day Streak</small></div>
-      <div class="c"><b>${wk.pct}%</b><small>This Week</small></div>
-    </div>
-    <div class="wstrip" style="margin-top:12px;">${ws}</div>`;
+  // 3) HYBRID SCORE — radar chart hero (replaces the old stat/week strip block)
+  $('home-progress').innerHTML=`<div class="sechead">Hybrid Score</div>${scoreRadarHTML()}`;
   // 4) COUNTDOWN (race → KL / starter → Hybrid Sim)
   if(race){
     $('home-countdown').innerHTML=`<div class="cdmini" onclick="switchTab('store');openProgramDetail('road-kl','home')">
@@ -2515,7 +2499,7 @@ function renderHome(){
     const tr=t?t.getBoundingClientRect():null, ar=a?a.getBoundingClientRect():null;
     const vh=getComputedStyle(document.documentElement).getPropertyValue('--vh').trim()||'—';
     const nd=window._navDiag||{};
-    d.textContent='N17 · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')
+    d.textContent='N18 · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')
       +' · sat '+(nd.sat!=null?nd.sat:'?')+' · sab '+(nd.sab!=null?nd.sab:'?')+' · navb '+(nd.navb!=null?nd.navb:'?')
       +' · pwa '+(_standaloneVH()?'y':'n')
       +(ar?(' · app '+Math.round(ar.height)+'@'+Math.round(ar.top)) : '')
@@ -2998,6 +2982,43 @@ function scoreDashHTML(){
     <div class="sb">${['engine','strength','stations','running'].map(bar).join('')}</div>
   </div>`;
 }
+/* ---- Hybrid Score radar (Home hero) — 4-axis spider chart, richer than the Progress bars ---- */
+function scoreRadarHTML(){
+  const s=hybridScore(), b=scoreBreakdown(), weak=weakestArea();
+  const keys=['engine','strength','stations','running'];           // top, right, bottom, left
+  const S=190, c=S/2, R=66;                                        // viewBox size, centre, max radius
+  const pt=(i,v)=>{ const a=(-90+i*90)*Math.PI/180, r=R*Math.max(6,v)/100;
+    return [ (c+r*Math.cos(a)).toFixed(1), (c+r*Math.sin(a)).toFixed(1) ]; };
+  const ring=f=>keys.map((_,i)=>{ const a=(-90+i*90)*Math.PI/180, r=R*f;
+    return (c+r*Math.cos(a)).toFixed(1)+','+(c+r*Math.sin(a)).toFixed(1); }).join(' ');
+  const poly=keys.map((k,i)=>pt(i,b[k]).join(',')).join(' ');
+  const dots=keys.map((k,i)=>{ const p=pt(i,b[k]); return `<circle cx="${p[0]}" cy="${p[1]}" r="3.4" fill="#FFE000"/>`; }).join('');
+  const axes=keys.map((_,i)=>{ const a=(-90+i*90)*Math.PI/180;
+    return `<line x1="${c}" y1="${c}" x2="${(c+R*Math.cos(a)).toFixed(1)}" y2="${(c+R*Math.sin(a)).toFixed(1)}" stroke="rgba(255,255,255,.10)" stroke-width="1"/>`; }).join('');
+  const lbl=[[c,18,'middle'],[S-6,c+4,'end'],[c,S-8,'middle'],[6,c+4,'start']];
+  const labels=keys.map((k,i)=>`<text x="${lbl[i][0]}" y="${lbl[i][1]}" text-anchor="${lbl[i][2]}" font-size="10.5" font-weight="700" fill="${k===weak?'#e5383b':'#8a8a8a'}" font-family="Inter,system-ui,sans-serif">${AREA_LABEL[k].toUpperCase()}</text>`).join('');
+  const vals=keys.map((k,i)=>{ const p=pt(i,Math.min(100,b[k]+13));
+    return `<text x="${p[0]}" y="${p[1]}" text-anchor="middle" font-size="9.5" font-weight="800" fill="#fff" font-family="Inter,system-ui,sans-serif" opacity=".85">${b[k]}</text>`; }).join('');
+  return `<div class="today" style="display:flex;align-items:center;gap:8px;padding:14px 12px;">
+    <div style="flex:0 0 auto;text-align:center;padding-left:6px;">
+      <div style="font-family:'Oswald';font-weight:700;font-size:58px;color:#FFE000;line-height:.9;">${s}</div>
+      <div style="font-size:9.5px;color:#8a8a8a;font-weight:800;letter-spacing:.8px;margin-top:4px;">HYBRID SCORE</div>
+      <div style="font-size:11px;color:#e5383b;font-weight:700;margin-top:9px;">Weakest: ${AREA_LABEL[weak]}</div>
+      <button class="go sec" style="width:auto;padding:7px 12px;font-size:11px;margin-top:9px;" onclick="switchTab('explore');setFilter('weakness')">Train it →</button>
+    </div>
+    <svg viewBox="0 0 ${S} ${S}" style="flex:1;max-width:200px;height:auto;overflow:visible;">
+      <defs><radialGradient id="rgrad" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="rgba(255,224,0,.55)"/><stop offset="100%" stop-color="rgba(255,224,0,.12)"/>
+      </radialGradient></defs>
+      <polygon points="${ring(1)}" fill="none" stroke="rgba(255,255,255,.13)" stroke-width="1"/>
+      <polygon points="${ring(.66)}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
+      <polygon points="${ring(.33)}" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="1"/>
+      ${axes}
+      <polygon points="${poly}" fill="url(#rgrad)" stroke="#FFE000" stroke-width="2.2" stroke-linejoin="round"/>
+      ${dots}${vals}${labels}
+    </svg>
+  </div>`;
+}
 /* ---- Training Load (acute:chronic ratio) + Weekly Volume trend (Zepp-inspired) ---- */
 function hfWeekStart(d){ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-((x.getDay()+6)%7)); return x; }   // Monday
 function sessionLoad(s){ const mins=s.mins||45; const it=s.rpe?(s.rpe/10):(s.hr?Math.max(0.4,Math.min(1.05,s.hr/180)):0.6); return Math.round(mins*it); }
@@ -3358,7 +3379,7 @@ function renderProfile(){
   // build + viewport diagnostics (helps debug device-specific layout issues)
   try{ const bt=$('build-tag'); if(bt){
     const vh=getComputedStyle(document.documentElement).getPropertyValue('--vh').trim()||'—';
-    bt.textContent='build 2026.08.12-N17 · vh '+vh+' · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')+' · pwa '+(_standaloneVH()?'yes':'no');
+    bt.textContent='build 2026.08.12-N18 · vh '+vh+' · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')+' · pwa '+(_standaloneVH()?'yes':'no');
   } }catch(e){}
   try{ renderStravaRow(); }catch(e){}   // Connected Apps → Strava
 
