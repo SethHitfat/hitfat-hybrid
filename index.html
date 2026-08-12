@@ -40,7 +40,9 @@
   /* fixed to the viewport so the bottom nav always sits at the very bottom on every iOS (no dvh/vh gap) */
   /* app height = JS-measured real viewport (--vh). iOS standalone/black-translucent misreports
      the height of fixed inset:0 elements (ends ~90pt early → nav floated high on iPhone only). */
-  .app{position:fixed;top:0;right:0;left:0;margin:0 auto;width:100%;max-width:440px;height:100vh;height:100dvh;height:var(--vh,100dvh);display:flex;flex-direction:column;overflow:hidden;}
+  /* 100dvh = the standards-correct "real" viewport height (iOS 15.4+). JS measurements were
+     unreliable here: innerHeight read short (nav floated high), screen.height read long (nav clipped). */
+  .app{position:fixed;top:0;right:0;left:0;margin:0 auto;width:100%;max-width:440px;height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
   .app, .app *{color:inherit;transform:none !important;writing-mode:horizontal-tb !important;float:none !important;}
   .hgroup h2,.dtitle,.pname,.card .ttl,.catcard .ttl{color:#fff !important;}
   .hgroup .k,.ptar{color:var(--hitfat) !important;}
@@ -69,7 +71,7 @@
      JS-measured --vh), so it overlays the content — content scrolls behind it, no black band below.
      absolute-in-.app avoids the iOS position:fixed viewport bug entirely. */
   /* bottom:14px — Apple Fitness+ hugs the very bottom; the home indicator overlaps the pill's lower padding */
-  .tabs{position:absolute;left:0;right:0;bottom:14px;margin:0 auto;width:calc(100% - 24px);max-width:414px;z-index:60;display:flex;align-items:center;gap:2px;background:rgba(24,24,26,.78);-webkit-backdrop-filter:blur(24px) saturate(1.6);backdrop-filter:blur(24px) saturate(1.6);border:1px solid rgba(255,255,255,.10);border-radius:26px;padding:6px 6px 9px;box-shadow:0 12px 40px rgba(0,0,0,.55);}
+  .tabs{position:absolute;left:0;right:0;bottom:max(14px, env(safe-area-inset-bottom,14px));margin:0 auto;width:calc(100% - 24px);max-width:414px;z-index:60;display:flex;align-items:center;gap:2px;background:rgba(24,24,26,.78);-webkit-backdrop-filter:blur(24px) saturate(1.6);backdrop-filter:blur(24px) saturate(1.6);border:1px solid rgba(255,255,255,.10);border-radius:26px;padding:6px 6px 9px;box-shadow:0 12px 40px rgba(0,0,0,.55);}
   .tab{flex:1;background:none;border:none;color:var(--dim);font-family:'Inter',system-ui,sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.1px;text-transform:none;padding:7px 2px 6px;cursor:pointer;border-radius:16px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:color .15s,background .15s;}
   .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
   .tab.active{color:var(--hyrox);background:rgba(255,224,0,.12);}
@@ -615,6 +617,7 @@
   <div class="screen" id="screen">
       <!-- SKRIN HOME (personalized dashboard — dirender oleh renderHome()) -->
       <div id="home" class="pad" style="display:none;">
+        <div id="home-diag" style="font-size:9px;color:#777;text-align:center;padding:4px 0 2px;"></div>
         <div id="home-install"></div>
         <div id="home-greet"></div>
         <div id="home-today"></div>
@@ -627,7 +630,6 @@
         <div id="home-races"></div>
         <div id="home-quick"></div>
         <div id="home-new"></div>
-        <div id="home-diag" style="font-size:9px;color:#555;text-align:center;padding:10px 0 0;"></div>
       </div>
     <div class="pad">
       <!-- SKRIN 1: WORKOUT LIBRARY -->
@@ -2472,7 +2474,7 @@ function renderHome(){
     const t=$('tabs'), a=document.querySelector('.app');
     const tr=t?t.getBoundingClientRect():null, ar=a?a.getBoundingClientRect():null;
     const vh=getComputedStyle(document.documentElement).getPropertyValue('--vh').trim()||'—';
-    d.textContent='N10 · vh '+vh+' · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')
+    d.textContent='N11 · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')
       +' · pwa '+(_standaloneVH()?'y':'n')
       +(ar?(' · app '+Math.round(ar.height)+'@'+Math.round(ar.top)) : '')
       +(tr?(' · tabs↓ '+Math.round(tr.bottom)) : '');
@@ -3314,7 +3316,7 @@ function renderProfile(){
   // build + viewport diagnostics (helps debug device-specific layout issues)
   try{ const bt=$('build-tag'); if(bt){
     const vh=getComputedStyle(document.documentElement).getPropertyValue('--vh').trim()||'—';
-    bt.textContent='build 2026.08.12-N10 · vh '+vh+' · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')+' · pwa '+(_standaloneVH()?'yes':'no');
+    bt.textContent='build 2026.08.12-N11 · vh '+vh+' · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')+' · pwa '+(_standaloneVH()?'yes':'no');
   } }catch(e){}
   try{ renderStravaRow(); }catch(e){}   // Connected Apps → Strava
 
