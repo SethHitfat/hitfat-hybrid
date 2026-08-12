@@ -52,7 +52,7 @@
 
   .screen{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
   .screen::-webkit-scrollbar{display:none;}
-  .pad{padding:6px 18px calc(80px + env(safe-area-inset-bottom,0px));} /* clear the fixed bottom nav */
+  .pad{padding:6px 18px calc(86px + env(safe-area-inset-bottom,0px));} /* clear the floating pill nav */
 
   .hgroup{margin:16px 2px 16px;}
   .hgroup .k{font-family:'Inter',system-ui,sans-serif;font-size:12.5px;font-weight:600;letter-spacing:.4px;text-transform:none;}
@@ -62,10 +62,11 @@
 
   /* tab navigation */
   /* nav pinned directly to the viewport bottom so it is ALWAYS flush at the bottom on iPhone */
-  .tabs{position:fixed;bottom:0;left:0;right:0;margin:0 auto;width:100%;max-width:440px;z-index:60;display:flex;align-items:flex-end;background:#0a0a0a;border-top:1px solid var(--line);padding:7px 8px calc(3px + env(safe-area-inset-bottom,0px));}
-  .tab{flex:1;background:none;border:none;color:var(--dim);font-family:'Inter',system-ui,sans-serif;font-size:11px;font-weight:500;letter-spacing:0;text-transform:none;padding:4px 2px 0;cursor:pointer;border-bottom:none;display:flex;flex-direction:column;align-items:center;gap:4px;transition:color .15s;}
-  .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;}
-  .tab.active{color:var(--hyrox);border-bottom:none;}
+  /* floating pill nav (Apple Fitness+ style) — glass capsule that floats above the bottom */
+  .tabs{position:fixed;bottom:calc(9px + env(safe-area-inset-bottom,0px));left:0;right:0;margin:0 auto;width:calc(100% - 24px);max-width:414px;z-index:60;display:flex;align-items:center;gap:2px;background:rgba(22,22,24,.72);-webkit-backdrop-filter:blur(24px) saturate(1.5);backdrop-filter:blur(24px) saturate(1.5);border:1px solid rgba(255,255,255,.09);border-radius:26px;padding:6px 6px;box-shadow:0 10px 34px rgba(0,0,0,.55);}
+  .tab{flex:1;background:none;border:none;color:var(--dim);font-family:'Inter',system-ui,sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.1px;text-transform:none;padding:7px 2px 6px;cursor:pointer;border-radius:16px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:color .15s,background .15s;}
+  .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  .tab.active{color:var(--hyrox);background:rgba(255,224,0,.12);}
   .tab.emblem{flex:0 0 64px;padding:0;}
   .tab.emblem .em{width:54px;height:54px;border-radius:50%;margin-top:-27px;background:transparent;border:1.5px solid var(--line);padding:0;display:flex;}
   .tab.emblem .em i{flex:1;border-radius:50%;background:#0d0d0d;display:flex;align-items:center;justify-content:center;font-style:normal;font-family:'Oswald';font-weight:700;font-size:15px;letter-spacing:1px;color:#fff;}
@@ -318,7 +319,7 @@
   .klinfo .row .ic{width:24px;text-align:center;font-size:15px;flex:0 0 auto;}
   .klinfo .row b{color:#fff;font-weight:700;}
 
-  .sechead{font-family:'Inter',system-ui,sans-serif;font-size:20px;font-weight:700;letter-spacing:-.2px;text-transform:none;color:#fff;margin:26px 0 13px;display:block;}
+  .sechead{font-family:'Inter',system-ui,sans-serif;font-size:22px;font-weight:800;letter-spacing:-.5px;text-transform:none;color:#fff;margin:30px 0 14px;display:block;}
 
   .trkbar{height:8px;border-radius:99px;background:var(--surface2,#181818);overflow:hidden;margin:0 0 7px;}
   .trkbar > i{display:block;height:100%;background:var(--hyrox);border-radius:99px;transition:width .3s;}
