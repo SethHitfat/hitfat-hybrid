@@ -78,6 +78,18 @@
   .tabs{position:absolute;left:0;right:0;bottom:var(--navb, max(14px, env(safe-area-inset-bottom,14px)));margin:0 auto;width:calc(100% - 24px);max-width:414px;z-index:60;display:flex;align-items:center;gap:2px;background:rgba(24,24,26,.78);-webkit-backdrop-filter:blur(24px) saturate(1.6);backdrop-filter:blur(24px) saturate(1.6);border:1px solid rgba(255,255,255,.10);border-radius:26px;padding:6px 6px 9px;box-shadow:0 12px 40px rgba(0,0,0,.55);}
   .tab{flex:1;background:none;border:none;color:var(--dim);font-family:'Inter',system-ui,sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.1px;text-transform:none;padding:7px 2px 6px;cursor:pointer;border-radius:16px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:color .15s,background .15s;}
   .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  /* HITFAT Timer home (Spotify-style browse) */
+  .tmtop{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:22px;}
+  .tmtop .q{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer;}
+  .tmtop .q .im{width:52px;height:52px;flex:none;background:#141414 center/cover no-repeat;}
+  .tmtop .q .t{font-size:13.5px;font-weight:700;color:#fff;line-height:1.2;padding-right:8px;}
+  .scard{position:relative;flex:0 0 auto;width:158px;cursor:pointer;}
+  .scard .im{height:158px;border-radius:14px;background:#141414 center/cover no-repeat;position:relative;overflow:hidden;}
+  .scard .im::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.05) 45%,rgba(0,0,0,.75));}
+  .scard .im .est{position:absolute;left:9px;bottom:9px;z-index:2;font-size:11px;font-weight:800;color:#fff;}
+  .scard .im .ty{position:absolute;right:9px;top:9px;z-index:2;font-size:9.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--hyrox-ink);background:var(--hyrox);padding:3px 7px;border-radius:99px;}
+  .scard .t{font-size:13.5px;font-weight:600;color:#fff;margin-top:8px;line-height:1.25;letter-spacing:-.2px;}
+  .scard .m{font-size:11.5px;color:var(--dim);margin-top:2px;}
   /* ===== Sessions: collections, session detail, count-up player (Roxfit-style) ===== */
   .coll{position:relative;flex:0 0 auto;width:168px;border-radius:16px;overflow:hidden;cursor:pointer;background:#141414;}
   .coll .im{height:110px;background:#141414 center/cover no-repeat;}
@@ -849,7 +861,7 @@
       </div>
       <!-- SKRIN EXPLORE (V3 discovery) -->
       <div id="explore" style="display:none;">
-        <div class="hgroup"><div class="k">Train</div><h2>SESSIONS</h2><p>Timed sessions, collections, free workouts and the full video library.</p></div>
+        <div class="hgroup"><div class="k">Your training</div><h2>TRAIN</h2><p>Timer sessions, free workouts, programs and the full video library.</p></div>
         <div class="filters" id="ex-filters"></div>
         <div id="ex-body"></div>
       </div>
@@ -941,6 +953,7 @@
         <div class="grid" id="grid"></div>
       </div>
       <!-- SKRIN 3: BUTIRAN -->
+      <div id="tmhome" class="pad" style="display:none;"><div id="tm-body"></div></div>
       <div id="tsess" class="pad" style="display:none;"><div id="ts-body"></div></div>
       <div id="detail" style="display:none;">
         <button class="back" id="d-back" onclick="backToList()">← Back</button>
@@ -964,7 +977,7 @@
        .app is pinned inset:0, so this row ALWAYS sits at the true bottom — deterministic, no iOS fixed-position quirks. -->
   <div class="tabs" id="tabs">
     <button class="tab active" id="tab-home" onclick="switchTab('home')"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>Home</button>
-    <button class="tab" id="tab-explore" onclick="switchTab('explore')"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="M21 21l-4.5-4.5"/></svg>Sessions</button>
+    <button class="tab" id="tab-explore" onclick="switchTab('explore')"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="M21 21l-4.5-4.5"/></svg>Train</button>
     <button class="tab" id="tab-store" onclick="switchTab('store')"><img class="ticon" src="icon-programs.png" alt="" width="24" height="24">Programs</button>
     <button class="tab" id="tab-progress" onclick="switchTab('progress')"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3M20 16V6"/></svg>Progress</button>
     <button class="tab" id="tab-profile" onclick="switchTab('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Profile</button>
@@ -2128,7 +2141,7 @@ function switchTab(tab){
   curTab=tab;
   $('tabs').style.display='flex'; // always restore the bottom nav when landing on a main tab
   // hide every screen
-  ['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail','store','tsess'].forEach(id=>{ const e=$(id); if(e) e.style.display='none'; });
+  ['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail','store','tsess','tmhome'].forEach(id=>{ const e=$(id); if(e) e.style.display='none'; });
   if(window.klTicker && tab!=='pro' && tab!=='home' && tab!=='explore'){ clearInterval(window.klTicker); window.klTicker=null; }
   ['tab-home','tab-programs','tab-plans','tab-pro','tab-target','tab-kl','tab-progress','tab-profile','tab-explore','tab-coaches','tab-store'].forEach(id=>{ const b=$(id); if(b&&b.classList) b.classList.remove('active'); });
   const setActive=id=>{ const b=$(id); if(b&&b.classList) b.classList.add('active'); };
@@ -3912,7 +3925,51 @@ const SESSIONS=[
   SX('q-engine','15 Min Engine','Engine',15,'quick',['Machine or Run'],[
     SB('Rounds',5,[SI('Hard effort','2:00 @ RPE 8'),SI('Easy','1:00 @ RPE 4')],'Repeatable — no hero first rep.')]),
 ];
+SESSIONS.push(
+  SX('str-hybrid','Hybrid Strength Circuit','Strength',30,'strength',['Barbell','Dumbbell'],[
+    SB('Rounds',5,[SI('Back Squat','5 reps',8),SI('DB Push Press','8 reps',7),SI('Walking Lunge','20 m'),SI('Rest','90 s')],'Heavy but repeatable — leave one rep in the tank.')]),
+  SX('str-pull','Pull & Grip Builder','Strength',24,'strength',['Pull-up bar','Kettlebell'],[
+    SB('Rounds',4,[SI('Pull Ups','8 reps',8),SI('KB Farmers Carry','100 m'),SI('Ring / TRX Row','12 reps'),SI('Rest','90 s')],'Grip is the hidden HYROX limiter.')]),
+  SX('str-core','Core & Carry','Strength',18,'strength',['Sandbag'],[
+    SB('AMRAP',18,[SI('Sandbag Carry','50 m'),SI('Sit Ups','20 reps'),SI('Plank','45 s'),SI('Hollow Hold','30 s')],'Brace hard, breathe out at the top.')]),
+  SX('run-400','400m Repeats','Running',26,'running',['Run'],[
+    SB('Rounds',8,[SI('Run','400 m @ race pace',8),SI('Jog recovery','90 s',4)],'Hold the same split every rep.')]),
+  SX('run-long','Long Easy Run','Running',50,'running',['Run'],[
+    SB('For Time',null,[SI('Run','8 km @ RPE 5')],'Conversational pace — this is base building, not a race.')]),
+  SX('run-pyr','Pyramid Intervals','Running',32,'running',['Run'],[
+    SB('For Time',null,[SI('Run','400 m',8),SI('Rest','60 s'),SI('Run','800 m',8),SI('Rest','90 s'),SI('Run','1200 m',8),
+      SI('Rest','90 s'),SI('Run','800 m',8),SI('Rest','90 s'),SI('Run','400 m',9)],'Up then down — negative split the way back.')])
+);
+const TIMER_CATS=[
+  {id:'race',    name:'Race Simulation', img:IMG.complete},
+  {id:'engine',  name:'Engine',          img:IMG.engine},
+  {id:'stations',name:'Stations',        img:IMG.power},
+  {id:'running', name:'Running',         img:IMG.found},
+  {id:'strength',name:'Strength',        img:IMG.power},
+  {id:'quick',   name:'Quick Hits',      img:IMG.found},
+];
+function catOf(id){ return TIMER_CATS.find(c=>c.id===id)||{name:'Session',img:IMG.w}; }
 function sessionById(id){ return SESSIONS.find(x=>x.id===id); }
+function scard(x){ const c=catOf(x.coll);
+  return `<div class="scard" onclick="openTSession('${x.id}')">
+    <div class="im" style="background-image:url('${c.img}')"><span class="ty">${x.blocks[0].type}</span><span class="est">${x.est} min</span></div>
+    <div class="t">${x.title}</div><div class="m">${x.tag}</div></div>`; }
+function openTimerHome(){
+  ['home','explore','store','progress','profile','categories','list','plans','pro','target','progdetail','detail','tsess','tmhome']
+    .forEach(i=>{ const e=$(i); if(e) e.style.display='none'; });
+  $('tmhome').style.display='block'; $('tabs').style.display='flex'; curTab='tmhome';
+  const feat=SESSIONS.slice(0,4);
+  const row=(title,list)=> list.length?`<div class="sechead">${title}</div><div class="hscroll">${list.map(scard).join('')}</div>`:'';
+  $('tm-body').innerHTML=`
+    <button class="back" onclick="switchTab('explore')">← Train</button>
+    <div class="hgroup" style="margin-bottom:14px;"><div class="k">⏱ No video · tap Next as you go</div><h2>HITFAT TIMER</h2></div>
+    <div class="tmtop">${feat.map(x=>`<div class="q" onclick="openTSession('${x.id}')">
+        <div class="im" style="background-image:url('${catOf(x.coll).img}')"></div><div class="t">${x.title}</div></div>`).join('')}</div>
+    ${TIMER_CATS.map(c=>row(c.name, SESSIONS.filter(x=>x.coll===c.id))).join('')}
+    <div class="sechead">All sessions</div><div id="tm-all"></div>`;
+  try{ const el=$('tm-all'); if(el) el.innerHTML=SESSIONS.map(sessionRow).join(''); }catch(e){}
+  $('screen').scrollTop=0;
+}
 function sessionMoveCount(x){ return x.blocks.reduce((a,b)=>a+b.items.length*(b.type==='Rounds'&&b.cap?b.cap:1),0); }
 
 /* ---- browse ---- */
@@ -3951,11 +4008,11 @@ function blockFooter(b){
 }
 function openTSession(id){
   const x=sessionById(id); if(!x) return; window._tsess=id;
-  ['home','explore','store','progress','profile','categories','list','plans','pro','target','progdetail','detail','tsess']
+  ['home','explore','store','progress','profile','categories','list','plans','pro','target','progdetail','detail','tsess','tmhome']
     .forEach(i=>{ const e=$(i); if(e) e.style.display='none'; });
   $('tsess').style.display='block'; $('tabs').style.display='none'; curTab='tsess';
   $('ts-body').innerHTML=`
-    <button class="back" onclick="switchTab('explore')">← Sessions</button>
+    <button class="back" onclick="openTimerHome()">← HITFAT Timer</button>
     <div class="hgroup"><div class="k">${x.tag}</div><h2>${x.title}</h2>
       <p>${x.equip.join(' · ')} · est. ${x.est} min</p></div>
     ${x.blocks.map(b=>`<div class="sblock">
@@ -4379,8 +4436,11 @@ function renderExplore(){
       <div class="catcard" onclick="switchTab('target')" style="margin-bottom:12px;"><div class="body"><div class="ttl">Target Sessions</div><div class="cnt">Fix a weak station or quality</div></div><div class="arr">›</div></div>
       <div class="catcard" onclick="switchTab('programs')"><div class="body"><div class="ttl">Workout Library</div><div class="cnt">Free sessions by category</div></div><div class="arr">›</div></div></div>`;
   } else if(exFilter==='quick'){
-    h+=sec('Collections', `<div id="ex-coll"></div>`);
-    h+=sec('Sessions', `<div id="ex-sess"></div>`, "switchTab('explore');setFilter('all')");
+    h+=`<div class="plan wide" style="background-image:url('${IMG.complete}');margin-bottom:6px;" onclick="openTimerHome()">
+        <div class="ov"></div>
+        <div class="pi"><div class="tx"><div class="k">⏱ Timer · no video</div><div class="t">HITFAT Timer</div>
+          <div class="d">${SESSIONS.length} timed sessions across ${TIMER_CATS.length} categories — tap Next as you go.</div></div>
+          <button class="join" onclick="event.stopPropagation();openTimerHome()">Open</button></div></div>`;
     h+=sec('Quick Workouts — FREE', QUICK_WORKOUTS.map((q,i)=>`<div class="wrow" onclick="openQuickWorkout(${i})">
       <div class="tx"><div class="t">${q.title}</div><div class="m">${q.tag} · ${totalMins(q)} min · RPE ${q.rpe}</div></div>
       <div class="freepill">Free</div><div class="chev">›</div></div>`).join(''));
@@ -4396,7 +4456,7 @@ function renderExplore(){
     h+=coachesSoonHTML();
   }
   $('ex-body').innerHTML=h;
-  try{ renderCollections('ex-coll'); renderSessionList('ex-sess'); }catch(e){}
+
   $('screen').scrollTop=0;
 }
 
