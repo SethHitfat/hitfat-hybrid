@@ -290,6 +290,13 @@
   .ptimer .adj{background:var(--surface2);border:1px solid var(--line);color:#fff;font-size:13px;font-weight:700;padding:9px 13px;border-radius:11px;cursor:pointer;min-width:50px;}
   .ptimer .clk{font-family:'Oswald';font-size:50px;font-weight:700;font-variant-numeric:tabular-nums;min-width:140px;text-align:center;line-height:1;}
   .ptimer .clk.reps{color:var(--hyrox);}
+  /* timer-first mode (no video): clock and movement name become the hero */
+  #player.timermode .vwrap{display:none;}
+  #player.timermode .pmove{margin-top:6vh;}
+  #player.timermode .pname{font-size:30px;}
+  #player.timermode .ptar{font-size:16px;}
+  #player.timermode .ptimer .clk{font-size:76px;min-width:190px;}
+  #player.timermode .ptimer{padding:18px 18px 8px;}
   .pplay{margin:6px auto 0;width:60px;height:60px;border-radius:50%;border:none;background:var(--hyrox);color:var(--hyrox-ink);font-size:24px;display:grid;place-items:center;cursor:pointer;box-shadow:0 6px 20px rgba(255,224,0,.3);}
   .pfoot{margin-top:auto;padding:8px 18px 24px;}
   .pprog{display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border-radius:99px;padding:10px 16px;font-size:13px;font-weight:600;color:var(--dim);}
@@ -2778,9 +2785,11 @@ function openDetail(ci,wi){
 function startWorkout(){
   flat=[];
   cur.blocks.forEach(b=>{const rounds=b.rounds||1;for(let r=1;r<=rounds;r++){b.moves.forEach(m=>flat.push({...m,phase:b.phase,round:rounds>1?r:null,totalRounds:rounds>1?rounds:null,isRest:!!m.rest}));}});
-  idx=0; $('player').classList.add('on'); load();
+  idx=0; $('player').classList.add('on');
+  $('player').classList.toggle('timermode', !!(cur && cur.timer));   // no-video, clock-first layout
+  load();
 }
-function closePlayer(){ stopTimer(); $('player').classList.remove('on','resting'); $('p-video').innerHTML=''; }
+function closePlayer(){ stopTimer(); $('player').classList.remove('on','resting','timermode'); $('p-video').innerHTML=''; }
 function load(){
   const m=flat[idx], P=$('player');
   if(m.isRest){
@@ -3768,6 +3777,42 @@ async function onSignedIn(session){
    Program "Open" routes to EXISTING real workout views (no dummy).
    ============================================================ */
 
+/* ---- Timer Sessions — a separate category from the video library: no demos, the
+   session is driven entirely by the interval clock (EMOM / AMRAP / intervals / sim). ---- */
+const TW=(title,tag,rpe,equip,desc,blocks)=>({title,tag,rpe,equip:equip||['Bodyweight'],desc,blocks,timer:true});
+const TIMER_SESSIONS=[
+  TW('EMOM 16 · Engine','EMOM',7,['Machine or Run'],'Every minute on the minute — 16 rounds. Start each effort when the clock hits zero.',[
+    {phase:'EMOM · 16 min',mins:16,format:'Every 1:00 × 16',note:'Work hard, the rest is whatever is left in the minute.',
+     moves:[{name:'Row / Ski 12 cal',time:60},{name:'Burpees × 10',time:60},{name:'Run 200m',time:60},{name:'Air Squats × 20',time:60}]}]),
+  TW('AMRAP 20 · Hybrid','AMRAP',8,['Bodyweight'],'As many rounds as possible in 20 minutes. Steady, repeatable pace.',[
+    {phase:'AMRAP · 20 min',mins:20,format:'As many rounds as possible',note:'Count your rounds — beat it next time.',
+     moves:[{name:'Wall Balls × 15',time:60},{name:'Sandbag Lunges × 20',time:75},{name:'Burpee Broad Jump × 10',time:60},{name:'Run 200m',time:60}]}]),
+  TW('4 × 4 Threshold','Intervals',9,['Machine or Run'],'Four hard 4-minute efforts with 3 minutes easy between — the classic engine builder.',[
+    {phase:'Intervals',mins:28,format:'4 × (4:00 hard / 3:00 easy)',rounds:4,note:'Same pace on the last rep as the first.',
+     moves:[{name:'Hard effort @ RPE 9',time:240},{name:'Easy recovery',rest:180}]}]),
+  TW('Tabata Finisher','Tabata',9,['Bodyweight'],'8 rounds of 20 seconds on, 10 seconds off. Empty the tank.',[
+    {phase:'Tabata',mins:8,format:'20s on / 10s off × 8',rounds:8,note:'Max quality reps in every 20s.',
+     moves:[{name:'Burpees',time:20},{name:'Rest',rest:10},{name:'Squat Jumps',time:20},{name:'Rest',rest:10}]}]),
+  TW('Station Ladder','Stations',8,['HYROX Stations'],'Ascending ladder across four HYROX stations — pace it, it builds fast.',[
+    {phase:'Ladder',mins:22,format:'Ascending rounds',note:'Add reps each round; keep transitions tight.',
+     moves:[{name:'SkiErg 250m',time:75},{name:'Sled Push 25m',time:60},{name:'Farmers Carry 100m',time:75},{name:'Wall Balls × 20',time:75},{name:'Rest',rest:60}]}]),
+  TW('Compromised Run Blocks','Running',8,['Run + Stations'],'Run straight off a station — the skill that decides HYROX race day.',[
+    {phase:'Blocks',mins:24,format:'6 × (station → 400m run)',rounds:6,note:'Short quick steps for the first 50m off the station.',
+     moves:[{name:'Station effort (sled / wall balls)',time:60},{name:'Run 400m',time:120},{name:'Rest',rest:60}]}]),
+  TW('Race Sim · Half','Race Sim',9,['HYROX Stations'],'Half a HYROX: 4 runs, 4 stations. Practise pacing and the roxzone.',[
+    {phase:'Simulation',mins:35,format:'4 × (1km run + station)',rounds:4,note:'Treat transitions like race day — no wasted seconds.',
+     moves:[{name:'Run 1km',time:300},{name:'Station (rotate each round)',time:240},{name:'Roxzone transition',rest:40}]}]),
+  TW('E2MOM Strength','Strength',7,['Barbell / DB'],'Every 2 minutes for 20 — strength you can repeat under fatigue.',[
+    {phase:'E2MOM · 20 min',mins:20,format:'Every 2:00 × 10',rounds:10,note:'Leave one rep in the tank each set.',
+     moves:[{name:'Back Squat × 5',time:60},{name:'Rest remainder',rest:60}]}]),
+];
+function openTimerSession(i){ const w=TIMER_SESSIONS[i]; if(w) openWorkoutObject(w,'Timer Session · '+w.tag,'tw-'+i,'explore'); }
+function renderTimerList(elId){ const el=$(elId); if(!el) return;
+  el.innerHTML=TIMER_SESSIONS.map((w,i)=>`<div class="wrow" onclick="openTimerSession(${i})">
+      <div class="num">⏱</div>
+      <div class="tx"><div class="t">${w.title}</div><div class="m">${w.tag} · ${totalMins(w)} min · RPE ${w.rpe}</div></div>
+      <div class="chev">›</div></div>`).join('');
+}
 /* ---- Quick Workouts (FREE) — built from the existing movement library ---- */
 const QW=(title,tag,rpe,equip,desc,blocks)=>({title,tag,rpe,equip:equip||['Bodyweight'],desc,blocks,free:true});
 const QUICK_WORKOUTS=[
@@ -3815,6 +3860,7 @@ function blocksAccHTML(blocks){ return blocks.map((b,bi)=>`
     ${b.moves.map(m=>m.rest?`<div class="ex rest"><span class="q">${fmtClock(m.rest)}</span><span class="nm">Rest</span><span class="ch">⏸</span></div>`:`<div class="ex ${(m.vimeo||m.list)?'':'norec'}"><span class="q">${m.reps!=null?m.reps+'x':fmtClock(m.time)}</span><span class="nm">${m.name}${m.list?'<br><span style="font-size:12px;color:var(--dim)">'+m.list.join(' + ')+'</span>':''}${m.partner?'<br><span style="font-size:11px;color:var(--dim2)">'+m.partner+'</span>':''}</span><span class="ch">${m.vimeo?'▾ video':(m.list?'↻':'')}</span></div>`).join('')}
     ${b.note?`<div class="note"><span class="d">●</span><span>${b.note}</span></div>`:''}</div></div>`).join(''); }
 function openWorkoutObject(w,label,key,backTab){
+  window.timerMode = !!w.timer;
   cur=w; window.curSessionKey=key||('qw-'+(w.title||'').replace(/\W+/g,'')); window.pendingKey=null;
   window.quickBack=backTab||'explore'; window.fromQuick=true; window.fromHome=false; window.fromKL=false; window.fromPlan=false;
   ['home','explore','coaches','progress','profile','categories','plans','pro','target','list','progdetail'].forEach(id=>{const e=$(id);if(e)e.style.display='none';});
@@ -4121,6 +4167,7 @@ function renderExplore(){
       <div class="catcard" onclick="switchTab('target')" style="margin-bottom:12px;"><div class="body"><div class="ttl">Target Sessions</div><div class="cnt">Fix a weak station or quality</div></div><div class="arr">›</div></div>
       <div class="catcard" onclick="switchTab('programs')"><div class="body"><div class="ttl">Workout Library</div><div class="cnt">Free sessions by category</div></div><div class="arr">›</div></div></div>`;
   } else if(exFilter==='quick'){
+    h+=sec('Timer Sessions — FREE', `<div id="ex-timer"></div>`);
     h+=sec('Quick Workouts — FREE', QUICK_WORKOUTS.map((q,i)=>`<div class="wrow" onclick="openQuickWorkout(${i})">
       <div class="tx"><div class="t">${q.title}</div><div class="m">${q.tag} · ${totalMins(q)} min · RPE ${q.rpe}</div></div>
       <div class="freepill">Free</div><div class="chev">›</div></div>`).join(''));
@@ -4135,7 +4182,9 @@ function renderExplore(){
   } else if(exFilter==='coaches'){
     h+=coachesSoonHTML();
   }
-  $('ex-body').innerHTML=h; $('screen').scrollTop=0;
+  $('ex-body').innerHTML=h;
+  try{ renderTimerList('ex-timer'); }catch(e){}
+  $('screen').scrollTop=0;
 }
 
 /* ---- Programs store (focus: sell HITFAT programs directly) ---- */
