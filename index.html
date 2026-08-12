@@ -192,14 +192,21 @@
 
 
   /* kategori = kad besar penuh lebar */
-  .catcard{position:relative;border-radius:var(--r);overflow:hidden;cursor:pointer;background:linear-gradient(135deg,#1a1a1a 0%,#0e0e0e 70%,#080808 100%);height:130px;border:1px solid var(--line);margin-bottom:13px;transition:transform .12s;padding:22px 22px 22px 26px;display:flex;flex-direction:column;justify-content:center;}
+  /* quiet navigation row (same language as the Home cards — no yellow spine, sentence case) */
+  .catcard{position:relative;border-radius:16px;overflow:hidden;cursor:pointer;background:var(--surface);height:auto;border:1px solid var(--line);margin-bottom:10px;transition:transform .12s;padding:15px 16px;display:flex;align-items:center;}
   .catcard:active{transform:scale(.985);}
-  .catcard::before{content:"";position:absolute;top:0;left:0;width:5px;height:100%;background:var(--hyrox);}
-  .catcard::after{content:"";position:absolute;top:-40%;right:-20%;width:80%;height:180%;background:radial-gradient(circle,rgba(255,224,0,.07),transparent 65%);pointer-events:none;}
-  .catcard .body{position:relative;z-index:2;}
-  .catcard .ttl{font-family:'Oswald';font-weight:700;font-size:30px;letter-spacing:2px;text-transform:uppercase;line-height:1;color:#fff;}
-  .catcard .cnt{color:var(--hyrox);font-size:12px;font-weight:700;margin-top:8px;letter-spacing:2px;text-transform:uppercase;}
-  .catcard .arr{position:absolute;right:22px;top:50%;transform:translateY(-50%);color:var(--hyrox);font-size:24px;z-index:2;}
+  .catcard .body{position:relative;z-index:2;flex:1;min-width:0;}
+  .catcard .ttl{font-family:'Inter',system-ui,sans-serif;font-weight:700;font-size:16.5px;letter-spacing:-.2px;text-transform:none;line-height:1.2;color:#fff;}
+  .catcard .cnt{color:var(--dim);font-size:13px;font-weight:500;margin-top:3px;letter-spacing:0;text-transform:none;}
+  .catcard .arr{position:static;transform:none;color:#5a5a5a;font-size:17px;z-index:2;flex:none;margin-left:10px;}
+
+  /* category tiles with artwork (Workout Library) */
+  .gcards{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+  .gcard{position:relative;height:132px;border-radius:16px;overflow:hidden;cursor:pointer;background:#141414 center/cover no-repeat;}
+  .gcard .ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.1) 35%,rgba(0,0,0,.85));}
+  .gcard .gi{position:absolute;left:0;right:0;bottom:0;padding:12px;}
+  .gcard .gi .t{font-size:15px;font-weight:700;color:#fff;letter-spacing:-.2px;}
+  .gcard .gi .c{font-size:11.5px;color:#bdbdbd;margin-top:2px;}
 
   /* senarai workout = kad 2 lajur */
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
@@ -2041,11 +2048,11 @@ const totalMins=w=>w.blocks.reduce((a,b)=>a+(b.mins||0),0);
 
 /* ============ SKRIN 1: KATEGORI ============ */
 function renderCategories(){
-  $('catlist').innerHTML=CATEGORIES.map((c,i)=>`
-    <div class="catcard" onclick="openCategory(${i})">
-      <div class="body"><div class="ttl">${c.name}</div><div class="cnt">${c.workouts.length} Workout${c.workouts.length>1?'s':''}</div></div>
-      <div class="arr">›</div>
-    </div>`).join('');
+  $('catlist').innerHTML=`<div class="gcards">${CATEGORIES.map((c,i)=>`
+    <div class="gcard" style="background-image:url('${c.img||IMG.w}')" onclick="openCategory(${i})">
+      <div class="ov"></div>
+      <div class="gi"><div class="t">${c.name}</div><div class="c">${c.workouts.length} workout${c.workouts.length>1?'s':''}</div></div>
+    </div>`).join('')}</div>`;
 }
 function showCategories(){ $('list').style.display='none'; $('detail').style.display='none'; $('plans').style.display='none'; $('categories').style.display='block'; $('tabs').style.display='flex'; $('screen').scrollTop=0; }
 
