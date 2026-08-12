@@ -534,7 +534,7 @@
   .pcard.full{width:auto;flex:1 1 auto;display:block;margin-bottom:13px;}
   .pcard:active{transform:scale(.98);}
   .pcard .top{position:relative;height:120px;background-size:cover;background-position:center;}
-  .pcard .top::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.15),rgba(10,10,10,.85));}
+  .pcard .top::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 45%,rgba(10,10,10,.5));}
   .pcard .top .edge{position:absolute;top:0;left:0;width:4px;height:100%;background:var(--hyrox);z-index:2;}
   .pcard .badge{position:absolute;top:10px;left:11px;z-index:3;font-family:'Oswald';font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 9px;border-radius:99px;}
   .badge.free{background:#1c7d3a;color:#fff;}
@@ -543,7 +543,17 @@
   .badge.soon{background:rgba(255,255,255,.16);color:#eee;border:1px solid rgba(255,255,255,.2);}
   .badge.done{background:#3a3a3a;color:#fff;}
   .pcard .info{padding:12px 14px 14px;}
-  .pcard .info .t{font-family:'Oswald';font-size:17px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:#fff;line-height:1.05;}
+  .pcard .info .t{font-family:'Inter',system-ui,sans-serif;font-size:15.5px;font-weight:600;letter-spacing:-.2px;text-transform:none;color:#fff;line-height:1.25;}
+
+  /* Apple Fitness+ style list row: rounded thumbnail left, text right, chevron */
+  .frow{display:flex;align-items:center;gap:14px;padding:9px 0;cursor:pointer;transition:opacity .12s;}
+  .frow:active{opacity:.55;}
+  .frow .th{position:relative;flex:0 0 132px;width:132px;height:74px;border-radius:14px;overflow:hidden;background:#141414 center/cover no-repeat;}
+  .frow .th .bdg{position:absolute;top:6px;left:6px;font-family:'Inter',system-ui,sans-serif;font-size:9px;font-weight:800;letter-spacing:.4px;padding:3px 7px;border-radius:99px;}
+  .frow .tx{flex:1;min-width:0;}
+  .frow .tx .t{font-family:'Inter',system-ui,sans-serif;font-size:15.5px;font-weight:600;letter-spacing:-.2px;color:#fff;line-height:1.25;}
+  .frow .tx .m{font-size:13px;color:var(--dim);margin-top:3px;line-height:1.3;font-weight:500;}
+  .frow .chev{flex:none;color:#5a5a5a;font-size:17px;line-height:1;}
   .pcard .info .m{font-size:11px;color:var(--dim);font-weight:600;margin-top:6px;letter-spacing:.2px;}
   .pcard .info .by{font-size:11px;color:var(--dim2);margin-top:5px;}
   .pcard .info .price{position:absolute;bottom:13px;right:14px;font-family:'Oswald';font-weight:700;font-size:15px;color:var(--hyrox);}
@@ -2501,7 +2511,7 @@ function renderHome(){
     const tr=t?t.getBoundingClientRect():null, ar=a?a.getBoundingClientRect():null;
     const vh=getComputedStyle(document.documentElement).getPropertyValue('--vh').trim()||'—';
     const nd=window._navDiag||{};
-    d.textContent='N13 · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')
+    d.textContent='N14 · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')
       +' · sat '+(nd.sat!=null?nd.sat:'?')+' · sab '+(nd.sab!=null?nd.sab:'?')+' · navb '+(nd.navb!=null?nd.navb:'?')
       +' · pwa '+(_standaloneVH()?'y':'n')
       +(ar?(' · app '+Math.round(ar.height)+'@'+Math.round(ar.top)) : '')
@@ -3344,7 +3354,7 @@ function renderProfile(){
   // build + viewport diagnostics (helps debug device-specific layout issues)
   try{ const bt=$('build-tag'); if(bt){
     const vh=getComputedStyle(document.documentElement).getPropertyValue('--vh').trim()||'—';
-    bt.textContent='build 2026.08.12-N13 · vh '+vh+' · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')+' · pwa '+(_standaloneVH()?'yes':'no');
+    bt.textContent='build 2026.08.12-N14 · vh '+vh+' · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')+' · pwa '+(_standaloneVH()?'yes':'no');
   } }catch(e){}
   try{ renderStravaRow(); }catch(e){}   // Connected Apps → Strava
 
@@ -3870,9 +3880,17 @@ function badgeCls(st){ return st==='OWNED'?'owned':st==='FREE'?'free':st==='SOON
 function programCard(id,full){
   const p=CATALOG[id]; if(!p) return ''; const st=programState(id);
   const price=(st==='PAID')?`<div class="price">${fmtPrice(p.price)}</div>`:'';
-  return `<div class="pcard ${full?'full':''}" onclick="openProgramDetail('${id}')">
-    <div class="top" style="background-image:url('${p.img}')"><div class="edge"></div><span class="badge ${badgeCls(st)}">${st}</span></div>
-    <div class="info"><div class="t">${p.title}</div><div class="m">${p.weeks} wk · ${p.days} days/wk · ${p.level}</div><div class="by">by HITFAT</div>${price}</div></div>`;
+  if(full){   // vertical lists → Apple Fitness+ style row (thumb left, text right, chevron)
+    const meta=[p.weeks+' wk', p.days+' days/wk', p.level].join(' · ');
+    const sub=(st==='PAID')?(fmtPrice(p.price)+' · '+meta):(st==='SOON'?('Coming soon · '+meta):meta);
+    return `<div class="frow" onclick="openProgramDetail('${id}')">
+      <div class="th" style="background-image:url('${p.img}')"><span class="badge ${badgeCls(st)} bdg">${st}</span></div>
+      <div class="tx"><div class="t">${p.title}</div><div class="m">${sub}</div></div>
+      <div class="chev">›</div></div>`;
+  }
+  return `<div class="pcard" onclick="openProgramDetail('${id}')">
+    <div class="top" style="background-image:url('${p.img}')"><span class="badge ${badgeCls(st)}">${st}</span></div>
+    <div class="info"><div class="t">${p.title}</div><div class="m">${p.weeks} wk · ${p.days} days/wk · ${p.level}</div>${price}</div></div>`;
 }
 function quickCard(i){ const q=QUICK_WORKOUTS[i]; return `<div class="qwcard" onclick="openQuickWorkout(${i})"><span class="badge free">Free</span><div class="t">${q.title}</div><div class="m">${q.tag} · ${totalMins(q)} min · RPE ${q.rpe}</div></div>`; }
 function coachCard(id){ const c=COACHES[id]; const n=coachPrograms(id).length; const ini=c.name.replace('Coach ','')[0];
