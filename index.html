@@ -2721,7 +2721,11 @@ function openDetail(ci,wi){
   cur=CATEGORIES[ci].workouts[wi]; catIdx=ci;
   // session key for progress logging (from Home/plan context, else library key)
   window.curSessionKey = window.pendingKey || ('lib-'+ci+'-'+wi); window.pendingKey=null;
-  $('categories').style.display='none'; $('list').style.display='none'; $('plans').style.display='none'; $('pro').style.display='none'; $('target').style.display='none'; $('tabs').style.display='none'; $('detail').style.display='block';
+  // hide EVERY main panel (home/explore/store/... were missing, so opening a session from Home
+  // rendered the detail *below* a still-visible Home — looked like "nothing happened")
+  ['home','explore','store','progress','profile','coaches','progdetail','categories','list','plans','pro','target']
+    .forEach(id=>{ const e=$(id); if(e) e.style.display='none'; });
+  $('tabs').style.display='none'; $('detail').style.display='block';
   $('d-label').textContent=CATEGORIES[catIdx].name;
   $('d-title').textContent=cur.title; $('d-rpe').textContent=cur.rpe; $('d-mins').textContent=totalMins(cur);
   $('d-equip').innerHTML='<b>Equipment:</b> '+cur.equip.join(' · '); $('d-desc').textContent=cur.desc;
