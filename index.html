@@ -74,7 +74,7 @@
      JS-measured --vh), so it overlays the content — content scrolls behind it, no black band below.
      absolute-in-.app avoids the iOS position:fixed viewport bug entirely. */
   /* bottom:14px — Apple Fitness+ hugs the very bottom; the home indicator overlaps the pill's lower padding */
-  .tabs{position:absolute;left:0;right:0;bottom:max(14px, env(safe-area-inset-bottom,14px));margin:0 auto;width:calc(100% - 24px);max-width:414px;z-index:60;display:flex;align-items:center;gap:2px;background:rgba(24,24,26,.78);-webkit-backdrop-filter:blur(24px) saturate(1.6);backdrop-filter:blur(24px) saturate(1.6);border:1px solid rgba(255,255,255,.10);border-radius:26px;padding:6px 6px 9px;box-shadow:0 12px 40px rgba(0,0,0,.55);}
+  .tabs{position:absolute;left:0;right:0;bottom:var(--navb, max(14px, env(safe-area-inset-bottom,14px)));margin:0 auto;width:calc(100% - 24px);max-width:414px;z-index:60;display:flex;align-items:center;gap:2px;background:rgba(24,24,26,.78);-webkit-backdrop-filter:blur(24px) saturate(1.6);backdrop-filter:blur(24px) saturate(1.6);border:1px solid rgba(255,255,255,.10);border-radius:26px;padding:6px 6px 9px;box-shadow:0 12px 40px rgba(0,0,0,.55);}
   .tab{flex:1;background:none;border:none;color:var(--dim);font-family:'Inter',system-ui,sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.1px;text-transform:none;padding:7px 2px 6px;cursor:pointer;border-radius:16px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:color .15s,background .15s;}
   .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
   .tab.active{color:var(--hyrox);background:rgba(255,224,0,.12);}
@@ -920,7 +920,30 @@ function setVH(){ try{
   }
   document.documentElement.style.setProperty('--vh', h+'px');
 }catch(e){} }
+
+/* ---- Adaptive nav offset ----
+   Some iOS PWAs get a web view SHORTER than the screen. Where the missing strip sits decides
+   the nav offset: if the view already starts below the status bar (safe-area-top = 0) the strip
+   is at the top and the normal safe-area bottom offset is right; if the view covers the status
+   bar (safe-area-top > 0) the strip is dead space at the BOTTOM, so the pill must hug the app
+   edge instead of leaving another gap. Probe reads the real env() values. */
+window._navDiag={};
+function setNavOffset(){ try{
+  var p=document.createElement('div');
+  p.style.cssText='position:absolute;left:-9999px;top:0;visibility:hidden;height:env(safe-area-inset-bottom,0px);width:env(safe-area-inset-top,0px);';
+  document.body.appendChild(p);
+  var sab=p.offsetHeight||0, sat=p.offsetWidth||0;
+  p.parentNode.removeChild(p);
+  var sh=(window.screen&&window.screen.height)||0, ih=window.innerHeight||0, gap=(sh&&ih)?(sh-ih):0;
+  var navb = Math.max(14, sab);                       // default: clear the home indicator
+  if(_standaloneVH() && gap>20 && sat>0) navb = 2;    // dead strip at the bottom → hug the app edge
+  document.documentElement.style.setProperty('--navb', navb+'px');
+  window._navDiag={sat:sat, sab:sab, gap:gap, navb:navb};
+}catch(e){} }
+function setLayout(){ setVH(); setNavOffset(); }
 setVH();
+document.addEventListener('DOMContentLoaded', setLayout);
+window.addEventListener('resize', setNavOffset);
 window.addEventListener('resize', setVH);
 window.addEventListener('orientationchange', function(){ setTimeout(setVH,120); });
 if(window.visualViewport) window.visualViewport.addEventListener('resize', setVH);
@@ -2477,7 +2500,9 @@ function renderHome(){
     const t=$('tabs'), a=document.querySelector('.app');
     const tr=t?t.getBoundingClientRect():null, ar=a?a.getBoundingClientRect():null;
     const vh=getComputedStyle(document.documentElement).getPropertyValue('--vh').trim()||'—';
-    d.textContent='N12 · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')
+    const nd=window._navDiag||{};
+    d.textContent='N13 · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')
+      +' · sat '+(nd.sat!=null?nd.sat:'?')+' · sab '+(nd.sab!=null?nd.sab:'?')+' · navb '+(nd.navb!=null?nd.navb:'?')
       +' · pwa '+(_standaloneVH()?'y':'n')
       +(ar?(' · app '+Math.round(ar.height)+'@'+Math.round(ar.top)) : '')
       +(tr?(' · tabs↓ '+Math.round(tr.bottom)) : '');
@@ -3319,7 +3344,7 @@ function renderProfile(){
   // build + viewport diagnostics (helps debug device-specific layout issues)
   try{ const bt=$('build-tag'); if(bt){
     const vh=getComputedStyle(document.documentElement).getPropertyValue('--vh').trim()||'—';
-    bt.textContent='build 2026.08.12-N12 · vh '+vh+' · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')+' · pwa '+(_standaloneVH()?'yes':'no');
+    bt.textContent='build 2026.08.12-N13 · vh '+vh+' · ih '+window.innerHeight+' · sh '+((window.screen&&window.screen.height)||'—')+' · pwa '+(_standaloneVH()?'yes':'no');
   } }catch(e){}
   try{ renderStravaRow(); }catch(e){}   // Connected Apps → Strava
 
