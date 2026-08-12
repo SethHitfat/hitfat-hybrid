@@ -899,11 +899,23 @@
    iOS misreports the layout height for fixed inset:0 elements in standalone/
    black-translucent mode, so .app ended early. Measure the REAL height in JS
    and expose it as --vh; .app{height:var(--vh)} then always reaches the true bottom. */
-function setVH(){ try{ document.documentElement.style.setProperty('--vh', window.innerHeight+'px'); }catch(e){} }
+function _standaloneVH(){ try{ return window.navigator.standalone===true || (window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches); }catch(e){ return false; } }
+function setVH(){ try{
+  var h=window.innerHeight;
+  if(_standaloneVH()){
+    // iOS standalone bug: innerHeight can report a Safari-like (toolbar-subtracted) height.
+    // The PWA truly covers the full screen (viewport-fit=cover), so trust screen.height in portrait.
+    var sh=(window.screen&&window.screen.height)||0, ch=document.documentElement.clientHeight||0;
+    if(window.innerWidth<=h && sh>h) h=sh;
+    if(ch>h) h=ch;
+  }
+  document.documentElement.style.setProperty('--vh', h+'px');
+}catch(e){} }
 setVH();
 window.addEventListener('resize', setVH);
 window.addEventListener('orientationchange', function(){ setTimeout(setVH,120); });
 if(window.visualViewport) window.visualViewport.addEventListener('resize', setVH);
+window.addEventListener('load', function(){ setVH(); setTimeout(setVH,300); setTimeout(setVH,1000); });  // iOS corrects late without firing resize
 
 /* ============================================================
    ████  PUSTAKA VIDEO  ████  (ID Vimeo dikongsi semua workout)
