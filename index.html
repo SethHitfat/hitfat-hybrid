@@ -85,7 +85,9 @@
   .tmtop .q .t{font-size:13.5px;font-weight:700;color:#fff;line-height:1.2;padding-right:8px;}
   .scard{position:relative;flex:0 0 auto;width:158px;cursor:pointer;}
   .scard .im{height:158px;border-radius:14px;background:#141414 center/cover no-repeat;position:relative;overflow:hidden;}
-  .scard .im::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.05) 45%,rgba(0,0,0,.75));}
+  .scard .im::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 40%,rgba(0,0,0,.55));}
+  .scard .im .gl{position:absolute;right:10px;bottom:8px;font-size:38px;opacity:.28;line-height:1;}
+  .scard .im .ty{box-shadow:0 2px 10px rgba(0,0,0,.35);}
   .scard .im .est{position:absolute;left:9px;bottom:9px;z-index:2;font-size:11px;font-weight:800;color:#fff;}
   .scard .im .ty{position:absolute;right:9px;top:9px;z-index:2;font-size:9.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--hyrox-ink);background:var(--hyrox);padding:3px 7px;border-radius:99px;}
   .scard .t{font-size:13.5px;font-weight:600;color:#fff;margin-top:8px;line-height:1.25;letter-spacing:-.2px;}
@@ -861,7 +863,7 @@
       </div>
       <!-- SKRIN EXPLORE (V3 discovery) -->
       <div id="explore" style="display:none;">
-        <div class="hgroup"><div class="k">Your training</div><h2>TRAIN</h2><p>Timer sessions, free workouts, programs and the full video library.</p></div>
+        <div class="hgroup"><div class="k">Discover</div><h2>EXPLORE</h2><p>Timer sessions, free workouts, programs and the full video library.</p></div>
         <div class="filters" id="ex-filters"></div>
         <div id="ex-body"></div>
       </div>
@@ -977,7 +979,7 @@
        .app is pinned inset:0, so this row ALWAYS sits at the true bottom — deterministic, no iOS fixed-position quirks. -->
   <div class="tabs" id="tabs">
     <button class="tab active" id="tab-home" onclick="switchTab('home')"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>Home</button>
-    <button class="tab" id="tab-explore" onclick="switchTab('explore')"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="M21 21l-4.5-4.5"/></svg>Train</button>
+    <button class="tab" id="tab-explore" onclick="switchTab('explore')"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="M21 21l-4.5-4.5"/></svg>Explore</button>
     <button class="tab" id="tab-store" onclick="switchTab('store')"><img class="ticon" src="icon-programs.png" alt="" width="24" height="24">Programs</button>
     <button class="tab" id="tab-progress" onclick="switchTab('progress')"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3M20 16V6"/></svg>Progress</button>
     <button class="tab" id="tab-profile" onclick="switchTab('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Profile</button>
@@ -3941,18 +3943,21 @@ SESSIONS.push(
       SI('Rest','90 s'),SI('Run','800 m',8),SI('Rest','90 s'),SI('Run','400 m',9)],'Up then down — negative split the way back.')])
 );
 const TIMER_CATS=[
-  {id:'race',    name:'Race Simulation', img:IMG.complete},
-  {id:'engine',  name:'Engine',          img:IMG.engine},
-  {id:'stations',name:'Stations',        img:IMG.power},
-  {id:'running', name:'Running',         img:IMG.found},
-  {id:'strength',name:'Strength',        img:IMG.power},
-  {id:'quick',   name:'Quick Hits',      img:IMG.found},
+  {id:'race',    name:'Race Simulation', c1:'#FF375F', c2:'#4a0d1c', gl:'🏁'},
+  {id:'engine',  name:'Engine',          c1:'#30D5C8', c2:'#0b3f3a', gl:'🫀'},
+  {id:'stations',name:'Stations',        c1:'#FF9500', c2:'#4d2c00', gl:'🛷'},
+  {id:'running', name:'Running',         c1:'#3A86FF', c2:'#0f2a55', gl:'🏃'},
+  {id:'strength',name:'Strength',        c1:'#A855F7', c2:'#2b1152', gl:'🏋️'},
+  {id:'quick',   name:'Quick Hits',      c1:'#FFE000', c2:'#4a4000', gl:'⚡'},
 ];
-function catOf(id){ return TIMER_CATS.find(c=>c.id===id)||{name:'Session',img:IMG.w}; }
+function catGrad(c){ return `linear-gradient(155deg, ${c.c1} 0%, ${c.c2} 78%)`; }
+function catOf(id){ return TIMER_CATS.find(c=>c.id===id)||{name:'Session',c1:'#3a3a3a',c2:'#141414',gl:'⏱'}; }
 function sessionById(id){ return SESSIONS.find(x=>x.id===id); }
 function scard(x){ const c=catOf(x.coll);
   return `<div class="scard" onclick="openTSession('${x.id}')">
-    <div class="im" style="background-image:url('${c.img}')"><span class="ty">${x.blocks[0].type}</span><span class="est">${x.est} min</span></div>
+    <div class="im" style="background:${catGrad(c)}">
+      <span class="gl">${c.gl}</span>
+      <span class="ty">${x.blocks[0].type}</span><span class="est">${x.est} min</span></div>
     <div class="t">${x.title}</div><div class="m">${x.tag}</div></div>`; }
 function openTimerHome(){
   ['home','explore','store','progress','profile','categories','list','plans','pro','target','progdetail','detail','tsess','tmhome']
@@ -3961,10 +3966,10 @@ function openTimerHome(){
   const feat=SESSIONS.slice(0,4);
   const row=(title,list)=> list.length?`<div class="sechead">${title}</div><div class="hscroll">${list.map(scard).join('')}</div>`:'';
   $('tm-body').innerHTML=`
-    <button class="back" onclick="switchTab('explore')">← Train</button>
+    <button class="back" onclick="switchTab('explore')">← Explore</button>
     <div class="hgroup" style="margin-bottom:14px;"><div class="k">⏱ No video · tap Next as you go</div><h2>HITFAT TIMER</h2></div>
     <div class="tmtop">${feat.map(x=>`<div class="q" onclick="openTSession('${x.id}')">
-        <div class="im" style="background-image:url('${catOf(x.coll).img}')"></div><div class="t">${x.title}</div></div>`).join('')}</div>
+        <div class="im" style="background:${catGrad(catOf(x.coll))}"></div><div class="t">${x.title}</div></div>`).join('')}</div>
     ${TIMER_CATS.map(c=>row(c.name, SESSIONS.filter(x=>x.coll===c.id))).join('')}
     <div class="sechead">All sessions</div><div id="tm-all"></div>`;
   try{ const el=$('tm-all'); if(el) el.innerHTML=SESSIONS.map(sessionRow).join(''); }catch(e){}
@@ -4436,7 +4441,7 @@ function renderExplore(){
       <div class="catcard" onclick="switchTab('target')" style="margin-bottom:12px;"><div class="body"><div class="ttl">Target Sessions</div><div class="cnt">Fix a weak station or quality</div></div><div class="arr">›</div></div>
       <div class="catcard" onclick="switchTab('programs')"><div class="body"><div class="ttl">Workout Library</div><div class="cnt">Free sessions by category</div></div><div class="arr">›</div></div></div>`;
   } else if(exFilter==='quick'){
-    h+=`<div class="plan wide" style="background-image:url('${IMG.complete}');margin-bottom:6px;" onclick="openTimerHome()">
+    h+=`<div class="plan wide" style="background:linear-gradient(135deg,#1d1a05 0%,#0f0f0f 55%,#0a0a0a 100%);border:1px solid rgba(255,224,0,.18);margin-bottom:6px;" onclick="openTimerHome()">
         <div class="ov"></div>
         <div class="pi"><div class="tx"><div class="k">⏱ Timer · no video</div><div class="t">HITFAT Timer</div>
           <div class="d">${SESSIONS.length} timed sessions across ${TIMER_CATS.length} categories — tap Next as you go.</div></div>
