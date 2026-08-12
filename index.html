@@ -753,6 +753,7 @@
       <div id="home" class="pad" style="display:none;">
         <div id="home-install"></div>
         <div id="home-hdr"></div>
+        <div id="home-phone"></div>
         <div id="home-week"></div>
         <div id="home-today"></div>
         <div id="home-activity"></div>
@@ -1031,14 +1032,8 @@
     <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.5 2.6 30.1 0 24 0 14.6 0 6.4 5.4 2.5 13.3l7.8 6.1C12.2 13.7 17.6 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.6c0-1.6-.1-3.1-.4-4.6H24v9.1h12.4c-.5 2.9-2.1 5.3-4.6 7l7.1 5.5c4.2-3.9 6.6-9.6 6.6-16z"/><path fill="#FBBC05" d="M10.3 28.6c-.5-1.4-.7-2.9-.7-4.6s.3-3.2.7-4.6l-7.8-6.1C.9 16.5 0 20.1 0 24s.9 7.5 2.5 10.7l7.8-6.1z"/><path fill="#34A853" d="M24 48c6.1 0 11.3-2 15-5.5l-7.1-5.5c-2 1.4-4.6 2.2-7.9 2.2-6.4 0-11.8-4.2-13.7-10l-7.8 6.1C6.4 42.6 14.6 48 24 48z"/></svg>
     Continue with Google
   </button>
-  <button class="gbtn" onclick="signInOAuth('facebook')" style="margin-top:10px;">
-    <svg viewBox="0 0 24 24"><path fill="#1877F2" d="M24 12a12 12 0 1 0-13.9 11.9v-8.4H7.1V12h3V9.4c0-3 1.8-4.6 4.5-4.6 1.3 0 2.7.2 2.7.2v2.9h-1.5c-1.5 0-2 .9-2 1.9V12h3.4l-.5 3.5h-2.9v8.4A12 12 0 0 0 24 12z"/></svg>
-    Continue with Facebook
-  </button>
-  <button class="gbtn" onclick="phoneStart()" style="margin-top:10px;">
-    <svg viewBox="0 0 24 24"><path fill="#2ec27e" d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.2.4 2.4.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.4 0 .8-.2 1l-2.3 2.2z"/></svg>
-    Continue with phone
-  </button>
+  <!-- Facebook + phone sign-in are built (signInOAuth('facebook') / phoneStart()) but hidden until the
+       Meta app and an SMS provider are configured in Supabase. Re-enable by restoring these buttons. -->
   <div class="authdiv">or</div>
   <div class="authfield"><input id="auth-email" type="email" inputmode="email" autocomplete="email" placeholder="Email address"></div>
   <div class="authfield"><input id="auth-pass" type="password" autocomplete="current-password" placeholder="Password"></div>
@@ -2544,6 +2539,7 @@ function donutSVG(pct,color,size){
 }
 function renderHome(){
   try{ renderInstallBanner(); }catch(e){}
+  try{ renderPhonePrompt(); }catch(e){}
   const race = HF.data.track==='race';
   const nm = (HF.data.prefs.name||'').trim();
   const wk = weekStats();
@@ -4275,6 +4271,25 @@ function isStandalone(){ try{ return (window.matchMedia && window.matchMedia('(d
 function isIOSdev(){ return /iphone|ipad|ipod/i.test(navigator.userAgent||''); }
 function dismissInstall(){ try{ localStorage.setItem('hf_install_dismissed','1'); }catch(e){} const el=$('home-install'); if(el) el.innerHTML=''; }
 function doInstall(){ const p=window._deferredInstall; if(!p) return; p.prompt(); const uc=p.userChoice; if(uc&&uc.finally){ uc.finally(function(){ window._deferredInstall=null; dismissInstall(); }); } else { window._deferredInstall=null; dismissInstall(); } }
+function phoneNeeded(){
+  try{ if(!HF.userId) return false;                       // only signed-in users
+    if((HF.data.prefs&&HF.data.prefs.phone||'').trim()) return false;
+    return localStorage.getItem('hf_phone_dismissed')!=='1';
+  }catch(e){ return false; }
+}
+function dismissPhonePrompt(){ try{ localStorage.setItem('hf_phone_dismissed','1'); }catch(e){} const el=$('home-phone'); if(el) el.innerHTML=''; }
+function renderPhonePrompt(){
+  const el=$('home-phone'); if(!el) return;
+  if(!phoneNeeded()){ el.innerHTML=''; return; }
+  el.innerHTML=`<div style="display:flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:0 2px 14px;">
+    <div style="flex:1;min-width:0;">
+      <div style="font-weight:700;font-size:13.5px;">📱 Add your phone number</div>
+      <div style="font-size:11.5px;color:#9a9a9a;margin-top:2px;">So we can reach you about races, orders and your programs.</div>
+    </div>
+    <button class="go sec" style="width:auto;flex:none;padding:9px 13px;font-size:12px;" onclick="openNameEditor()">Add</button>
+    <button onclick="dismissPhonePrompt()" style="background:none;border:none;color:#777;font-size:19px;line-height:1;cursor:pointer;flex:none;">×</button>
+  </div>`;
+}
 function renderInstallBanner(){
   const el=$('home-install'); if(!el) return;
   let dismissed=false; try{ dismissed=localStorage.getItem('hf_install_dismissed')==='1'; }catch(e){}
