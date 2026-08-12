@@ -77,6 +77,45 @@
   .tabs{position:absolute;left:0;right:0;bottom:var(--navb, max(14px, env(safe-area-inset-bottom,14px)));margin:0 auto;width:calc(100% - 24px);max-width:414px;z-index:60;display:flex;align-items:center;gap:2px;background:rgba(24,24,26,.78);-webkit-backdrop-filter:blur(24px) saturate(1.6);backdrop-filter:blur(24px) saturate(1.6);border:1px solid rgba(255,255,255,.10);border-radius:26px;padding:6px 6px 9px;box-shadow:0 12px 40px rgba(0,0,0,.55);}
   .tab{flex:1;background:none;border:none;color:var(--dim);font-family:'Inter',system-ui,sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.1px;text-transform:none;padding:7px 2px 6px;cursor:pointer;border-radius:16px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:color .15s,background .15s;}
   .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+  /* ===== Home v4 (reference concept): header · day strip · activity cards · plan cards ===== */
+  .hhdr{display:flex;align-items:center;gap:12px;margin:14px 2px 18px;}
+  .hhdr .av2{width:46px;height:46px;border-radius:50%;background:var(--surface2);border:1px solid var(--line);display:grid;place-items:center;font-family:'Oswald';font-weight:700;font-size:19px;color:var(--hyrox);flex:none;}
+  .hhdr .w2{flex:1;min-width:0;}
+  .hhdr .w2 .n{font-size:16.5px;font-weight:700;color:#fff;letter-spacing:-.2px;}
+  .hhdr .w2 .s{font-size:13px;color:var(--dim);margin-top:2px;}
+  .hhdr .chip{flex:none;display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:8px 12px;cursor:pointer;}
+
+  .wk2{display:flex;gap:5px;margin:0 0 22px;}
+  .wk2 .d{flex:1;text-align:center;padding:9px 0 10px;border-radius:14px;}
+  .wk2 .d small{display:block;font-size:11px;color:var(--dim);font-weight:600;}
+  .wk2 .d b{display:block;font-size:15px;font-weight:700;color:#fff;margin-top:5px;}
+  .wk2 .d.done b{color:#2ec27e;}
+  .wk2 .d.on{background:var(--hyrox);}
+  .wk2 .d.on small,.wk2 .d.on b{color:var(--hyrox-ink);}
+
+  .acard{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:14px 15px;}
+  .acard .ah{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+  .acard .ah .t{flex:1;font-size:14.5px;font-weight:700;color:#fff;}
+  .acard .ah .c{color:#5a5a5a;font-size:17px;line-height:1;}
+  .acard .big{font-size:19px;font-weight:800;color:#fff;letter-spacing:-.3px;}
+  .acard .sub{font-size:12px;color:var(--dim);margin-top:3px;}
+  .arow{display:flex;gap:10px;margin-top:10px;}
+  .arow .acard{flex:1;min-width:0;}
+  .mbar{display:flex;align-items:flex-end;gap:5px;height:54px;flex:1;}
+  .mbar .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .mbar .b{width:100%;background:var(--hyrox);border-radius:4px;min-height:4px;}
+  .mbar .b.off{background:#2b2b2b;}
+  .mbar .l{font-size:9px;color:var(--dim2);}
+
+  .plan{position:relative;flex:0 0 auto;width:288px;height:206px;border-radius:20px;overflow:hidden;background:#141414 center/cover no-repeat;cursor:pointer;}
+  .plan.wide{width:auto;flex:1 1 auto;display:block;}
+  .plan .ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.05) 38%,rgba(0,0,0,.88));}
+  .plan .pi{position:absolute;left:0;right:0;bottom:0;padding:14px;display:flex;align-items:flex-end;gap:10px;}
+  .plan .pi .tx{flex:1;min-width:0;}
+  .plan .pi .tx .k{font-size:10.5px;font-weight:800;letter-spacing:.6px;color:var(--hyrox);text-transform:uppercase;margin-bottom:5px;}
+  .plan .pi .tx .t{font-size:16.5px;font-weight:700;color:#fff;letter-spacing:-.2px;line-height:1.2;}
+  .plan .pi .tx .d{font-size:12px;color:#c2c2c2;margin-top:3px;line-height:1.35;}
+  .plan .join{flex:none;background:var(--hyrox);color:var(--hyrox-ink);border:none;border-radius:99px;padding:10px 17px;font-weight:800;font-size:12.5px;cursor:pointer;}
   /* Activity-style score rings: sweep in on first paint */
   .aring{transition:stroke-dashoffset 1s cubic-bezier(.22,.9,.3,1);}
   /* brand mark used in place of an outline icon (Programs tab) */
@@ -639,13 +678,13 @@
       <!-- SKRIN HOME (personalized dashboard — dirender oleh renderHome()) -->
       <div id="home" class="pad" style="display:none;">
         <div id="home-install"></div>
-        <div id="home-greet"></div>
+        <div id="home-hdr"></div>
+        <div id="home-week"></div>
         <div id="home-today"></div>
-        <div id="home-progress"></div>
+        <div id="home-activity"></div>
+        <div id="home-plans"></div>
         <div id="home-challenge"></div>
         <div id="home-wod"></div>
-        <div id="home-continue"></div>
-        <div id="home-recommend"></div>
         <div id="home-races"></div>
         <div id="home-quick"></div>
       </div>
@@ -2400,78 +2439,117 @@ function homeDoneDaysThisWeek(){
   Object.values(HF.data.sessions).forEach(s=>{ if(s&&s.date){ const d=new Date(s.date); if(d>=mon){ set.add((d.getDay()+6)%7); } } });
   return set;
 }
+function donutSVG(pct,color,size){
+  const r=size/2-4, C=2*Math.PI*r, off=C*(1-Math.max(0,Math.min(100,pct))/100);
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="flex:none;">
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="rgba(255,255,255,.09)" stroke-width="6"/>
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="6" stroke-linecap="round"
+      stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 ${size/2} ${size/2})"/>
+  </svg>`;
+}
 function renderHome(){
-  try{ renderInstallBanner(); }catch(e){}   // "Add to Home Screen" prompt (once, after sign-in)
+  try{ renderInstallBanner(); }catch(e){}
   const race = HF.data.track==='race';
-  const nameStr = HF.data.prefs.name?', '+HF.data.prefs.name:'';
-  // 1) GREETING + compact score chip (the full Hybrid Score lives in the Progress tab)
-  $('home-greet').innerHTML=`<div class="greet" style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 2px 16px;">
-      <div style="min-width:0;">
-        <div class="hi">${greetWord()}${nameStr}</div>
-        <div class="who">${race?'Race Ready':'Hybrid Starter'} · ${HF.streak()}-day streak</div>
-      </div>
-      <div onclick="switchTab('progress')" style="flex:none;display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--line);border-radius:99px;padding:7px 12px;cursor:pointer;">
-        <b style="font-family:'Oswald';font-size:17px;color:#FFE000;line-height:1;">${hybridScore()}</b>
+  const nm = (HF.data.prefs.name||'').trim();
+  const wk = weekStats();
+
+  // 1) HEADER — avatar · greeting · score chip
+  $('home-hdr').innerHTML=`<div class="hhdr">
+      <div class="av2">${nm?nm[0].toUpperCase():'H'}</div>
+      <div class="w2"><div class="n">Hi${nm?', '+nm:''}</div><div class="s">${greetWord()} — ${race?'Race Ready':'Hybrid Starter'}</div></div>
+      <div class="chip" onclick="switchTab('progress')">
+        <b style="font-family:'Oswald';font-size:17px;color:var(--hyrox);line-height:1;">${hybridScore()}</b>
         <span style="font-size:11px;color:#8a8a8a;font-weight:600;">Score</span>
-        <span style="color:#5a5a5a;font-size:14px;line-height:1;">›</span>
       </div></div>`;
-  // 2) TODAY'S TRAINING
+
+  // 2) WEEK STRIP — today highlighted, trained days in green
+  const done=homeDoneDaysThisWeek(), now=new Date(), off=(now.getDay()+6)%7;
+  const mon=new Date(now); mon.setDate(now.getDate()-off);
+  const names=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  $('home-week').innerHTML=`<div class="wk2">${names.map((n,i)=>{ const dt=new Date(mon); dt.setDate(mon.getDate()+i);
+      return `<div class="d ${i===off?'on':''} ${done.has(i)?'done':''}"><small>${n}</small><b>${dt.getDate()}</b></div>`; }).join('')}</div>`;
+
+  // 3) TODAY'S TRAINING — full-width image card with a Start pill
   const nx=nextSession();
   if(nx){
     const wo=CATEGORIES[nx.c].workouts[nx.w];
-    $('home-today').innerHTML=`<div class="sechead" style="margin-top:2px;">Today's Training</div>
-      <div class="today hero">
-        <div class="tk">${nx.phase} · Day ${nx.day} · ${prettyPlan()}</div>
-        <div class="tt">${wo.title}</div>
-        <div class="tm">RPE ${wo.rpe} · ${totalMins(wo)} min · ▶ video-guided</div>
-        <div class="trow">
-          <button class="go" onclick="openSessionDetail(${nx.c},${nx.w},'${nx.key}')">Start Workout</button>
-          <button class="go sec" onclick="quickComplete('${nx.key}')">✓</button>
+    $('home-today').innerHTML=`<div class="sechead" style="margin-top:0;">Today's Training</div>
+      <div class="plan wide" style="background-image:url('${wo.img||IMG.w}')" onclick="openSessionDetail(${nx.c},${nx.w},'${nx.key}')">
+        <div class="ov"></div>
+        <div class="pi"><div class="tx">
+            <div class="k">${nx.phase} · Day ${nx.day}</div>
+            <div class="t">${wo.title}</div>
+            <div class="d">RPE ${wo.rpe} · ${totalMins(wo)} min · video-guided</div>
+          </div>
+          <button class="join" onclick="event.stopPropagation();openSessionDetail(${nx.c},${nx.w},'${nx.key}')">Start</button>
         </div></div>`;
   } else {
-    $('home-today').innerHTML=`<div class="sechead" style="margin-top:2px;">Today's Training</div>
-      <div class="today hero"><div class="tk">Rest &amp; Recovery</div><div class="tt">Recovery Day</div>
-      <div class="tm">Take a mobility or easy-walk day, hydrate and let the work settle.</div>
-      <div class="trow"><button class="go" onclick="openQuickWorkout(0)">▶ 10-Min Mobility</button></div></div>`;
+    $('home-today').innerHTML=`<div class="sechead" style="margin-top:0;">Today's Training</div>
+      <div class="plan wide" style="background-image:url('${IMG.found}')" onclick="openQuickWorkout(0)">
+        <div class="ov"></div>
+        <div class="pi"><div class="tx"><div class="k">Rest &amp; Recovery</div><div class="t">Recovery Day</div>
+          <div class="d">Mobility or an easy walk — let the work settle.</div></div>
+          <button class="join" onclick="event.stopPropagation();openQuickWorkout(0)">Mobility</button></div></div>`;
   }
-  // 2b) WORKOUT OF THE DAY (free daily rotation — traffic/return hook)
-  (function(){ const r=todayReadiness(), i=suggestedWODIndex(r.mode), q=QUICK_WORKOUTS[i], st=HF.streak();
+
+  // 4) RECENT ACTIVITY — sessions bar chart + score / minutes donuts
+  const dayMin=[0,0,0,0,0,0,0], dayHas=[0,0,0,0,0,0,0];
+  Object.values(HF.data.sessions).forEach(x=>{ if(!x||!x.date) return; const d=new Date(x.date); if(isNaN(d)||d<mon) return;
+    const i=(d.getDay()+6)%7; if(i>=0&&i<7){ dayMin[i]+=(x.mins||45); dayHas[i]=1; } });
+  const maxMin=Math.max(30,...dayMin), totalMin=dayMin.reduce((a,b)=>a+b,0);
+  const bars=names.map((n,i)=>`<div class="col"><div class="b ${dayHas[i]?'':'off'}" style="height:${Math.max(4,Math.round(dayMin[i]/maxMin*46))}px"></div><div class="l">${n[0]}</div></div>`).join('');
+  $('home-activity').innerHTML=`<div class="sechead">Recent Activity</div>
+    <div class="acard">
+      <div class="ah"><span>🏃</span><div class="t">This Week</div><div class="c">›</div></div>
+      <div style="display:flex;align-items:flex-end;gap:14px;">
+        <div style="flex:0 0 auto;"><div class="big">${wk.done} sessions</div><div class="sub">${totalMin} min · ${wk.pct}% of plan</div></div>
+        <div class="mbar">${bars}</div>
+      </div>
+    </div>
+    <div class="arow">
+      <div class="acard" onclick="switchTab('progress')" style="cursor:pointer;">
+        <div class="ah"><span>⚡</span><div class="t">Hybrid Score</div><div class="c">›</div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><div style="flex:1;"><div class="big">${hybridScore()}</div><div class="sub">Weakest: ${AREA_LABEL[weakestArea()]}</div></div>${donutSVG(hybridScore(),'#FFE000',54)}</div>
+      </div>
+      <div class="acard">
+        <div class="ah"><span>🔥</span><div class="t">Streak</div><div class="c">›</div></div>
+        <div style="display:flex;align-items:center;gap:10px;"><div style="flex:1;"><div class="big">${HF.streak()} days</div><div class="sub">${HF.totalDone()} total</div></div>${donutSVG(Math.min(100,HF.streak()*14),'#FF375F',54)}</div>
+      </div>
+    </div>`;
+
+  // 5) TRENDING PLANS — programs as image cards with a Join pill
+  const ownedP=CATALOG_ORDER.filter(id=>ownsProgram(id)&&CATALOG[id].access!=='free');
+  const contId=ownedP[0]||'hybrid-starter';
+  const plans=[contId];
+  if(!ownsProgram('first-timer')) plans.push('first-timer');
+  plans.push(race?'race-12':'build-engine'); plans.push('station-builder');
+  const uniq=plans.filter((v,i,a)=>a.indexOf(v)===i).slice(0,4);
+  $('home-plans').innerHTML=`<div class="sechead">Trending Plans</div>
+    <div class="hscroll">${uniq.map(id=>{ const p=CATALOG[id], st=programState(id), owned=ownsProgram(id);
+      return `<div class="plan" style="background-image:url('${p.img}')" onclick="openProgramDetail('${id}','home')">
+        <div class="ov"></div>
+        <div class="pi"><div class="tx"><div class="k">${p.tag} · ${p.weeks} wk</div><div class="t">${p.title}</div>
+          <div class="d">${p.goal}</div></div>
+          <button class="join" onclick="event.stopPropagation();${owned?`openProgramContent('${id}')`:`openProgramDetail('${id}','home')`}">${owned?'Open':(st==='SOON'?'Soon':'Join')}</button>
+        </div></div>`; }).join('')}</div>`;
+
+  // 6) WORKOUT OF THE DAY (free, adaptive)
+  (function(){ const r=todayReadiness(), i=suggestedWODIndex(r.mode), q=QUICK_WORKOUTS[i];
     $('home-wod').innerHTML=`<div class="sechead">Workout of the Day <span style="font-size:11px;color:#2ec27e;font-weight:800;letter-spacing:1px;">FREE</span></div>
       <div class="today">
-        <div class="tk"><span style="color:${r.color};font-weight:800;">● ${r.label}</span>${st>0?` · 🔥 ${st}-day streak`:''}</div>
+        <div class="tk"><span style="color:${r.color};font-weight:800;">● ${r.label}</span></div>
         <div class="tt">${q.title}</div>
         <div class="tm">${q.tag} · ${totalMins(q)} min · RPE ${q.rpe}</div>
         <div style="font-size:11.5px;color:#8a8a8a;margin-top:3px;">${r.tip}</div>
-        <div class="trow">
-          <button class="go" onclick="openWOD()">▶ Start Free Workout</button>
-          <button class="go sec" onclick="shareWOD()">Share</button>
-        </div>
+        <div class="trow"><button class="go" onclick="openWOD()">Start free workout</button>
+          <button class="go sec" onclick="shareWOD()">Share</button></div>
       </div>`;
   })();
-  try{ renderChallenge(); }catch(e){ console.error(e); }   // 2c) 7-Day Hybrid Challenge (launch lead-magnet)
-  try{ renderRaces(); }catch(e){ console.error(e); }       // Races — discover & track MY/SEA races
-  const wk=weekStats();
-  $('home-progress').innerHTML='';   // Hybrid Score moved to the Progress tab
-  // 4) FOR YOU — current program progress + recommendations (countdown removed: the Races
-  //    section already carries the KL countdown, so it was duplicated information)
+
+  try{ renderChallenge(); }catch(e){ console.error(e); }
+  try{ renderRaces(); }catch(e){ console.error(e); }
   if(window.klTicker){ clearInterval(window.klTicker); window.klTicker=null; }
-  const ownedP=CATALOG_ORDER.filter(id=>ownsProgram(id)&&CATALOG[id].access!=='free');
-  const contId = ownedP[0] || 'hybrid-starter';
-  const cp=CATALOG[contId];
-  const weak=weakestArea();
-  const recIds=[];
-  if(!ownsProgram('first-timer') && CATALOG['first-timer']) recIds.push('first-timer');
-  recIds.push(race?'race-12':'build-engine');
-  recIds.push('station-builder');
-  $('home-continue').innerHTML='';
-  $('home-recommend').innerHTML=`<div class="sechead">For You</div>
-    <div class="frow" onclick="${ownsProgram(contId)?`openProgramContent('${contId}')`:`openProgramDetail('${contId}','home')`}">
-      <div class="th" style="background-image:url('${cp.img}')"></div>
-      <div class="tx"><div class="t">${cp.title}</div>
-        <div class="m">Week ${currentWeek()} of ${cp.weeks} · ${wk.pct}% this week</div>
-        <div class="trkbar" style="height:5px;margin:7px 0 0;"><i style="width:${wk.pct}%"></i></div></div>
-      <div class="chev">›</div></div>
-    <div class="hscroll" style="margin-top:12px;">${recIds.filter((v,i,a)=>a.indexOf(v)===i).map(id=>programCard(id)).join('')}</div>`;
+
   // 7) QUICK WORKOUTS
   $('home-quick').innerHTML=`<div class="sechead">Quick Workouts <span style="font-size:11px;color:#2ec27e;font-weight:800;letter-spacing:1px;">FREE</span></div>
     <div class="hscroll">${QUICK_WORKOUTS.map((_,i)=>quickCard(i)).join('')}</div>`;
