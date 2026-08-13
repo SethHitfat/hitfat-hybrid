@@ -4413,9 +4413,48 @@ function joinProgram(id){ const p=CATALOG[id]; if(!p) return;
     <div class="modalrow"><button class="cancel" onclick="closeModal()">Not now</button><button class="confirm" onclick="payProgram('${id}')">Pay ${fmtPrice(p.price)}</button></div>`;
   $('modal').classList.add('on');
 }
-function payProgram(id){ const url=BCL_LINKS[id]; closeModal();
-  if(url){ nfToast('Opening secure payment…'); location.href=url; }   // same-window → BCL redirects back to ?paid=<id>
-  else { nfToast('Payment link coming soon for this program.'); }
+async function payProgram(id){
+  const p=CATALOG[id]; if(!p) return;
+  if(!PAYMENTS_LIVE){ closeModal(); nfToast(p.title+' — opening soon.'); return; }
+  if(!HF.userId){ closeModal(); nfToast('Please sign in first so we can unlock your program.'); return; }
+  closeModal(); nfToast('Opening secure payment…');
+  try{
+    const r=await fetch('/.netlify/functions/pay-create',{ method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ program_id:id, user_id:HF.userId, email:HF.email,
+                            name:(HF.data.prefs&&HF.data.prefs.name)||'' }) });
+    const d=await r.json();
+    if(d && d.url){ location.href=d.url; return; }
+    console.warn('pay-create', d); nfToast('Could not start payment — please try again.');
+  }catch(e){ console.error(e); nfToast('Could not start payment — check your connection.'); }
+}
+
+/* Unlock ONLY from a payment Bayarcash confirmed to our server (payments.status = paid).
+   The browser is never trusted, so a hand-typed ?paid= URL can no longer unlock anything. */
+async function checkPaidPurchases(silent){
+  if(!sb || !HF.userId) return 0;
+  try{
+    const { data, error } = await sb.from('payments')
+      .select('program_id').eq('user_id', HF.userId).eq('status','paid');
+    if(error || !data) return 0;
+    let n=0;
+    data.forEach(r=>{ if(r.program_id && CATALOG[r.program_id] && !ownsProgram(r.program_id)){ grantProgram(r.program_id); n++; } });
+    if(n){ nfToast('Payment confirmed — program unlocked! 🎉');
+      try{ if(curTab==='home') renderHome(); }catch(e){} }
+    return n;
+  }catch(e){ return 0; }
+}
+/* After returning from the gateway the callback can take a few seconds — poll briefly. */
+function awaitPayment(pid){
+  let tries=0;
+  nfToast('Confirming your payment…');
+  const t=setInterval(async ()=>{
+    tries++;
+    const n=await checkPaidPurchases(true);
+    if(n || tries>=10){ clearInterval(t);
+      if(!n && tries>=10) nfToast('Payment not confirmed yet — it will unlock automatically once received.');
+      else if(pid && CATALOG[pid]) { try{ openProgramDetail(pid); }catch(e){} }
+    }
+  }, 3000);
 }
 
 /* ---- Auto-unlock after BCL payment (Cara A) ----
@@ -4430,13 +4469,17 @@ function capturePaidParam(){
   }catch(e){}
 }
 function handlePaidRedirect(){
-  try{ const pid=localStorage.getItem('hf_pending_paid'); if(!pid) return;
-    localStorage.removeItem('hf_pending_paid');
-    const p=CATALOG[pid]; if(!p || p.access==='free') return;
-    if(ownsProgram(pid)){ nfToast(p.title+' — already unlocked ✓'); return; }
-    grantProgram(pid);                                   // sets HF.data.owned + purchases, cloud-synced via HF.save()
-    nfToast('Payment received — '+p.title+' unlocked! 🎉');
-    if(typeof openProgramDetail==='function') openProgramDetail(pid);
+  try{
+    const pid=localStorage.getItem('hf_pending_paid');
+    if(pid){ localStorage.removeItem('hf_pending_paid');
+      const p=CATALOG[pid];
+      if(p && p.access!=='free'){
+        if(ownsProgram(pid)) nfToast(p.title+' — already unlocked ✓');
+        else awaitPayment(pid);                 // wait for the verified callback, never self-grant
+        return;
+      }
+    }
+    checkPaidPurchases(true);                   // pick up any payment confirmed while away
   }catch(e){ console.error(e); }
 }
 
