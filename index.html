@@ -3671,7 +3671,7 @@ function renderProfile(){
   $('pf-programs').innerHTML=list.map(id=>{ const c=CATALOG[id]; const st=programState(id);
     return `<div class="pfrow" style="cursor:pointer;" onclick="${ownsProgram(id)?`openProgramContent('${id}')`:`switchTab('store');openProgramDetail('${id}','profile')`}">
       <span class="l" style="color:#fff;font-weight:600;">${c.title}</span>
-      <span class="v"><span class="badge ${badgeCls(st)}" style="position:static;">${st}</span></span></div>`; }).join('');
+      <span class="v"><span class="badge ${badgeCls(st)}" style="position:static;">${badgeLabel(id,st)}</span></span></div>`; }).join('');
   // Purchases
   const pur=(HF.data.purchases||[]).slice().reverse();
   $('pf-purchases').innerHTML = pur.length ? pur.map(x=>{ const d=new Date(x.date);
@@ -4451,20 +4451,21 @@ function shareChallenge(){
 
 /* ---- cards ---- */
 function badgeCls(st){ return st==='OWNED'?'owned':st==='FREE'?'free':st==='SOON'?'soon':st==='COMPLETED'?'done':'paid'; }
+/* the badge sells the program: show the price until it is bought, then OWNED */
+function badgeLabel(id,st){ return st==='PAID' ? fmtPrice(CATALOG[id].price) : st; }
 function programCard(id,full){
   const p=CATALOG[id]; if(!p) return ''; const st=programState(id);
-  const price=(st==='PAID')?`<div class="price">${fmtPrice(p.price)}</div>`:'';
   if(full){   // vertical lists → Apple Fitness+ style row (thumb left, text right, chevron)
     const meta=[p.weeks+' wk', p.days+' days/wk', p.level].join(' · ');
-    const sub=(st==='PAID')?(fmtPrice(p.price)+' · '+meta):(st==='SOON'?('Coming soon · '+meta):meta);
+    const sub=(st==='SOON')?('Coming soon · '+meta):meta;
     return `<div class="frow" onclick="openProgramDetail('${id}')">
-      <div class="th" style="background-image:url('${p.img}')"><span class="badge ${badgeCls(st)} bdg">${st}</span></div>
+      <div class="th" style="background-image:url('${p.img}')"><span class="badge ${badgeCls(st)} bdg">${badgeLabel(id,st)}</span></div>
       <div class="tx"><div class="t">${p.title}</div><div class="m">${sub}</div></div>
       <div class="chev">›</div></div>`;
   }
   return `<div class="pcard" onclick="openProgramDetail('${id}')">
-    <div class="top" style="background-image:url('${p.img}')"><span class="badge ${badgeCls(st)}">${st}</span></div>
-    <div class="info"><div class="t">${p.title}</div><div class="m">${p.weeks} wk · ${p.days} days/wk · ${p.level}</div>${price}</div></div>`;
+    <div class="top" style="background-image:url('${p.img}')"><span class="badge ${badgeCls(st)}">${badgeLabel(id,st)}</span></div>
+    <div class="info"><div class="t">${p.title}</div><div class="m">${p.weeks} wk · ${p.days} days/wk · ${p.level}</div></div></div>`;
 }
 function quickCard(i){ const q=QUICK_WORKOUTS[i]; return `<div class="qwcard" onclick="openQuickWorkout(${i})"><span class="badge free">Free</span><div class="t">${q.title}</div><div class="m">${q.tag} · ${totalMins(q)} min · RPE ${q.rpe}</div></div>`; }
 function coachCard(id){ const c=COACHES[id]; const n=coachPrograms(id).length; const ini=c.name.replace('Coach ','')[0];
@@ -4585,7 +4586,7 @@ function openProgramDetail(id,backTab){ const p=CATALOG[id]; if(!p) return; pdBa
              : `<button class="buy" onclick="joinProgram('${id}')">Join Program — ${fmtPrice(p.price)}</button>`);
   const wish = (soon||paySoon)?'':`<button class="wish ${inWishlist(id)?'on':''}" onclick="toggleWishlist('${id}');openProgramDetail('${id}')">♥</button>`;
   $('pgd-body').innerHTML=`
-    <div class="pd-hero" style="background-image:url('${p.img}')"><div class="edge"></div><div class="body"><span class="badge ${badgeCls(st)}">${st}</span><h2>${p.title}</h2></div></div>
+    <div class="pd-hero" style="background-image:url('${p.img}')"><div class="edge"></div><div class="body"><span class="badge ${badgeCls(st)}">${badgeLabel(id,st)}</span><h2>${p.title}</h2></div></div>
     <div class="pd-meta"><span class="chip"><b>${p.weeks}</b> weeks</span><span class="chip"><b>${p.days}</b> days/wk</span><span class="chip">${p.level}</span><span class="chip">by HITFAT</span></div>
     <div class="desc" style="margin:0 2px 6px;">${p.summary}</div>
     <div class="scalebox" style="margin-top:12px;"><div class="sh">Goal</div><div class="si">${p.goal}</div></div>
