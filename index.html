@@ -1397,7 +1397,7 @@ function fmtPrice(p){ return (p&&p>0) ? ('RM'+p) : 'Free'; }
 function ownsProgram(id){ const p=CATALOG[id]; if(!p) return false; if(p.access==='free') return true; return !!(HF.data.owned && HF.data.owned[id]); }
 /* Payment launch flag — while false, paid programs show "Coming Soon" (demand capture via
    wishlist / Notify me) instead of a Pay button. Flip to true on payment-release day.
-   BCL_LINKS + auto-unlock stay fully wired; nothing to rebuild when going live. */
+   The Bayarcash flow stays fully wired; nothing to rebuild when going live. */
 const PAYMENTS_LIVE = false;
 function paymentsSoon(id){ const p=CATALOG[id]; return !PAYMENTS_LIVE && !!p && p.access==='paid' && !ownsProgram(id); }
 function programState(id){ // FREE | OWNED | PAID | SOON | COMPLETED  (+ IN PROGRESS handled by caller)
@@ -4395,21 +4395,12 @@ function renderFirstTimer(){
 function toggleFT(key,c,w){ if(HF.isDone(key)) HF.undone(key); else HF.markDone(key,{name:CATEGORIES[c].workouts[w].title}); renderFirstTimer(); }
 function openFTSession(c,w,key){ window.fromFT=true; window.fromPlan=false; window.fromHome=false; window.fromKL=false; window.pendingKey=key; openDetail(c,w); }
 
-/* ---- Join / payment (BCL.my — Cara A manual payment links) ---- */
-// Each link is a BCL.my payment form on hitfat.bcl.my. After payment, buyer is
-// redirected back to the app; owner confirms in BCL.my then runs grantProgram('<id>').
-// To add a program: create its BCL.my form, then map its id → form URL here.
-const BCL_LINKS = {
-  'first-timer': 'https://hitfat.bcl.my/form/hyrox-first-timer',   // RM19
-  'race-8':      'https://hitfat.bcl.my/form/race-prep-8week',     // RM99
-  'race-12':     'https://hitfat.bcl.my/form/race-ready-12week',   // RM149
-  'road-kl':     'https://hitfat.bcl.my/form/road-to-hyrox-kl',    // RM199
-};
+/* ---- Join / payment (Bayarcash — server-created payment intent, verified callback) ---- */
 function joinProgram(id){ const p=CATALOG[id]; if(!p) return;
   if(!PAYMENTS_LIVE){ nfToast(p.title+' — opening soon. Tap “Notify me”.'); openProgramDetail(id); return; }  // payments not live yet
   $('modal-sheet').innerHTML=`<h3>Join ${p.title}</h3>
     <p class="msub">One-time ${fmtPrice(p.price)} — unlocks inside your HITFAT HYBRID account, forever.</p>
-    <div class="infonote">Secure payment via <b>BCL.my</b> (FPX, DuitNow QR, cards, eWallet). Your program unlocks after payment is confirmed.</div>
+    <div class="infonote">Secure payment via <b>Bayarcash</b> (FPX, DuitNow QR, cards, eWallet). Your program unlocks after payment is confirmed.</div>
     <div class="modalrow"><button class="cancel" onclick="closeModal()">Not now</button><button class="confirm" onclick="payProgram('${id}')">Pay ${fmtPrice(p.price)}</button></div>`;
   $('modal').classList.add('on');
 }
