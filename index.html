@@ -1398,7 +1398,7 @@ function ownsProgram(id){ const p=CATALOG[id]; if(!p) return false; if(p.access=
 /* Payment launch flag — while false, paid programs show "Coming Soon" (demand capture via
    wishlist / Notify me) instead of a Pay button. Flip to true on payment-release day.
    The Bayarcash flow stays fully wired; nothing to rebuild when going live. */
-const PAYMENTS_LIVE = false;
+const PAYMENTS_LIVE = true;
 function paymentsSoon(id){ const p=CATALOG[id]; return !PAYMENTS_LIVE && !!p && p.access==='paid' && !ownsProgram(id); }
 function programState(id){ // FREE | OWNED | PAID | SOON | COMPLETED  (+ IN PROGRESS handled by caller)
   const p=CATALOG[id]; if(!p) return 'SOON';
