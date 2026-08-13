@@ -4603,13 +4603,24 @@ async function payProgram(id){
 /* Unlock ONLY from a payment Bayarcash confirmed to our server (payments.status = paid).
    The browser is never trusted, so a hand-typed ?paid= URL can no longer unlock anything. */
 async function checkPaidPurchases(silent){
-  if(!sb || !HF.userId) return 0;
+  if(!HF.userId) return 0;
   try{
-    const { data, error } = await sb.from('payments')
-      .select('program_id').eq('user_id', HF.userId).eq('status','paid');
-    if(error || !data) return 0;
+    // ask the server (service key + a live Bayarcash check) rather than SELECTing the table here,
+    // which only works if the payments RLS policy lets the buyer read their own rows
+    let ids=null;
+    try{
+      const r=await fetch('/.netlify/functions/pay-status?user_id='+encodeURIComponent(HF.userId));
+      const d=await r.json(); if(d && Array.isArray(d.programs)) ids=d.programs;
+    }catch(e){}
+    if(ids===null && sb){   // fallback: direct read
+      const { data, error } = await sb.from('payments')
+        .select('program_id').eq('user_id', HF.userId).eq('status','paid');
+      if(error || !data) return 0;
+      ids=data.map(r=>r.program_id);
+    }
+    if(!ids) return 0;
     let n=0;
-    data.forEach(r=>{ if(r.program_id && CATALOG[r.program_id] && !ownsProgram(r.program_id)){ grantProgram(r.program_id); n++; } });
+    ids.forEach(pid=>{ if(pid && CATALOG[pid] && !ownsProgram(pid)){ grantProgram(pid); n++; } });
     if(n){ nfToast('Payment confirmed — program unlocked! 🎉');
       try{ if(curTab==='home') renderHome(); }catch(e){} }
     return n;
