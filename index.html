@@ -2141,11 +2141,15 @@ function renderCategories(){
 function showCategories(){ $('list').style.display='none'; $('detail').style.display='none'; $('plans').style.display='none'; $('categories').style.display='block'; $('tabs').style.display='flex'; $('screen').scrollTop=0; }
 
 /* ============ TAB NAVIGATION ============ */
+/* every full-screen panel — openers must hide them ALL, otherwise the panel they came
+   from stays visible underneath and the new screen looks like it never opened. */
+const PANELS=['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail','store','tsess','tmhome'];
+function hidePanels(){ PANELS.forEach(id=>{ const e=$(id); if(e) e.style.display='none'; }); }
 function switchTab(tab){
   curTab=tab;
   $('tabs').style.display='flex'; // always restore the bottom nav when landing on a main tab
   // hide every screen
-  ['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail','store','tsess','tmhome'].forEach(id=>{ const e=$(id); if(e) e.style.display='none'; });
+  hidePanels();
   if(window.klTicker && tab!=='pro' && tab!=='home' && tab!=='explore'){ clearInterval(window.klTicker); window.klTicker=null; }
   ['tab-home','tab-programs','tab-plans','tab-pro','tab-target','tab-kl','tab-progress','tab-profile','tab-explore','tab-coaches','tab-store'].forEach(id=>{ const b=$(id); if(b&&b.classList) b.classList.remove('active'); });
   const setActive=id=>{ const b=$(id); if(b&&b.classList) b.classList.add('active'); };
@@ -2782,7 +2786,7 @@ function toggleChk(i){
 /* ============ SKRIN 2: SENARAI ============ */
 function openCategory(i){
   catIdx=i; const c=CATEGORIES[i];
-  $('categories').style.display='none'; $('detail').style.display='none'; $('plans').style.display='none'; $('tabs').style.display='none'; $('list').style.display='block';
+  hidePanels(); $('tabs').style.display='none'; $('list').style.display='block';
   $('l-cat').textContent='Program'; $('l-title').textContent=c.name; $('l-desc').textContent=c.desc;
   $('grid').innerHTML=c.workouts.map((w,wi)=>`
     <div class="wrow" onclick="openDetail(${i},${wi})">
@@ -2811,8 +2815,7 @@ function openDetail(ci,wi){
   window.curSessionKey = window.pendingKey || ('lib-'+ci+'-'+wi); window.pendingKey=null;
   // hide EVERY main panel (home/explore/store/... were missing, so opening a session from Home
   // rendered the detail *below* a still-visible Home — looked like "nothing happened")
-  ['home','explore','store','progress','profile','coaches','progdetail','categories','list','plans','pro','target']
-    .forEach(id=>{ const e=$(id); if(e) e.style.display='none'; });
+  hidePanels();
   $('tabs').style.display='none'; $('detail').style.display='block';
   $('d-label').textContent=CATEGORIES[catIdx].name;
   $('d-title').textContent=cur.title; $('d-rpe').textContent=cur.rpe; $('d-mins').textContent=totalMins(cur);
@@ -3905,6 +3908,184 @@ async function onSignedIn(session){
    Program "Open" routes to EXISTING real workout views (no dummy).
    ============================================================ */
 
+/* ============================================================
+   ████  SESSIONS · COLLECTIONS · COUNT-UP PLAYER  ████
+   A second training format alongside the video library: a session is just a list of
+   movements with targets (distance / reps), executed by a count-up clock — tap Next
+   when a movement is done. Authoring needs no per-move durations.
+   ============================================================ */
+const SI=(n,t,rpe)=>({n,t,rpe:rpe||null});
+const SB=(type,cap,items,note)=>({type,cap:cap||null,items,note:note||''});
+const SX=(id,title,tag,est,coll,equip,blocks)=>({id,title,tag,est,coll,equip,blocks});
+const SESSIONS=[
+  SX('hx-full','HYROX Full Simulation','Race Sim',81,'race',['Ski Erg','Sled','Row','Wall Ball','Sandbag'],[
+    SB('For Time',null,[SI('Run','1 km'),SI('SkiErg','1000 m'),SI('Run','1 km'),SI('Sled Push','50 m'),SI('Run','1 km'),SI('Sled Pull','50 m'),
+      SI('Run','1 km'),SI('Burpee Broad Jump','80 m'),SI('Run','1 km'),SI('Row','1000 m'),SI('Run','1 km'),SI('Farmers Carry','200 m'),
+      SI('Run','1 km'),SI('Sandbag Lunges','100 m'),SI('Run','1 km'),SI('Wall Balls','100 reps')],'Race pace — keep the roxzone tight.')]),
+  SX('hx-half','HYROX Half Simulation','Race Sim',42,'race',['Ski Erg','Sled','Row','Wall Ball'],[
+    SB('For Time',null,[SI('Run','1 km'),SI('SkiErg','500 m'),SI('Run','1 km'),SI('Sled Push','25 m'),SI('Run','1 km'),SI('Row','500 m'),
+      SI('Run','1 km'),SI('Wall Balls','50 reps')],'Half distances — practise pacing and transitions.')]),
+  SX('hx-stations','Stations Only Sim','Race Sim',34,'race',['Ski Erg','Sled','Row','Sandbag','Wall Ball'],[
+    SB('For Time',null,[SI('SkiErg','1000 m'),SI('Sled Push','50 m'),SI('Sled Pull','50 m'),SI('Burpee Broad Jump','80 m'),
+      SI('Row','1000 m'),SI('Farmers Carry','200 m'),SI('Sandbag Lunges','100 m'),SI('Wall Balls','100 reps')],'All 8 stations back to back — no runs.')]),
+  SX('amrap-30','AMRAP 30 · Hybrid','AMRAP',30,'engine',['Ski Erg','Sled','Kettlebell','Wall Ball'],[
+    SB('AMRAP',30,[SI('SkiErg','500 m',7),SI('Sled Push','25 m',7),SI('KB Farmers Carry','100 m',7),SI('Run','200 m',4),SI('Wall Balls','30 reps',9)],
+      'Steady, repeatable rounds — count them and beat it next time.')]),
+  SX('emom-20','EMOM 20 · Engine','EMOM',20,'engine',['Machine or Run'],[
+    SB('EMOM',20,[SI('Row / Ski','12 cal'),SI('Burpees','10 reps'),SI('Run','200 m'),SI('Air Squats','20 reps')],
+      'One movement per minute — the rest of the minute is your recovery.')]),
+  SX('thr-4x4','4 × 4 Threshold','Intervals',28,'engine',['Machine or Run'],[
+    SB('Rounds',4,[SI('Hard effort','4:00 @ RPE 9'),SI('Easy recovery','3:00 @ RPE 4')],'Same pace on the last rep as the first.')]),
+  SX('comp-run','Compromised Run Blocks','Running',24,'engine',['Run + Stations'],[
+    SB('Rounds',6,[SI('Station effort','60 s'),SI('Run','400 m'),SI('Rest','60 s')],'Short quick steps for the first 50 m off the station.')]),
+  SX('st-ladder','Station Ladder','Stations',22,'stations',['HYROX Stations'],[
+    SB('Rounds',4,[SI('SkiErg','250 m'),SI('Sled Push','25 m'),SI('Farmers Carry','100 m'),SI('Wall Balls','20 reps'),SI('Rest','60 s')],
+      'Keep transitions tight — the ladder builds fast.')]),
+  SX('st-sled','Sled & Carry Builder','Stations',26,'stations',['Sled','Kettlebell'],[
+    SB('Rounds',5,[SI('Sled Push','25 m'),SI('Sled Pull','25 m'),SI('Farmers Carry','100 m'),SI('Rest','90 s')],'Heavy but unbroken lengths.')]),
+  SX('st-wall','Wall Ball Capacity','Stations',18,'stations',['Wall Ball'],[
+    SB('Rounds',5,[SI('Wall Balls','25 reps unbroken'),SI('Run','150 m'),SI('Rest','60 s')],'Protect the unbroken set — drop reps before you drop form.')]),
+  SX('q-tabata','Tabata Finisher','Tabata',8,'quick',['Bodyweight'],[
+    SB('Rounds',8,[SI('Burpees','20 s'),SI('Rest','10 s'),SI('Squat Jumps','20 s'),SI('Rest','10 s')],'Max quality reps in every 20 seconds.')]),
+  SX('q-core','10 Min Core Blast','Core',10,'quick',['Bodyweight'],[
+    SB('AMRAP',10,[SI('Sit Ups','15 reps'),SI('Russian Twists','20 reps'),SI('Plank','40 s'),SI('Leg Raises','12 reps')],'Move continuously.')]),
+  SX('q-engine','15 Min Engine','Engine',15,'quick',['Machine or Run'],[
+    SB('Rounds',5,[SI('Hard effort','2:00 @ RPE 8'),SI('Easy','1:00 @ RPE 4')],'Repeatable — no hero first rep.')]),
+];
+SESSIONS.push(
+  SX('str-hybrid','Hybrid Strength Circuit','Strength',30,'strength',['Barbell','Dumbbell'],[
+    SB('Rounds',5,[SI('Back Squat','5 reps',8),SI('DB Push Press','8 reps',7),SI('Walking Lunge','20 m'),SI('Rest','90 s')],'Heavy but repeatable — leave one rep in the tank.')]),
+  SX('str-pull','Pull & Grip Builder','Strength',24,'strength',['Pull-up bar','Kettlebell'],[
+    SB('Rounds',4,[SI('Pull Ups','8 reps',8),SI('KB Farmers Carry','100 m'),SI('Ring / TRX Row','12 reps'),SI('Rest','90 s')],'Grip is the hidden HYROX limiter.')]),
+  SX('str-core','Core & Carry','Strength',18,'strength',['Sandbag'],[
+    SB('AMRAP',18,[SI('Sandbag Carry','50 m'),SI('Sit Ups','20 reps'),SI('Plank','45 s'),SI('Hollow Hold','30 s')],'Brace hard, breathe out at the top.')]),
+  SX('run-400','400m Repeats','Running',26,'running',['Run'],[
+    SB('Rounds',8,[SI('Run','400 m @ race pace',8),SI('Jog recovery','90 s',4)],'Hold the same split every rep.')]),
+  SX('run-long','Long Easy Run','Running',50,'running',['Run'],[
+    SB('For Time',null,[SI('Run','8 km @ RPE 5')],'Conversational pace — this is base building, not a race.')]),
+  SX('run-pyr','Pyramid Intervals','Running',32,'running',['Run'],[
+    SB('For Time',null,[SI('Run','400 m',8),SI('Rest','60 s'),SI('Run','800 m',8),SI('Rest','90 s'),SI('Run','1200 m',8),
+      SI('Rest','90 s'),SI('Run','800 m',8),SI('Rest','90 s'),SI('Run','400 m',9)],'Up then down — negative split the way back.')])
+);
+const TIMER_CATS=[
+  {id:'race',    name:'Race Simulation', c1:'#FF375F', c2:'#4a0d1c', gl:'🏁'},
+  {id:'engine',  name:'Engine',          c1:'#30D5C8', c2:'#0b3f3a', gl:'🫀'},
+  {id:'stations',name:'Stations',        c1:'#FF9500', c2:'#4d2c00', gl:'🛷'},
+  {id:'running', name:'Running',         c1:'#3A86FF', c2:'#0f2a55', gl:'🏃'},
+  {id:'strength',name:'Strength',        c1:'#A855F7', c2:'#2b1152', gl:'🏋️'},
+  {id:'quick',   name:'Quick Hits',      c1:'#FFE000', c2:'#4a4000', gl:'⚡'},
+];
+function catGrad(c){ return `linear-gradient(155deg, ${c.c1} 0%, ${c.c2} 78%)`; }
+function catOf(id){ return TIMER_CATS.find(c=>c.id===id)||{name:'Session',c1:'#3a3a3a',c2:'#141414',gl:'⏱'}; }
+function sessionById(id){ return SESSIONS.find(x=>x.id===id); }
+function scard(x){ const c=catOf(x.coll);
+  return `<div class="scard" onclick="openTSession('${x.id}')">
+    <div class="im" style="background:${catGrad(c)}">
+      <span class="gl">${c.gl}</span>
+      <span class="ty">${x.blocks[0].type}</span><span class="est">${x.est} min</span></div>
+    <div class="t">${x.title}</div><div class="m">${x.tag}</div></div>`; }
+function openTimerHome(){
+  hidePanels();
+  $('tmhome').style.display='block'; $('tabs').style.display='flex'; curTab='tmhome';
+  const feat=SESSIONS.slice(0,4);
+  const row=(title,list)=> list.length?`<div class="sechead">${title}</div><div class="hscroll">${list.map(scard).join('')}</div>`:'';
+  $('tm-body').innerHTML=`
+    <button class="back" onclick="switchTab('explore')">← Explore</button>
+    <div class="hgroup" style="margin-bottom:14px;"><div class="k">⏱ No video · tap Next as you go</div><h2>HITFAT TIMER</h2></div>
+    <div class="tmtop">${feat.map(x=>`<div class="q" onclick="openTSession('${x.id}')">
+        <div class="im" style="background:${catGrad(catOf(x.coll))}"></div><div class="t">${x.title}</div></div>`).join('')}</div>
+    ${TIMER_CATS.map(c=>row(c.name, SESSIONS.filter(x=>x.coll===c.id))).join('')}
+    <div class="sechead">All sessions</div><div id="tm-all"></div>`;
+  try{ const el=$('tm-all'); if(el) el.innerHTML=SESSIONS.map(sessionRow).join(''); }catch(e){}
+  $('screen').scrollTop=0;
+}
+/* ---- browse ---- */
+function sessionRow(x){ return `<div class="wrow" onclick="openTSession('${x.id}')">
+    <div class="num">⏱</div>
+    <div class="tx"><div class="t">${x.title}</div><div class="m">${x.tag} · ${x.est} min · ${x.blocks[0].type}</div></div>
+    <div class="chev">›</div></div>`; }
+/* ---- session detail ---- */
+function blockFooter(b){
+  if(b.type==='AMRAP') return `↻ As many rounds as possible in ${b.cap}m`;
+  if(b.type==='EMOM')  return `↻ Every minute on the minute for ${b.cap}m`;
+  if(b.type==='Rounds')return `↻ Repeat for ${b.cap} rounds`;
+  return `↻ For time — complete every movement`;
+}
+function openTSession(id){
+  const x=sessionById(id); if(!x) return; window._tsess=id;
+  hidePanels();
+  $('tsess').style.display='block'; $('tabs').style.display='none'; curTab='tsess';
+  $('ts-body').innerHTML=`
+    <button class="back" onclick="openTimerHome()">← HITFAT Timer</button>
+    <div class="hgroup"><div class="k">${x.tag}</div><h2>${x.title}</h2>
+      <p>${x.equip.join(' · ')} · est. ${x.est} min</p></div>
+    ${x.blocks.map(b=>`<div class="sblock">
+      <div class="bh"><span class="bt">${b.type}${b.cap?(b.type==='Rounds'?' × '+b.cap:' · '+b.cap+'m'):''}</span></div>
+      ${b.items.map((it,i)=>`<div class="sitem"><div class="n">${i+1}</div>
+        <div class="b"><div class="t">${it.n}</div><div class="m">${it.t}${it.rpe?(' · RPE '+it.rpe):''}</div></div></div>`).join('')}
+      <div class="bf">${blockFooter(b)}</div>
+      ${b.note?`<div class="infonote" style="margin-top:10px;">${b.note}</div>`:''}
+    </div>`).join('')}
+    <button class="go" style="width:100%;background:var(--hyrox);color:var(--hyrox-ink);border:none;border-radius:99px;padding:16px;font-weight:800;font-size:16px;cursor:pointer;margin-top:6px;" onclick="tpStart('${x.id}')">Get Started</button>`;
+  $('screen').scrollTop=0;
+}
+
+/* ---- count-up player ---- */
+let tp=null, tpTick=null;
+function tpFlat(x){ const out=[];
+  x.blocks.forEach(b=>{ const rounds=(b.type==='Rounds'&&b.cap)?b.cap:1;
+    for(let r=1;r<=rounds;r++) b.items.forEach(it=>out.push({n:it.n,t:it.t,rpe:it.rpe,mode:b.type,round:rounds>1?r:null,rounds:rounds>1?rounds:null})); });
+  return out; }
+function tpFmt(ms){ const s=Math.max(0,Math.floor(ms/1000)), m=Math.floor(s/60), ss=s%60;
+  return (m<10?'0':'')+m+':'+(ss<10?'0':'')+ss; }
+function tpStart(id){ const x=sessionById(id); if(!x) return;
+  tp={ id:id, title:x.title, flat:tpFlat(x), i:0, splits:[], t0:Date.now(), mark:Date.now(), paused:false, pausedAt:0 };
+  $('tplay').classList.add('on'); tpRender();
+  clearInterval(tpTick); tpTick=setInterval(tpRender,250);
+}
+function tpRender(){ if(!tp) return;
+  const cur=tp.flat[tp.i]; if(!cur) return tpFinish();
+  $('tp-mode').textContent='▷ '+cur.mode+(cur.round?('  ·  Round '+cur.round+'/'+cur.rounds):'');
+  const now = tp.paused ? tp.pausedAt : Date.now();
+  $('tp-total').textContent = tpFmt(now-tp.t0);
+  const past = tp.flat.slice(Math.max(0,tp.i-2), tp.i);
+  $('tp-stack').innerHTML =
+    past.map(m=>`<div class="past"><div class="t">${m.n}</div><div class="m">${m.t}</div></div>`).join('') +
+    `<div class="cur">
+       <div class="chip">E${tp.i+1}/${tp.flat.length}</div>
+       <div class="nm">${cur.n}</div>
+       <div class="tg">${cur.t}${cur.rpe?(' · RPE '+cur.rpe):''}</div>
+       <div class="clk">${tpFmt(now-tp.mark)}</div>
+       <button class="nx" onclick="tpNext()">${tp.i===tp.flat.length-1?'Finish':'Next'}</button>
+     </div>`;
+  const p=$('tp-prev');
+  if(tp.splits.length){ p.style.display='flex'; $('tp-prevt').textContent=tpFmt(tp.splits[tp.splits.length-1].ms); }
+  else p.style.display='none';
+}
+function tpNext(){ if(!tp) return;
+  const now = tp.paused ? tp.pausedAt : Date.now();
+  tp.splits.push({ n:tp.flat[tp.i].n, ms:now-tp.mark });
+  if(tp.i>=tp.flat.length-1) return tpFinish();
+  tp.i++; tp.mark=now; try{ beep(660,0.12); }catch(e){} tpRender();
+}
+function tpUndo(){ if(!tp||!tp.splits.length) return;
+  const last=tp.splits.pop(); tp.i=Math.max(0,tp.i-1);
+  tp.mark=(tp.paused?tp.pausedAt:Date.now())-last.ms; tpRender();
+}
+function tpToggle(){ if(!tp) return;
+  if(tp.paused){ const d=Date.now()-tp.pausedAt; tp.t0+=d; tp.mark+=d; tp.paused=false; $('tp-pp').textContent='❚❚'; }
+  else { tp.pausedAt=Date.now(); tp.paused=true; $('tp-pp').textContent='▶'; }
+  tpRender();
+}
+function tpFinish(){ if(!tp) return;
+  const now = tp.paused ? tp.pausedAt : Date.now();
+  const mins=Math.max(1,Math.round((now-tp.t0)/60000));
+  HF.markDone('sess-'+tp.id+'-'+Date.now(), { name:tp.title, mins:mins });
+  clearInterval(tpTick); tpTick=null; $('tplay').classList.remove('on');
+  nfToast(tp.title+' complete — '+tpFmt(now-tp.t0)+' ✓'); tp=null;
+  try{ if(curTab==='home') renderHome(); }catch(e){}
+}
+
 /* ---- Quick Workouts (FREE) — built from the existing movement library ---- */
 const QW=(title,tag,rpe,equip,desc,blocks)=>({title,tag,rpe,equip:equip||['Bodyweight'],desc,blocks,free:true});
 const QUICK_WORKOUTS=[
@@ -3955,7 +4136,7 @@ function openWorkoutObject(w,label,key,backTab){
   window.timerMode = !!w.timer;
   cur=w; window.curSessionKey=key||('qw-'+(w.title||'').replace(/\W+/g,'')); window.pendingKey=null;
   window.quickBack=backTab||'explore'; window.fromQuick=true; window.fromHome=false; window.fromKL=false; window.fromPlan=false;
-  ['home','explore','coaches','progress','profile','categories','plans','pro','target','list','progdetail'].forEach(id=>{const e=$(id);if(e)e.style.display='none';});
+  hidePanels();
   $('tabs').style.display='none'; $('detail').style.display='block';
   $('d-label').textContent=label||w.tag||'Quick Workout';
   $('d-title').textContent=w.title; $('d-rpe').textContent=w.rpe||'—'; $('d-mins').textContent=totalMins(w);
@@ -4339,7 +4520,7 @@ function programPhases(id){
   return `<div class="sechead" style="margin:20px 0 12px;">Program Phases</div><div class="phaselist2">${ph.map(x=>`<div class="ph2"><div class="n">${x[0]}</div><div class="i"><div class="t">${x[1]}</div><div class="m">${x[2]}</div></div></div>`).join('')}</div>`;
 }
 function openProgramDetail(id,backTab){ const p=CATALOG[id]; if(!p) return; pdBackTab=backTab||(curTab==='progdetail'?pdBackTab:curTab)||'explore';
-  ['home','explore','coaches','progress','profile','categories','plans','pro','target','list','detail'].forEach(x=>{const e=$(x);if(e)e.style.display='none';});
+  hidePanels();
   $('progdetail').style.display='block'; $('tabs').style.display='flex'; curTab='progdetail';
   const st=programState(id), owned=ownsProgram(id), soon=p.access==='soon', paySoon=paymentsSoon(id);
   const cta = soon ? `<button class="buy soon" disabled>Coming Soon</button>`
@@ -4376,7 +4557,7 @@ const FIRST_TIMER=(function(){
 })();
 function openFirstTimer(){
   if(window.klTicker){ clearInterval(window.klTicker); window.klTicker=null; }
-  ['home','explore','store','coaches','progress','profile','categories','plans','pro','target','list','detail'].forEach(x=>{const e=$(x);if(e)e.style.display='none';});
+  hidePanels();
   $('progdetail').style.display='block'; $('tabs').style.display='flex'; curTab='progdetail'; pdBackTab='store';
   renderFirstTimer(); $('screen').scrollTop=0;
 }
