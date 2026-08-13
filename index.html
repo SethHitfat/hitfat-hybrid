@@ -4631,7 +4631,7 @@ function joinProgram(id){ const p=CATALOG[id]; if(!p) return;
   if(!PAYMENTS_LIVE){ nfToast(p.title+' — opening soon. Tap “Notify me”.'); openProgramDetail(id); return; }  // payments not live yet
   $('modal-sheet').innerHTML=`<h3>Join ${p.title}</h3>
     <p class="msub">One-time ${fmtPrice(p.price)} — unlocks inside your HITFAT HYBRID account, forever.</p>
-    <div class="infonote">Secure payment via <b>Bayarcash</b> (FPX, DuitNow QR, cards, eWallet). Your program unlocks after payment is confirmed.</div>
+    <div class="infonote">Secure payment via <b>Bayarcash</b> — FPX online banking. Your program unlocks as soon as the payment is confirmed.</div>
     <div class="modalrow"><button class="cancel" onclick="closeModal()">Not now</button><button class="confirm" onclick="payProgram('${id}')">Pay ${fmtPrice(p.price)}</button></div>`;
   $('modal').classList.add('on');
 }
