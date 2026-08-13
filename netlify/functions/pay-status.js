@@ -27,6 +27,27 @@ exports.handler = async (event) => {
     return json(200, { shown: rows.length, by_status: by, rows });
   }
 
+  // setup check: which portals exist, which channels each has, and which key we are configured to use
+  if (q.portals === '1') {
+    const TOKEN = process.env.BAYARCASH_TOKEN;
+    if (!TOKEN) return json(500, { error: 'no_token' });
+    const r = await fetch(BC + '/portals', { headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN } });
+    if (!r.ok) return json(502, { error: 'http_' + r.status });
+    const d = await r.json();
+    const list = Array.isArray(d) ? d : (d && d.data) || [];
+    const inUse = process.env.BAYARCASH_PORTAL_KEY || '';
+    return json(200, {
+      configured_key_tail: inUse.slice(-6),
+      portals: list.map(p => ({
+        name: p.portal_name || p.name,
+        key_tail: String(p.portal_key || '').slice(-6),
+        is_configured: p.portal_key === inUse,
+        matches_query: q.key ? p.portal_key === q.key : undefined,
+        channels: (p.payment_channels || []).map(c => c.id + ':' + (c.name || c.code))
+      }))
+    });
+  }
+
   // support/debug: what does Bayarcash itself say about one order?
   if (q.verify) {
     const v = await bcStatus(q.verify);
