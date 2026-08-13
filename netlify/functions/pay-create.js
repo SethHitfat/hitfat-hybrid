@@ -9,6 +9,7 @@ const CORS = {
   'Access-Control-Allow-Headers': 'Content-Type'
 };
 const PRICES = { 'first-timer': 19, 'race-8': 99, 'race-12': 149, 'road-kl': 199, 'foundation-13': 79 };
+const CHANNELS = [1, 6];               // 1 = FPX Online Banking, 6 = DuitNow QR
 
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: CORS, body: '' };
@@ -21,6 +22,8 @@ exports.handler = async (event) => {
   const { program_id, user_id, name, email } = b;
   const amount = PRICES[program_id];
   if (!amount || !user_id || !email) return json(400, { error: 'missing_fields' });
+  // only channels this portal actually offers — anything else would fail at Bayarcash
+  const channel = CHANNELS.indexOf(Number(b.channel)) > -1 ? Number(b.channel) : 1;
 
   // one order number per attempt — the callback uses it to find the row again
   const order_number = 'HF' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase();
@@ -40,7 +43,7 @@ exports.handler = async (event) => {
   const amt = Number(amount).toFixed(2);
   const payer_name = (name || 'HITFAT athlete').slice(0, 60);
   const intent = {
-    payment_channel: 1,                        // 1 = FPX
+    payment_channel: channel,                  // 1 = FPX Online Banking · 6 = DuitNow QR
     portal_key: PORTAL,
     order_number,
     amount: amt,
@@ -55,7 +58,7 @@ exports.handler = async (event) => {
   // sorted by key and joined with "|"
   const SECRET = process.env.BAYARCASH_SECRET;
   if (SECRET) {
-    const parts = { payment_channel: 1, order_number, amount: amt, payer_name, payer_email: email };
+    const parts = { payment_channel: channel, order_number, amount: amt, payer_name, payer_email: email };
     const payload = Object.keys(parts).sort().map(k => String(parts[k]).trim()).join('|');
     intent.checksum = require('crypto').createHmac('sha256', SECRET).update(payload).digest('hex');
   }
