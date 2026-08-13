@@ -674,7 +674,8 @@
   .badge.soon{background:rgba(255,255,255,.16);color:#eee;border:1px solid rgba(255,255,255,.2);}
   .badge.done{background:#3a3a3a;color:#fff;}
   .pcard .info{padding:12px 14px 14px;}
-  .pcard .info .t{font-family:'Inter',system-ui,sans-serif;font-size:15.5px;font-weight:600;letter-spacing:-.2px;text-transform:none;color:#fff;line-height:1.25;}
+  .pcard .info .t{display:flex;align-items:center;gap:8px;font-family:'Inter',system-ui,sans-serif;font-size:15.5px;font-weight:600;letter-spacing:-.2px;text-transform:none;color:#fff;line-height:1.25;}
+  .pcard .info .t .ibdg{margin-left:auto;flex:none;}
 
   /* Apple Fitness+ style list row: rounded thumbnail left, text right, chevron */
   .frow{display:flex;align-items:center;gap:14px;padding:9px 0;cursor:pointer;transition:opacity .12s;}
@@ -682,9 +683,10 @@
   .frow .th{position:relative;flex:0 0 132px;width:132px;height:74px;border-radius:14px;overflow:hidden;background:#141414 center/cover no-repeat;}
   .frow .th .bdg{position:absolute;top:6px;right:6px;font-family:'Inter',system-ui,sans-serif;font-size:9px;font-weight:800;letter-spacing:.4px;padding:3px 7px;border-radius:99px;}
   .frow .tx{flex:1;min-width:0;}
-  .frow .tx .t{font-family:'Inter',system-ui,sans-serif;font-size:15.5px;font-weight:600;letter-spacing:-.2px;color:#fff;line-height:1.25;}
+  .frow .tx .t{display:flex;align-items:center;gap:8px;font-family:'Inter',system-ui,sans-serif;font-size:15.5px;font-weight:600;letter-spacing:-.2px;color:#fff;line-height:1.25;}
+  .frow .tx .t .ibdg{margin-left:auto;flex:none;}
   .frow .tx .m{font-size:13px;color:var(--dim);margin-top:3px;line-height:1.3;font-weight:500;}
-  .frow .chev{flex:none;color:#5a5a5a;font-size:17px;line-height:1;}
+  .frow .chev{flex:none;color:#5a5a5a;font-size:17px;line-height:1;margin-left:2px;}
   .pcard .info .m{font-size:11px;color:var(--dim);font-weight:600;margin-top:6px;letter-spacing:.2px;}
   .pcard .info .by{font-size:11px;color:var(--dim2);margin-top:5px;}
   .pcard .info .price{position:absolute;bottom:13px;right:14px;font-family:'Oswald';font-weight:700;font-size:15px;color:var(--hyrox);}
