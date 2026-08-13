@@ -691,6 +691,8 @@
   .frow .tx .t{display:flex;align-items:center;gap:8px;font-family:'Inter',system-ui,sans-serif;font-size:15.5px;font-weight:600;letter-spacing:-.2px;color:#fff;line-height:1.25;}
   .frow .tx .t .ibdg{margin-left:auto;flex:none;}
   .frow .tx .m{font-size:13px;color:var(--dim);margin-top:3px;line-height:1.3;font-weight:500;}
+  .frow .tx .m .pz,.pcard .info .m .pz{color:#fff;font-weight:700;}
+  .frow .tx .m .oz,.pcard .info .m .oz{color:#2ec27e;font-weight:600;}
   .frow .chev{flex:none;color:#5a5a5a;font-size:17px;line-height:1;margin-left:2px;}
   .pcard .info .m{font-size:11px;color:var(--dim);font-weight:600;margin-top:6px;letter-spacing:.2px;}
   .pcard .info .by{font-size:11px;color:var(--dim2);margin-top:5px;}
@@ -4460,6 +4462,14 @@ function shareChallenge(){
 /* ---- cards ---- */
 function badgeCls(st){ return st==='OWNED'?'owned':st==='FREE'?'free':st==='SOON'?'soon':st==='COMPLETED'?'done':'paid'; }
 /* the badge sells the program: show the price until it is bought, then OWNED */
+/* what the metadata line leads with: the price, or the state that replaces it */
+function metaLead(id,st){
+  if(st==='PAID') return '<b class="pz">'+fmtPrice(CATALOG[id].price)+'</b> · ';
+  if(st==='OWNED') return '<b class="oz">✓ Owned</b> · ';
+  if(st==='SOON') return 'Coming soon · ';
+  if(st==='FREE') return '<b class="pz">Free</b> · ';
+  return '';
+}
 function badgeLabel(id,st){
   if(st==='PAID') return fmtPrice(CATALOG[id].price);
   if(st==='FREE') return 'Free';
@@ -4472,15 +4482,15 @@ function programCard(id,full){
   const p=CATALOG[id]; if(!p) return ''; const st=programState(id);
   if(full){   // vertical lists → Apple Fitness+ style row (thumb left, text right, chevron)
     const meta=[p.weeks+' wk', p.days+' days/wk', p.level].join(' · ');
-    const sub=(st==='SOON')?('Coming soon · '+meta):meta;
+    const sub=metaLead(id,st)+meta;
     return `<div class="frow" onclick="openProgramDetail('${id}')">
       <div class="th" style="background-image:url('${p.img}')"></div>
-      <div class="tx"><div class="t">${p.title}<span class="badge ibdg ${badgeCls(st)}">${badgeLabel(id,st)}</span></div><div class="m">${sub}</div></div>
+      <div class="tx"><div class="t">${p.title}</div><div class="m">${sub}</div></div>
       <div class="chev">›</div></div>`;
   }
   return `<div class="pcard" onclick="openProgramDetail('${id}')">
     <div class="top" style="background-image:url('${p.img}')"></div>
-    <div class="info"><div class="t">${p.title}<span class="badge ibdg ${badgeCls(st)}">${badgeLabel(id,st)}</span></div><div class="m">${p.weeks} wk · ${p.days} days/wk · ${p.level}</div></div></div>`;
+    <div class="info"><div class="t">${p.title}</div><div class="m">${metaLead(id,st)}${p.weeks} wk · ${p.days} days/wk</div></div></div>`;
 }
 function quickCard(i){ const q=QUICK_WORKOUTS[i]; return `<div class="qwcard" onclick="openQuickWorkout(${i})"><span class="badge free">Free</span><div class="t">${q.title}</div><div class="m">${q.tag} · ${totalMins(q)} min · RPE ${q.rpe}</div></div>`; }
 function coachCard(id){ const c=COACHES[id]; const n=coachPrograms(id).length; const ini=c.name.replace('Coach ','')[0];
