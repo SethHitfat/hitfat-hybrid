@@ -1,0 +1,62 @@
+// HITFAT — create a Bayarcash payment intent (server-side so the access token never reaches the browser).
+// Env: BAYARCASH_TOKEN (Personal Access Token), BAYARCASH_PORTAL_KEY, SUPABASE_URL, SUPABASE_SERVICE_KEY
+const API = 'https://api.console.bayar.cash/v3/payment-intents';
+const SITE = 'https://hybrid.hitfat.io';
+const CORS = {
+  'Content-Type': 'application/json',
+  'Access-Control-Allow-Origin': SITE,
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type'
+};
+const PRICES = { 'first-timer': 19, 'race-8': 99, 'race-12': 149, 'road-kl': 199, 'foundation-13': 79 };
+
+exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: CORS, body: '' };
+  const TOKEN = process.env.BAYARCASH_TOKEN, PORTAL = process.env.BAYARCASH_PORTAL_KEY;
+  const SB_URL = process.env.SUPABASE_URL, SB_KEY = process.env.SUPABASE_SERVICE_KEY;
+  if (!TOKEN || !PORTAL) return json(500, { error: 'not_configured' });
+
+  let b = {};
+  try { b = JSON.parse(event.body || '{}'); } catch (e) {}
+  const { program_id, user_id, name, email } = b;
+  const amount = PRICES[program_id];
+  if (!amount || !user_id || !email) return json(400, { error: 'missing_fields' });
+
+  // one order number per attempt — the callback uses it to find the row again
+  const order_number = 'HF' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase();
+
+  // record the attempt first, so a callback can never arrive for an unknown order
+  if (SB_URL && SB_KEY) {
+    const r = await fetch(SB_URL + '/rest/v1/payments', {
+      method: 'POST',
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ order_number, user_id, program_id, amount, status: 'pending' })
+    });
+    if (!r.ok) return json(500, { error: 'order_record_failed', detail: await r.text() });
+  }
+
+  try {
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
+      body: JSON.stringify({
+        payment_channel: 1,                    // 1 = FPX
+        portal_key: PORTAL,
+        order_number,
+        amount,                                // ringgit
+        payer_name: (name || 'HITFAT athlete').slice(0, 60),
+        payer_email: email,
+        return_url: SITE + '/?paid=' + encodeURIComponent(program_id),
+        callback_url: SITE + '/.netlify/functions/pay-callback',
+        metadata: program_id
+      })
+    });
+    const d = await res.json();
+    if (!res.ok || !d || !d.url) return json(502, { error: 'intent_failed', detail: d });
+    return json(200, { url: d.url, order_number });
+  } catch (e) {
+    return json(500, { error: 'exception', detail: String(e && e.message) });
+  }
+};
+
+function json(code, obj) { return { statusCode: code, headers: CORS, body: JSON.stringify(obj) }; }
