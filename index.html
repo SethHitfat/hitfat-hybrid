@@ -667,12 +667,17 @@
   .pcard .top::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 45%,rgba(10,10,10,.5));}
   .pcard .top .edge{position:absolute;top:0;left:0;width:4px;height:100%;background:var(--hyrox);z-index:2;}
   .pcard .badge{position:absolute;top:10px;right:11px;z-index:3;font-family:'Oswald';font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 9px;border-radius:99px;}
-  .ibdg{display:inline-block;vertical-align:1px;font-family:'Inter',system-ui,sans-serif;font-size:9.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;padding:3px 7px;border-radius:99px;margin-left:8px;white-space:nowrap;}
   .badge.free{background:#1c7d3a;color:#fff;}
   .badge.paid{background:var(--hyrox);color:var(--hyrox-ink);}
   .badge.owned{background:#0e6b8c;color:#fff;}
   .badge.soon{background:rgba(255,255,255,.16);color:#eee;border:1px solid rgba(255,255,255,.2);}
   .badge.done{background:#3a3a3a;color:#fff;}
+  .badge.ibdg{display:inline-block;background:none;border:none;padding:0;margin-left:8px;font-family:'Inter',system-ui,sans-serif;
+    font-size:13.5px;font-weight:700;letter-spacing:-.1px;text-transform:none;white-space:nowrap;}
+  .badge.ibdg.paid,.badge.ibdg.free{color:var(--hyrox);}
+  .badge.ibdg.owned{color:#2ec27e;font-size:12.5px;font-weight:600;}
+  .badge.ibdg.soon,.badge.ibdg.done{color:var(--dim);font-size:12.5px;font-weight:600;}
+
   .pcard .info{padding:12px 14px 14px;}
   .pcard .info .t{display:flex;align-items:center;gap:8px;font-family:'Inter',system-ui,sans-serif;font-size:15.5px;font-weight:600;letter-spacing:-.2px;text-transform:none;color:#fff;line-height:1.25;}
   .pcard .info .t .ibdg{margin-left:auto;flex:none;}
@@ -3674,7 +3679,7 @@ function renderProfile(){
   $('pf-programs').innerHTML=list.map(id=>{ const c=CATALOG[id]; const st=programState(id);
     return `<div class="pfrow" style="cursor:pointer;" onclick="${ownsProgram(id)?`openProgramContent('${id}')`:`switchTab('store');openProgramDetail('${id}','profile')`}">
       <span class="l" style="color:#fff;font-weight:600;">${c.title}</span>
-      <span class="v"><span class="badge ${badgeCls(st)}" style="position:static;">${badgeLabel(id,st)}</span></span></div>`; }).join('');
+      <span class="v"><span class="badge ibdg ${badgeCls(st)}" style="margin-left:0;">${badgeLabel(id,st)}</span></span></div>`; }).join('');
   // Purchases
   const pur=(HF.data.purchases||[]).slice().reverse();
   $('pf-purchases').innerHTML = pur.length ? pur.map(x=>{ const d=new Date(x.date);
@@ -4455,7 +4460,14 @@ function shareChallenge(){
 /* ---- cards ---- */
 function badgeCls(st){ return st==='OWNED'?'owned':st==='FREE'?'free':st==='SOON'?'soon':st==='COMPLETED'?'done':'paid'; }
 /* the badge sells the program: show the price until it is bought, then OWNED */
-function badgeLabel(id,st){ return st==='PAID' ? fmtPrice(CATALOG[id].price) : st; }
+function badgeLabel(id,st){
+  if(st==='PAID') return fmtPrice(CATALOG[id].price);
+  if(st==='FREE') return 'Free';
+  if(st==='OWNED') return '✓ Owned';
+  if(st==='SOON') return 'Soon';
+  if(st==='COMPLETED') return 'Done';
+  return st;
+}
 function programCard(id,full){
   const p=CATALOG[id]; if(!p) return ''; const st=programState(id);
   if(full){   // vertical lists → Apple Fitness+ style row (thumb left, text right, chevron)
