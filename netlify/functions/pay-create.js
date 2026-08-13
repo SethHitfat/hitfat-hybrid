@@ -35,21 +35,36 @@ exports.handler = async (event) => {
     if (!r.ok) return json(500, { error: 'order_record_failed', detail: await r.text() });
   }
 
+  // Ringgit with 2 decimals — Bayarcash responses and the existing BCL forms both use "199.00",
+  // so sending a bare 19 risks being read as cents.
+  const amt = Number(amount).toFixed(2);
+  const payer_name = (name || 'HITFAT athlete').slice(0, 60);
+  const intent = {
+    payment_channel: 1,                        // 1 = FPX
+    portal_key: PORTAL,
+    order_number,
+    amount: amt,
+    payer_name,
+    payer_email: email,
+    return_url: SITE + '/?paid=' + encodeURIComponent(program_id),
+    callback_url: SITE + '/.netlify/functions/pay-callback',
+    metadata: program_id
+  };
+
+  // optional but recommended: HMAC over payment_channel/order_number/amount/payer_name/payer_email,
+  // sorted by key and joined with "|"
+  const SECRET = process.env.BAYARCASH_SECRET;
+  if (SECRET) {
+    const parts = { payment_channel: 1, order_number, amount: amt, payer_name, payer_email: email };
+    const payload = Object.keys(parts).sort().map(k => String(parts[k]).trim()).join('|');
+    intent.checksum = require('crypto').createHmac('sha256', SECRET).update(payload).digest('hex');
+  }
+
   try {
     const res = await fetch(API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN },
-      body: JSON.stringify({
-        payment_channel: 1,                    // 1 = FPX
-        portal_key: PORTAL,
-        order_number,
-        amount,                                // ringgit
-        payer_name: (name || 'HITFAT athlete').slice(0, 60),
-        payer_email: email,
-        return_url: SITE + '/?paid=' + encodeURIComponent(program_id),
-        callback_url: SITE + '/.netlify/functions/pay-callback',
-        metadata: program_id
-      })
+      body: JSON.stringify(intent)
     });
     const d = await res.json();
     if (!res.ok || !d || !d.url) return json(502, { error: 'intent_failed', detail: d });
