@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>HITFAT Rep Lab — Wall Ball Depth Analysis</title>
+<title>HITFAT Rep Lab — Wall Ball Biomechanics</title>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -11,32 +11,52 @@
 <meta name="theme-color" content="#000000">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
-  :root{ --bg:#000; --surface:#0e0e0e; --surface2:#161616; --line:#262626; --txt:#fff; --dim:#9a9a9a; --dim2:#6a6a6a; --hyrox:#FFE000; --ink:#141000; --ok:#2ec27e; --grey:#8a8a8a; --bad:#ff5a5a; }
+  :root{ --bg:#000; --surface:#0e0e0e; --surface2:#161616; --line:#232323; --txt:#fff; --dim:#9a9a9a; --dim2:#6a6a6a;
+         --hyrox:#FFE000; --ink:#141000; --ok:#2ec27e; --grey:#8a8a8a; --bad:#ff5a5a; --cool:#30D5C8; }
   *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
   html,body{height:100%;}
-  body{background:radial-gradient(1000px 500px at 85% -10%,#1c1905 0%,transparent 55%),var(--bg);color:var(--txt);font-family:'Inter',system-ui,sans-serif;overflow:hidden;}
+  body{background:radial-gradient(1000px 500px at 85% -10%,#1c1905 0%,transparent 55%),var(--bg);color:var(--txt);
+       font-family:'Inter',system-ui,sans-serif;overflow:hidden;}
   .app{position:fixed;inset:0;margin:0 auto;max-width:520px;display:flex;flex-direction:column;overflow:hidden;}
-  .brandbar{display:flex;align-items:center;justify-content:space-between;padding:calc(14px + env(safe-area-inset-top,0px)) 18px 12px;flex:none;border-bottom:1px solid var(--line);}
-  .logo{font-family:'Oswald';font-weight:700;font-size:16px;letter-spacing:3px;line-height:.95;}
-  .logo b{color:var(--hyrox);} .logo small{display:block;font-size:8px;letter-spacing:4px;color:var(--dim);font-weight:500;margin-top:3px;}
-  .badge{font-family:'Oswald';font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:5px 10px;border-radius:99px;background:#1c7d3a;color:#fff;}
+
+  /* topbar — matches the app wordmark (Inter 800, no Oswald caps) */
+  .brandbar{display:flex;align-items:center;justify-content:space-between;
+            padding:calc(14px + env(safe-area-inset-top,0px)) 18px 12px;flex:none;border-bottom:1px solid var(--line);}
+  .logo{font-weight:800;font-size:17px;letter-spacing:.5px;line-height:1.1;}
+  .logo .y{color:var(--hyrox);}
+  .logo small{display:block;font-size:11px;letter-spacing:.2px;color:var(--dim);font-weight:500;margin-top:2px;}
+  .badge{font-family:'Oswald';font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+         padding:5px 10px;border-radius:99px;background:rgba(46,194,126,.16);color:#5ee0a0;border:1px solid rgba(46,194,126,.3);}
   .scr{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
   .scr::-webkit-scrollbar{display:none;}
   .pad{padding:20px 20px calc(28px + env(safe-area-inset-bottom,0px));}
-  h1{font-family:'Oswald';font-weight:700;font-size:30px;line-height:1.02;letter-spacing:.4px;text-transform:uppercase;margin-bottom:8px;}
+
+  /* type — Inter 800 sentence case, same as Home/Explore */
+  h1{font-weight:800;font-size:27px;line-height:1.16;letter-spacing:-.4px;margin-bottom:9px;}
   h1 .y{color:var(--hyrox);}
-  .sub{color:var(--dim);font-size:14px;line-height:1.55;margin-bottom:22px;}
-  .card{background:linear-gradient(155deg,#1a1a1a 0%,#0e0e0e 60%,#080808 100%);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:14px;}
-  .card .h{font-family:'Oswald';font-size:12px;letter-spacing:2px;color:var(--hyrox);font-weight:700;text-transform:uppercase;margin-bottom:12px;}
+  h2{font-weight:800;font-size:20px;letter-spacing:-.2px;margin:26px 2px 12px;}
+  .sub{color:var(--dim);font-size:14.5px;line-height:1.55;margin-bottom:20px;}
+  .kick{font-family:'Oswald';font-size:11px;letter-spacing:2px;color:var(--hyrox);font-weight:700;text-transform:uppercase;margin-bottom:12px;}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:12px;}
   .step{display:flex;gap:13px;align-items:flex-start;margin-bottom:13px;}
-  .step .n{font-family:'Oswald';font-size:15px;font-weight:700;color:var(--ink);background:var(--hyrox);min-width:26px;height:26px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;}
-  .step .t{font-size:13.5px;color:#ddd;line-height:1.5;}
-  .step .t b{color:#fff;}
-  .btn{width:100%;background:var(--hyrox);color:var(--ink)!important;border:none;border-radius:99px;padding:17px;font-family:'Oswald';font-weight:700;font-size:16px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;}
+  .step:last-child{margin-bottom:0;}
+  .step .n{font-family:'Oswald';font-size:14px;font-weight:700;color:var(--ink);background:var(--hyrox);
+           min-width:24px;height:24px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto;margin-top:1px;}
+  .step .t{font-size:14px;color:#cfcfcf;line-height:1.5;}
+  .step .t b{color:#fff;font-weight:600;}
+  .btn{width:100%;background:var(--hyrox);color:var(--ink)!important;border:none;border-radius:99px;padding:17px;
+       font-family:'Oswald';font-weight:700;font-size:16px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;}
   .btn:active{transform:scale(.985);}
   .btn.sec{background:var(--surface2);color:#fff!important;border:1px solid var(--line);}
   .btn:disabled{opacity:.5;}
-  .note{font-size:11.5px;color:var(--dim2);line-height:1.5;text-align:center;margin-top:14px;}
+  .note{font-size:12px;color:var(--dim2);line-height:1.5;text-align:center;margin-top:14px;}
+
+  /* what it measures — quiet rows, gray chevron-free, same language as the app lists */
+  .mrow{display:flex;gap:12px;align-items:center;padding:12px 14px;background:var(--surface);border:1px solid var(--line);
+        border-radius:14px;margin-bottom:8px;}
+  .mrow .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:15px;flex:0 0 auto;}
+  .mrow .t{font-size:14.5px;font-weight:600;}
+  .mrow .m{font-size:12.5px;color:var(--dim);margin-top:2px;line-height:1.4;}
 
   /* live */
   #live{display:none;position:absolute;inset:0;background:#000;flex-direction:column;}
@@ -47,69 +67,110 @@
   /* overlay must mirror the same way as the video so the skeleton lands on the body */
   #overlay{position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1);}
   #overlay.rear{transform:none;}
-  .hud{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:calc(14px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px));}
-  .hud .top{display:flex;justify-content:space-between;align-items:flex-start;}
-  .repbox{background:rgba(0,0,0,.55);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:10px 18px;text-align:center;}
-  .repbox b{font-family:'Oswald';font-size:52px;font-weight:700;line-height:.9;color:#fff;display:block;}
-  .repbox small{font-size:10px;letter-spacing:2px;color:var(--hyrox);text-transform:uppercase;font-weight:700;}
-  .mini{display:flex;gap:8px;}
-  .mchip{background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:8px 12px;text-align:center;}
-  .mchip b{font-family:'Oswald';font-size:18px;color:var(--hyrox);display:block;line-height:1;}
-  .mchip small{font-size:8px;letter-spacing:1px;color:var(--dim);text-transform:uppercase;}
-  .status{align-self:center;font-family:'Oswald';font-size:20px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:10px 24px;border-radius:99px;background:rgba(0,0,0,.6);border:1.5px solid var(--line);color:var(--dim);transition:all .1s;}
+  .hud{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;
+       padding:calc(14px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px));}
+  .hud .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .repbox{background:rgba(0,0,0,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);
+          border-radius:16px;padding:9px 16px;text-align:center;}
+  .repbox b{font-family:'Oswald';font-size:46px;font-weight:700;line-height:.92;color:#fff;display:block;}
+  .repbox small{font-size:9.5px;letter-spacing:2px;color:var(--hyrox);text-transform:uppercase;font-weight:700;}
+  .mini{display:flex;flex-direction:column;gap:6px;align-items:flex-end;}
+  .mchip{background:rgba(0,0,0,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);
+         border-radius:11px;padding:6px 10px;display:flex;align-items:center;gap:7px;min-width:104px;justify-content:space-between;}
+  .mchip small{font-size:8.5px;letter-spacing:1.4px;color:var(--dim);text-transform:uppercase;font-weight:700;}
+  .mchip b{font-family:'Oswald';font-size:16px;line-height:1;color:#fff;}
+  .mchip b.deg::after{content:'°';font-size:11px;color:var(--dim);}
+  .mchip.hot b{color:var(--bad);} .mchip.good b{color:var(--ok);}
+  .status{align-self:center;font-family:'Oswald';font-size:19px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+          padding:9px 22px;border-radius:99px;background:rgba(0,0,0,.6);border:1.5px solid var(--line);color:var(--dim);transition:all .1s;}
   .status.go{color:var(--hyrox);border-color:var(--hyrox);}
   .status.valid{color:#fff;background:var(--ok);border-color:var(--ok);}
   .status.grey{color:#fff;background:var(--grey);border-color:var(--grey);}
   .controls{display:flex;gap:10px;pointer-events:auto;}
   .controls .btn{flex:1;padding:15px;}
-  .gauge{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:14px;height:40%;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.15);border-radius:99px;overflow:hidden;pointer-events:none;}
+  .gauge{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:14px;height:40%;background:rgba(0,0,0,.5);
+         border:1px solid rgba(255,255,255,.15);border-radius:99px;overflow:hidden;pointer-events:none;}
   .gauge i{position:absolute;left:0;right:0;bottom:0;background:var(--hyrox);border-radius:99px;transition:height .05s;}
   .gauge .line{position:absolute;left:-6px;right:-6px;height:2px;background:var(--ok);}
 
   /* result */
   #result{display:none;}
   #result.on{display:block;}
-  .rcard{position:relative;border-radius:20px;overflow:hidden;border:1px solid var(--line);background:radial-gradient(600px 300px at 80% -10%,#26220a 0%,transparent 55%),linear-gradient(160deg,#141414 0%,#0a0a0a 100%);padding:22px 20px;}
+  .rcard{position:relative;border-radius:20px;overflow:hidden;border:1px solid var(--line);
+         background:radial-gradient(600px 300px at 80% -10%,#26220a 0%,transparent 55%),linear-gradient(160deg,#141414 0%,#0a0a0a 100%);
+         padding:22px 20px;}
   .rcard .rb{display:flex;align-items:center;justify-content:space-between;}
-  .rcard .rb .l{font-family:'Oswald';font-weight:700;font-size:14px;letter-spacing:2px;}
-  .rcard .rb .l b{color:var(--hyrox);}
-  .rcard .rb .d{font-size:10px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;}
-  .bigscore{text-align:center;margin:18px 0 6px;}
-  .bigscore .v{font-family:'Oswald';font-weight:700;font-size:88px;line-height:.9;color:var(--hyrox);}
-  .bigscore .l{font-size:11px;letter-spacing:3px;color:var(--dim);text-transform:uppercase;font-weight:700;margin-top:2px;}
-  .rgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin:18px 0 6px;}
-  .rgrid .c{background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:13px;padding:13px 8px;text-align:center;}
-  .rgrid .c b{font-family:'Oswald';font-size:24px;color:#fff;display:block;line-height:1;}
-  .rgrid .c small{font-size:9px;letter-spacing:.5px;color:var(--dim);text-transform:uppercase;margin-top:6px;display:block;}
-  .repbar{display:flex;align-items:flex-end;gap:3px;height:52px;margin:16px 0 4px;padding:8px;background:rgba(0,0,0,.3);border-radius:12px;border:1px solid var(--line);overflow-x:auto;}
+  .rcard .rb .l{font-weight:800;font-size:14.5px;letter-spacing:.2px;}
+  .rcard .rb .l .y{color:var(--hyrox);}
+  .rcard .rb .d{font-size:11px;color:var(--dim);letter-spacing:.4px;}
+  .bigscore{text-align:center;margin:16px 0 4px;}
+  .bigscore .v{font-family:'Oswald';font-weight:700;font-size:84px;line-height:.9;color:var(--hyrox);}
+  .bigscore .l{font-size:11px;letter-spacing:2.5px;color:var(--dim);text-transform:uppercase;font-weight:700;margin-top:4px;}
+  .bigscore .g{font-size:13px;color:#fff;font-weight:600;margin-top:8px;}
+  .rgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin:18px 0 4px;}
+  .rgrid .c{background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:13px;padding:12px 6px;text-align:center;}
+  .rgrid .c b{font-family:'Oswald';font-size:23px;color:#fff;display:block;line-height:1;}
+  .rgrid .c small{font-size:9px;letter-spacing:.4px;color:var(--dim);text-transform:uppercase;margin-top:6px;display:block;}
+  .repbar{display:flex;align-items:flex-end;gap:3px;height:56px;margin:16px 0 4px;padding:8px;background:rgba(0,0,0,.3);
+          border-radius:12px;border:1px solid var(--line);overflow-x:auto;}
   .repbar i{flex:0 0 7px;background:var(--ok);border-radius:2px;min-height:4px;}
   .repbar i.grey{background:var(--grey);} .repbar i.bad{background:var(--bad);}
-  .verline{font-size:11px;color:var(--dim);text-align:center;margin-top:10px;}
+  .verline{font-size:11.5px;color:var(--dim);text-align:center;margin-top:10px;}
   .verline b{color:var(--hyrox);}
-  .actions{margin-top:16px;} .actions .btn{margin-bottom:10px;}
+
+  /* biomechanics report */
+  .bio{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:6px 16px;margin-bottom:12px;}
+  .brow{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.06);}
+  .brow:last-child{border-bottom:none;}
+  .brow .t{flex:1;min-width:0;}
+  .brow .t .n{font-size:14.5px;font-weight:600;}
+  .brow .t .m{font-size:12.5px;color:var(--dim);margin-top:2px;line-height:1.4;}
+  .brow .v{font-family:'Oswald';font-size:21px;font-weight:700;text-align:right;line-height:1;}
+  .brow .v small{display:block;font-family:'Inter';font-size:9px;letter-spacing:1px;color:var(--dim);
+                 text-transform:uppercase;font-weight:700;margin-top:4px;}
+  .v.ok{color:var(--ok);} .v.warn{color:var(--hyrox);} .v.bad{color:var(--bad);} .v.n{color:#fff;}
+  .meter{height:5px;border-radius:99px;background:rgba(255,255,255,.09);overflow:hidden;margin-top:8px;}
+  .meter i{display:block;height:100%;border-radius:99px;background:var(--hyrox);}
+  .cue{display:flex;gap:11px;align-items:flex-start;padding:13px 14px;background:var(--surface);border:1px solid var(--line);
+       border-radius:14px;margin-bottom:8px;font-size:14px;line-height:1.5;color:#dcdcdc;}
+  .cue .d{width:8px;height:8px;border-radius:50%;flex:0 0 auto;margin-top:6px;background:var(--hyrox);}
+  .cue.good .d{background:var(--ok);} .cue.bad .d{background:var(--bad);}
+  .cue b{color:#fff;font-weight:600;}
+  .chart{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:12px;}
+  .chart .cl{display:flex;justify-content:space-between;font-size:11px;color:var(--dim2);margin-top:8px;}
+  .actions{margin-top:18px;} .actions .btn{margin-bottom:10px;}
   .err{color:var(--bad);font-size:13px;text-align:center;margin-top:14px;line-height:1.5;}
   .loading{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.75);z-index:5;}
   .loading .box{text-align:center;} .loading .box .s{font-family:'Oswald';color:var(--hyrox);letter-spacing:2px;font-size:14px;}
-  .spin{width:34px;height:34px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--hyrox);border-radius:50%;margin:0 auto 12px;animation:sp 1s linear infinite;}
+  .spin{width:34px;height:34px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--hyrox);border-radius:50%;
+        margin:0 auto 12px;animation:sp 1s linear infinite;}
   @keyframes sp{to{transform:rotate(360deg);}}
 </style>
 </head>
 <body>
 <div class="app">
   <div class="brandbar">
-    <div class="logo">HITFAT <b>REP LAB</b><small>WALL BALL DEPTH ANALYSIS</small></div>
+    <div class="logo">HITFAT <span class="y">REP LAB</span><small>Wall ball biomechanics</small></div>
     <span class="badge">Free · AI</span>
   </div>
 
   <!-- INTRO -->
   <div class="scr" id="intro">
     <div class="pad">
-      <h1>Judge your <span class="y">wall ball</span> depth</h1>
-      <div class="sub">AI pose analysis checks every rep against the HYROX standard — <b>hips below the knee</b> (rulebook 8.8.6). Live count, depth score, shareable result.</div>
+      <h1>Judge your <span class="y">wall ball</span> mechanics</h1>
+      <div class="sub">On-device pose analysis measures every rep against the HYROX depth standard — <b>hips below the knee</b> (rulebook 8.8.6) — and reads the joint angles behind it.</div>
+
+      <div class="mrow"><div class="ic" style="background:rgba(255,224,0,.14);color:#FFE000">📐</div>
+        <div><div class="t">Joint angles</div><div class="m">Knee, hip and trunk tracked live, degree by degree</div></div></div>
+      <div class="mrow"><div class="ic" style="background:rgba(46,194,126,.14);color:#2ec27e">📏</div>
+        <div><div class="t">Depth verdict</div><div class="m">Hip vs knee height on every rep — valid, grey zone or high</div></div></div>
+      <div class="mrow"><div class="ic" style="background:rgba(48,213,200,.14);color:#30D5C8">⏱</div>
+        <div><div class="t">Tempo &amp; symmetry</div><div class="m">Down/up seconds per rep and left–right balance</div></div></div>
+
+      <h2>Set up for accuracy</h2>
       <div class="card">
-        <div class="h">Set up for accuracy</div>
         <div class="step"><div class="n">1</div><div class="t">Prop your phone at <b>hip height</b>, ~2–3m away, so your <b>full body</b> is in frame.</div></div>
-        <div class="step"><div class="n">2</div><div class="t">A <b>side angle</b> is most accurate for depth. Front-on still counts reps.</div></div>
+        <div class="step"><div class="n">2</div><div class="t">A <b>side angle</b> reads depth and trunk lean best. Front-on still counts reps and symmetry.</div></div>
         <div class="step"><div class="n">3</div><div class="t">Good lighting. Hold the wall ball as normal and squat to depth each rep.</div></div>
       </div>
       <button class="btn" id="startBtn" onclick="start()">▶ Start Camera</button>
@@ -129,8 +190,10 @@
         <div class="top">
           <div class="repbox"><b id="repN">0</b><small>Reps</small></div>
           <div class="mini">
-            <div class="mchip"><b id="validN">0</b><small>Valid</small></div>
-            <div class="mchip"><b id="greyN">0</b><small>Grey</small></div>
+            <div class="mchip"><small>Knee</small><b class="deg" id="kneeA">—</b></div>
+            <div class="mchip"><small>Hip</small><b class="deg" id="hipA">—</b></div>
+            <div class="mchip"><small>Trunk</small><b class="deg" id="trunkA">—</b></div>
+            <div class="mchip"><small>Valid</small><b id="validN">0</b></div>
           </div>
         </div>
         <div class="status" id="status">GET READY</div>
@@ -146,8 +209,8 @@
   <div class="scr" id="result">
     <div class="pad">
       <div class="rcard" id="rcard">
-        <div class="rb"><div class="l">HITFAT <b>REP LAB</b></div><div class="d" id="rdate">—</div></div>
-        <div class="bigscore"><div class="v" id="rscore">0</div><div class="l">Depth Score</div></div>
+        <div class="rb"><div class="l">HITFAT <span class="y">REP LAB</span></div><div class="d" id="rdate">—</div></div>
+        <div class="bigscore"><div class="v" id="rscore">0</div><div class="l">Depth Score</div><div class="g" id="rgrade">—</div></div>
         <div class="rgrid">
           <div class="c"><b id="rvalid">0</b><small>Valid Reps</small></div>
           <div class="c"><b id="rdepth">0%</b><small>Avg Depth</small></div>
@@ -156,6 +219,16 @@
         <div class="repbar" id="rbar"></div>
         <div class="verline">Verified to HYROX depth standard — <b>hips below knee</b></div>
       </div>
+
+      <h2>Biomechanics</h2>
+      <div class="bio" id="bioRows"></div>
+
+      <h2>Depth per rep</h2>
+      <div class="chart"><div id="depthChart"></div><div class="cl"><span>Rep 1</span><span id="chartEnd">Rep —</span></div></div>
+
+      <h2>Coaching notes</h2>
+      <div id="cues"></div>
+
       <div class="actions">
         <button class="btn" onclick="shareResult()">Share Result</button>
         <button class="btn sec" onclick="restart()">Try Again</button>
@@ -173,27 +246,43 @@
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
 <script>
 /* ============================================================
-   HITFAT REP LAB — wall ball depth judge
-   Pose (MoveNet) → hip vs knee → rep count + depth score.
+   HITFAT REP LAB — wall ball biomechanics
+   Pose (MoveNet) → depth verdict + joint angles, tempo, symmetry
+   and ball-path drift, reported per rep.
    Tunable constants below for on-device calibration.
    ============================================================ */
 const $=id=>document.getElementById(id);
 const video=$('video'), overlay=$('overlay'), ctx=overlay.getContext('2d');
 let detector=null, stream=null, running=false, raf=null, facing='user';
-let reps=0, valid=0, grey=0, repDepths=[]; // repDepths: {score, cls}
-let state='up', bottom=-1, seenBottom=false;
+let reps=0, valid=0, grey=0, repData=[];
+let state='up', bottom=-1, live={};
 
-// MoveNet keypoint indices (COCO): 5 Lsh 6 Rsh 11 Lhip 12 Rhip 13 Lknee 14 Rknee 15 Lank 16 Rank
-const K={LSH:5,RSH:6,LHIP:11,RHIP:12,LKNEE:13,RKNEE:14,LANK:15,RANK:16};
+// MoveNet keypoint indices (COCO): 5 Lsh 6 Rsh 9 Lwr 10 Rwr 11 Lhip 12 Rhip 13 Lknee 14 Rknee 15 Lank 16 Rank
+const K={LSH:5,RSH:6,LWR:9,RWR:10,LHIP:11,RHIP:12,LKNEE:13,RKNEE:14,LANK:15,RANK:16};
 const MINSCORE=0.35;            // keypoint confidence
 const VALID_TH=0.0;             // hip-below-knee (normalized) → valid at/below 0
 const GREY_BAND=0.06;           // ± band around threshold = "grey zone"
+const DEEP_KNEE=95;             // knee angle at the bottom we call a full squat
+const LEAN_OK=40;               // trunk lean from vertical we consider tall enough
+const SYM_OK=10;                // left/right knee difference that still reads as balanced
 
 function pt(kp,i){ return kp[i]; }
+function ok(p){ return p && p.score>MINSCORE; }
 function usableSide(kp){
   const l=(pt(kp,K.LHIP).score+pt(kp,K.LKNEE).score)/2, r=(pt(kp,K.RHIP).score+pt(kp,K.RKNEE).score)/2;
-  return r>l ? {hip:K.RHIP,knee:K.RKNEE,ank:K.RANK,sh:K.RSH} : {hip:K.LHIP,knee:K.LKNEE,ank:K.LANK,sh:K.LSH};
+  return r>l ? {hip:K.RHIP,knee:K.RKNEE,ank:K.RANK,sh:K.RSH,wr:K.RWR} : {hip:K.LHIP,knee:K.LKNEE,ank:K.LANK,sh:K.LSH,wr:K.LWR};
 }
+
+/* ---- geometry ---- */
+function angleAt(a,b,c){                       // interior angle at b, in degrees
+  const abx=a.x-b.x, aby=a.y-b.y, cbx=c.x-b.x, cby=c.y-b.y;
+  const m=(Math.hypot(abx,aby)*Math.hypot(cbx,cby))||1;
+  return Math.acos(Math.max(-1,Math.min(1,(abx*cbx+aby*cby)/m)))*180/Math.PI;
+}
+function leanFromVertical(hip,sh){              // 0° = perfectly upright torso
+  return Math.abs(Math.atan2(sh.x-hip.x, -(sh.y-hip.y))*180/Math.PI);
+}
+function mid(a,b){ return {x:(a.x+b.x)/2, y:(a.y+b.y)/2, score:Math.min(a.score,b.score)}; }
 
 async function initDetector(){
   await tf.setBackend('webgl'); await tf.ready();
@@ -214,8 +303,8 @@ async function start(){
     return;
   }
   $('loading').style.display='none';
-  resize(); running=true; reps=0;valid=0;grey=0;repDepths=[];state='up';seenBottom=false;smoothKP=null;
-  $('repN').textContent='0';$('validN').textContent='0';$('greyN').textContent='0';
+  resize(); running=true; reps=0;valid=0;grey=0;repData=[];state='up';smoothKP=null;trail=[];
+  $('repN').textContent='0';$('validN').textContent='0';
   loop();
 }
 function resize(){ overlay.width=video.videoWidth||overlay.clientWidth; overlay.height=video.videoHeight||overlay.clientHeight; }
@@ -237,88 +326,261 @@ function smooth(kp){
 }
 // COCO/MoveNet connections: arms, torso, legs (skip face for a clean look)
 const SKELETON=[[5,7],[7,9],[6,8],[8,10],[5,6],[5,11],[6,12],[11,12],[11,13],[13,15],[12,14],[14,16]];
+
+/* ball path — the wrist midpoint traces where the ball travels */
+let trail=[];
+function pushTrail(p,torso){
+  if(!p || p.score<MINSCORE) return;
+  trail.push({x:p.x,y:p.y,t:Date.now(),torso});
+  if(trail.length>70) trail.shift();
+}
+
+/* every frame: measure, judge, draw */
 function analyze(kp0){
   const kp=smooth(kp0);
-  const s=usableSide(kp), hip=pt(kp,s.hip), knee=pt(kp,s.knee), sh=pt(kp,s.sh);
+  const s=usableSide(kp), hip=pt(kp,s.hip), knee=pt(kp,s.knee), sh=pt(kp,s.sh), ank=pt(kp,s.ank);
+  const torso=Math.max(30, Math.abs(hip.y-(ok(sh)?sh.y:hip.y-100)));
+
+  // live angles (only when the joints are actually visible)
+  live.knee = (ok(hip)&&ok(knee)&&ok(ank)) ? angleAt(hip,knee,ank) : null;
+  live.hip  = (ok(sh)&&ok(hip)&&ok(knee))  ? angleAt(sh,hip,knee)  : null;
+  live.lean = (ok(sh)&&ok(hip))            ? leanFromVertical(hip,sh) : null;
+  live.symL = (ok(kp[K.LHIP])&&ok(kp[K.LKNEE])&&ok(kp[K.LANK])) ? angleAt(kp[K.LHIP],kp[K.LKNEE],kp[K.LANK]) : null;
+  live.symR = (ok(kp[K.RHIP])&&ok(kp[K.RKNEE])&&ok(kp[K.RANK])) ? angleAt(kp[K.RHIP],kp[K.RKNEE],kp[K.RANK]) : null;
+
+  const wrist = (ok(kp[K.LWR])&&ok(kp[K.RWR])) ? mid(kp[K.LWR],kp[K.RWR]) : (ok(kp[s.wr])?kp[s.wr]:null);
+  pushTrail(wrist,torso);
+
   drawScene(kp,s);
-  if(hip.score<MINSCORE||knee.score<MINSCORE){ setStatus('MOVE INTO FRAME',''); return; }
+  paintChips();
+
+  if(!ok(hip)||!ok(knee)){ setStatus('MOVE INTO FRAME',''); return; }
   // scale-invariant depth: (hipY - kneeY) / torso(shoulder→hip). >0 = hip below knee.
-  const torso=Math.max(30, Math.abs(hip.y - (sh.score>MINSCORE?sh.y:hip.y-100)) );
-  const depth=(hip.y - knee.y)/torso; // normalized
+  const depth=(hip.y - knee.y)/torso;
   // gauge (map depth -0.4..0.4 → 0..100%)
-  const g=Math.max(0,Math.min(100, (depth+0.4)/0.8*100)); $('gfill').style.height=g+'%';
-  // knee line marker on gauge (threshold)
+  const g=Math.max(0,Math.min(100,(depth+0.4)/0.8*100)); $('gfill').style.height=g+'%';
   $('gline').style.bottom=((VALID_TH+0.4)/0.8*100)+'%';
-  // state machine
+
+  const now=Date.now();
   if(state==='up'){
-    if(depth > VALID_TH+0.02){ state='down'; bottom=depth; seenBottom=true; }
+    if(depth > VALID_TH+0.02){                 // descent crossed into the judged zone
+      state='down'; bottom=depth;
+      rep={tStart:now, tBottom:now, kneeMin:live.knee||180, hipMin:live.hip||180, leanMax:live.lean||0,
+           sym:symDiff(), pathX:[], torso};
+    }
     setStatus(depth>-0.1?'GO LOWER':'READY', depth>-0.1?'go':'');
-  } else { // down
-    bottom=Math.max(bottom,depth);
+  } else {
+    if(depth>bottom){ bottom=depth; rep.tBottom=now; }   // new deepest point of this rep
+    if(live.knee!=null) rep.kneeMin=Math.min(rep.kneeMin,live.knee);
+    if(live.hip!=null)  rep.hipMin =Math.min(rep.hipMin,live.hip);
+    if(live.lean!=null) rep.leanMax=Math.max(rep.leanMax,live.lean);
+    const sd=symDiff(); if(sd!=null) rep.sym=Math.max(rep.sym||0,sd);
+    if(wrist) rep.pathX.push(wrist.x);
     setStatus('GO LOWER','go');
-    if(depth < VALID_TH-0.03){ // returned to top → rep complete
+    if(depth < VALID_TH-0.03){                 // returned to the top → rep complete
       state='up';
       const cls = bottom>=VALID_TH+GREY_BAND ? 'valid' : (bottom>=VALID_TH-GREY_BAND ? 'grey':'bad');
-      const score = Math.max(0,Math.min(100, Math.round(50 + bottom*120)));
+      const score = Math.max(0,Math.min(100,Math.round(50 + bottom*120)));
+      const drift = rep.pathX.length>2 ? (Math.max.apply(null,rep.pathX)-Math.min.apply(null,rep.pathX))/(rep.torso||1) : null;
       reps++; if(cls==='valid'){valid++;} else if(cls==='grey'){grey++;}
-      repDepths.push({score, cls});
-      $('repN').textContent=reps; $('validN').textContent=valid; $('greyN').textContent=grey;
+      repData.push({ score, cls, depth:bottom,
+        kneeMin:Math.round(rep.kneeMin), hipMin:Math.round(rep.hipMin), leanMax:Math.round(rep.leanMax),
+        sym:rep.sym!=null?Math.round(rep.sym):null, drift,
+        ecc:(rep.tBottom-rep.tStart)/1000, con:(now-rep.tBottom)/1000 });
+      $('repN').textContent=reps; $('validN').textContent=valid;
       flash(cls);
     }
   }
 }
+let rep={};
+function symDiff(){ return (live.symL!=null&&live.symR!=null) ? Math.abs(live.symL-live.symR) : null; }
+
+function paintChips(){
+  setChip('kneeA', live.knee, v=>v<=DEEP_KNEE?'good':(v<=125?'':'hot'));
+  setChip('hipA',  live.hip,  v=>v<=100?'good':'');
+  setChip('trunkA',live.lean, v=>v<=LEAN_OK?'good':(v<=55?'':'hot'));
+}
+function setChip(id,val,cls){
+  const el=$(id); if(!el) return;
+  el.textContent = val==null?'—':Math.round(val);
+  const chip=el.parentNode; chip.className='mchip'+(val==null?'':(cls(val)?' '+cls(val):''));
+}
+
 let flashT=null;
-function flash(cls){ const el=$('status'); el.className='status '+(cls==='valid'?'valid':cls==='grey'?'grey':''); el.textContent=cls==='valid'?'VALID ✓':cls==='grey'?'GREY ZONE':'TOO HIGH'; clearTimeout(flashT); flashT=setTimeout(()=>{el.className='status';el.textContent='READY';},700); beep(cls); }
+function flash(cls){
+  const el=$('status');
+  el.className='status '+(cls==='valid'?'valid':cls==='grey'?'grey':'');
+  el.textContent=cls==='valid'?'VALID ✓':cls==='grey'?'GREY ZONE':'TOO HIGH';
+  clearTimeout(flashT); flashT=setTimeout(()=>{el.className='status';el.textContent='READY';},700);
+  beep(cls);
+}
 function setStatus(t,c){ const el=$('status'); if(el.className.indexOf('valid')>-1||el.className.indexOf('grey')>-1) return; el.className='status '+(c||''); el.textContent=t; }
+
+/* ---- the biomechanics overlay ---- */
 function drawScene(kp,s){
-  const W=overlay.width, H=overlay.height;
-  const knee=kp[s.knee], hip=kp[s.hip];
-  const below = hip.score>MINSCORE && knee.score>MINSCORE && hip.y>knee.y;
-  // 1) DEPTH LINE at knee level + translucent grey-zone band
-  if(knee.score>MINSCORE){
+  const W=overlay.width, H=overlay.height, U=W/1000;      // U = scale unit, keeps line weights sane on any resolution
+  const knee=kp[s.knee], hip=kp[s.hip], ank=kp[s.ank], sh=kp[s.sh];
+  const below = ok(hip)&&ok(knee)&&hip.y>knee.y;
+
+  // 1) BALL PATH — the wrist midpoint trail, fading out
+  if(trail.length>1){
+    ctx.lineCap='round';
+    for(let i=1;i<trail.length;i++){
+      const a=trail[i-1], b=trail[i], f=i/trail.length;
+      ctx.strokeStyle='rgba(48,213,200,'+(0.06+f*0.5).toFixed(3)+')';
+      ctx.lineWidth=Math.max(2,6*U*f);
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+    }
+  }
+  // 2) DEPTH LINE at knee level + grey-zone band
+  if(ok(knee)){
     const band=H*0.03;
     ctx.fillStyle='rgba(255,255,255,.05)'; ctx.fillRect(0,knee.y-band,W,band*2);
     ctx.strokeStyle= below?'rgba(46,194,126,.95)':'rgba(255,224,0,.85)';
-    ctx.lineWidth=Math.max(2,W/300); ctx.setLineDash([18,12]);
+    ctx.lineWidth=Math.max(2,3*U); ctx.setLineDash([18,12]);
     ctx.beginPath();ctx.moveTo(0,knee.y);ctx.lineTo(W,knee.y);ctx.stroke(); ctx.setLineDash([]);
+    label(ctx, below?'BELOW PARALLEL':'HIP LINE', 14*U, knee.y-10*U, below?'#2ec27e':'#FFE000', U);
   }
-  // 2) DEPTH GAP — vertical line from hip down to the knee line (green when valid)
-  if(hip.score>MINSCORE && knee.score>MINSCORE){
-    ctx.strokeStyle= below?'rgba(46,194,126,.85)':'rgba(255,224,0,.5)'; ctx.lineWidth=Math.max(2,W/260);
+  // 3) DEPTH GAP — hip down to the knee line
+  if(ok(hip)&&ok(knee)){
+    ctx.strokeStyle= below?'rgba(46,194,126,.85)':'rgba(255,224,0,.5)'; ctx.lineWidth=Math.max(2,4*U);
     ctx.beginPath();ctx.moveTo(hip.x,hip.y);ctx.lineTo(hip.x,knee.y);ctx.stroke();
   }
-  // 3) SKELETON — full body, smooth, subtle shadow for contrast
-  ctx.save(); ctx.shadowColor='rgba(0,0,0,.55)'; ctx.shadowBlur=W/70;
-  ctx.strokeStyle='rgba(255,255,255,.92)'; ctx.lineWidth=Math.max(3,W/150); ctx.lineCap='round'; ctx.lineJoin='round';
-  SKELETON.forEach(pr=>{ const a=kp[pr[0]],b=kp[pr[1]]; if(a.score>MINSCORE&&b.score>MINSCORE){ ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke(); }});
+  // 4) TRUNK — the torso segment plus a vertical reference, so the lean angle is visible
+  if(ok(hip)&&ok(sh)){
+    const len=Math.hypot(sh.x-hip.x, sh.y-hip.y);
+    ctx.setLineDash([7,9]); ctx.strokeStyle='rgba(255,255,255,.4)'; ctx.lineWidth=Math.max(1.5,2*U);
+    ctx.beginPath(); ctx.moveTo(hip.x,hip.y); ctx.lineTo(hip.x,hip.y-len); ctx.stroke(); ctx.setLineDash([]);
+    if(live.lean!=null) arc(ctx, hip, {x:hip.x,y:hip.y-len}, sh, len*0.34, live.lean<=LEAN_OK?'#2ec27e':'#FFE000', U, Math.round(live.lean)+'°');
+  }
+  // 5) JOINT ANGLES — knee and hip arcs with their live degrees
+  if(ok(hip)&&ok(knee)&&ok(ank) && live.knee!=null){
+    const r=Math.min(Math.hypot(hip.x-knee.x,hip.y-knee.y), Math.hypot(ank.x-knee.x,ank.y-knee.y))*0.42;
+    arc(ctx, knee, hip, ank, r, live.knee<=DEEP_KNEE?'#2ec27e':'#FFE000', U, Math.round(live.knee)+'°');
+  }
+  if(ok(sh)&&ok(hip)&&ok(knee) && live.hip!=null){
+    const r=Math.min(Math.hypot(sh.x-hip.x,sh.y-hip.y), Math.hypot(knee.x-hip.x,knee.y-hip.y))*0.34;
+    arc(ctx, hip, sh, knee, r, 'rgba(255,255,255,.85)', U, Math.round(live.hip)+'°');
+  }
+  // 6) SKELETON — thin technical lines, joints as rings
+  ctx.save(); ctx.shadowColor='rgba(0,0,0,.55)'; ctx.shadowBlur=14*U;
+  ctx.strokeStyle='rgba(255,255,255,.85)'; ctx.lineWidth=Math.max(2,5*U); ctx.lineCap='round'; ctx.lineJoin='round';
+  SKELETON.forEach(pr=>{ const a=kp[pr[0]],b=kp[pr[1]]; if(ok(a)&&ok(b)){ ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke(); }});
   ctx.restore();
-  // 4) JOINTS — hips yellow, knees green, rest white
-  for(let i=5;i<kp.length;i++){ const p=kp[i]; if(p.score<MINSCORE) continue;
-    const isHip=(i===11||i===12), isKnee=(i===13||i===14);
-    ctx.beginPath(); ctx.fillStyle= isKnee?'#2ec27e': isHip?'#FFE000':'rgba(255,255,255,.95)';
-    ctx.arc(p.x,p.y,(isHip||isKnee)?Math.max(6,W/95):Math.max(4,W/160),0,7); ctx.fill();
-    if(isHip||isKnee){ ctx.lineWidth=Math.max(2,W/200); ctx.strokeStyle='rgba(0,0,0,.5)'; ctx.stroke(); }
+  for(let i=5;i<kp.length;i++){
+    const p=kp[i]; if(!ok(p)) continue;
+    const isHip=(i===11||i===12), isKnee=(i===13||i===14), key=isHip||isKnee;
+    ctx.beginPath(); ctx.arc(p.x,p.y,key?Math.max(6,10*U):Math.max(4,6*U),0,7);
+    ctx.fillStyle= isKnee?'rgba(46,194,126,.25)': isHip?'rgba(255,224,0,.25)':'rgba(0,0,0,.35)'; ctx.fill();
+    ctx.lineWidth=Math.max(2,3.4*U); ctx.strokeStyle= isKnee?'#2ec27e': isHip?'#FFE000':'rgba(255,255,255,.9)'; ctx.stroke();
   }
 }
+/* angle arc between b→a and b→c, with the degree label on the bisector */
+function arc(c2,b,a,c,r,color,U,txt){
+  const a1=Math.atan2(a.y-b.y,a.x-b.x), a2=Math.atan2(c.y-b.y,c.x-b.x);
+  let d=a2-a1; while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI;
+  c2.beginPath(); c2.strokeStyle=color; c2.lineWidth=Math.max(2,3.4*U);
+  c2.arc(b.x,b.y,r,a1,a1+d,d<0); c2.stroke();
+  const m=a1+d/2, lx=b.x+Math.cos(m)*(r+22*U), ly=b.y+Math.sin(m)*(r+22*U);
+  label(c2,txt,lx,ly,color,U,true);
+}
+/* text drawn un-mirrored, so it stays readable on the flipped selfie view */
+function label(c2,txt,x,y,color,U,center){
+  const size=Math.max(13,26*U);
+  c2.save();
+  c2.translate(x,y); c2.scale(overlay.classList.contains('rear')?1:-1,1);
+  c2.font='700 '+size+'px Oswald, Inter, sans-serif';
+  c2.textAlign=center?'center':'left'; c2.textBaseline='middle';
+  const w=c2.measureText(txt).width;
+  c2.fillStyle='rgba(0,0,0,.55)';
+  roundRectPath(c2,(center?-w/2:0)-7*U,-size*0.62,w+14*U,size*1.24,6*U); c2.fill();
+  c2.fillStyle=color; c2.fillText(txt,0,1);
+  c2.restore();
+}
+function roundRectPath(x,rx,ry,w,h,r){ x.beginPath();x.moveTo(rx+r,ry);x.arcTo(rx+w,ry,rx+w,ry+h,r);x.arcTo(rx+w,ry+h,rx,ry+h,r);x.arcTo(rx,ry+h,rx,ry,r);x.arcTo(rx,ry,rx+w,ry,r);x.closePath(); }
+
 let ac=null;
 function beep(cls){ try{ if(!ac)ac=new (window.AudioContext||window.webkitAudioContext)(); const o=ac.createOscillator(),g=ac.createGain(); o.connect(g);g.connect(ac.destination); o.frequency.value=cls==='valid'?880:cls==='grey'?520:300; o.type='sine'; g.gain.setValueAtTime(.001,ac.currentTime); g.gain.exponentialRampToValueAtTime(.3,ac.currentTime+.01); g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.18); o.start();o.stop(ac.currentTime+.2);}catch(e){} }
 function flipCam(){ facing = facing==='user'?'environment':'user'; stop(); start(); }
 function stop(){ running=false; if(raf)cancelAnimationFrame(raf); if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;} }
 
+/* ============================================================
+   REPORT — pure functions, so the numbers can be tested offline
+   ============================================================ */
+function avg(a){ return a.length? a.reduce((x,y)=>x+y,0)/a.length : null; }
+function summarise(rd){
+  const done=rd.length;
+  const scores=rd.map(r=>r.score);
+  const avgDepth = done? Math.round(avg(scores)) : 0;
+  const varc = done? rd.reduce((a,b)=>a+Math.pow(b.score-avgDepth,2),0)/done : 0;
+  const cons = done? Math.max(0, Math.round(100 - Math.sqrt(varc)*1.6)) : 0;   // no reps → nothing to be consistent about
+  const validN = rd.filter(r=>r.cls==='valid').length;
+  const validRatio = done? validN/done : 0;
+  const depthScore = Math.round(Math.max(0,Math.min(100, avgDepth*0.65 + cons*0.15 + validRatio*100*0.20)));
+  const knee = avg(rd.map(r=>r.kneeMin).filter(v=>v!=null));
+  const hipA = avg(rd.map(r=>r.hipMin).filter(v=>v!=null));
+  const lean = avg(rd.map(r=>r.leanMax).filter(v=>v!=null));
+  const sym  = avg(rd.map(r=>r.sym).filter(v=>v!=null));
+  const ecc  = avg(rd.map(r=>r.ecc).filter(v=>v!=null&&v<12));
+  const con  = avg(rd.map(r=>r.con).filter(v=>v!=null&&v<12));
+  const drift= avg(rd.map(r=>r.drift).filter(v=>v!=null));
+  return {reps:done, valid:validN, grey:rd.filter(r=>r.cls==='grey').length,
+          avgDepth, cons, depthScore, knee, hipA, lean, sym, ecc, con, drift};
+}
+function grade(s){ return s>=85?'Race standard':s>=70?'Solid — nearly there':s>=50?'Work in progress':'Needs depth work'; }
+function cues(m){
+  const out=[];
+  if(!m.reps) return [{cls:'', t:'No reps counted. Re-frame so your <b>hip and knee</b> stay visible for the whole squat.'}];
+  if(m.knee!=null && m.knee>DEEP_KNEE+20) out.push({cls:'bad', t:'Your knee only closed to <b>'+Math.round(m.knee)+'°</b> at the bottom. Under <b>'+DEEP_KNEE+'°</b> is a full wall ball squat — sit between the heels, not back.'});
+  else if(m.knee!=null && m.knee>DEEP_KNEE) out.push({cls:'', t:'Knee bottoms at <b>'+Math.round(m.knee)+'°</b> — close, keep sinking a few more centimetres to bank every rep.'});
+  else if(m.knee!=null) out.push({cls:'good', t:'Depth is there — knee closing to <b>'+Math.round(m.knee)+'°</b> at the bottom.'});
+  if(m.lean!=null && m.lean>LEAN_OK+15) out.push({cls:'bad', t:'Trunk folds to <b>'+Math.round(m.lean)+'°</b> from vertical. Keep the ball at the chest and the ribs stacked — a forward torso costs you the throw.'});
+  else if(m.lean!=null && m.lean>LEAN_OK) out.push({cls:'', t:'Trunk lean <b>'+Math.round(m.lean)+'°</b> — a touch forward. Elbows up, chest tall.'});
+  else if(m.lean!=null) out.push({cls:'good', t:'Torso stays tall (<b>'+Math.round(m.lean)+'°</b>) — that is what keeps the throw cheap.'});
+  if(m.sym!=null && m.sym>SYM_OK) out.push({cls:'bad', t:'Left and right knee angles differ by <b>'+Math.round(m.sym)+'°</b>. Film front-on to confirm, then even out the loading.'});
+  if(m.ecc!=null && m.ecc<0.35) out.push({cls:'', t:'You are dropping fast (<b>'+m.ecc.toFixed(2)+'s</b> down). Fine for a race, but control it in training to build the position.'});
+  if(m.ecc!=null && m.ecc>1.4) out.push({cls:'', t:'Descent takes <b>'+m.ecc.toFixed(2)+'s</b> — slow for a workout pace. Sharpen the drop and use the bounce.'});
+  if(m.drift!=null && m.drift>0.9) out.push({cls:'', t:'The ball drifts <b>'+Math.round(m.drift*100)+'%</b> of a torso length horizontally. Keep it travelling straight up the same line.'});
+  if(m.cons>=85) out.push({cls:'good', t:'Rep-to-rep consistency <b>'+m.cons+'%</b> — the depth barely changes as you fatigue.'});
+  else if(m.cons<60) out.push({cls:'bad', t:'Consistency <b>'+m.cons+'%</b> — depth falls off across the set. That is where no-reps come from in a race.'});
+  return out.slice(0,5);
+}
+
+function fmtDeg(v){ return v==null?'—':Math.round(v)+'°'; }
+function fmtSec(v){ return v==null?'—':v.toFixed(2)+'s'; }
+function bioRow(name, meta, value, unit, cls, meterPct){
+  return '<div class="brow"><div class="t"><div class="n">'+name+'</div><div class="m">'+meta+'</div>'+
+    (meterPct!=null?'<div class="meter"><i style="width:'+Math.max(3,Math.min(100,meterPct))+'%"></i></div>':'')+
+    '</div><div class="v '+cls+'">'+value+(unit?'<small>'+unit+'</small>':'')+'</div></div>';
+}
 function finish(){
   stop(); $('intro').style.display='none'; $('live').classList.remove('on'); $('result').classList.add('on');
-  const total=reps||1;
-  const avgDepth = repDepths.length? Math.round(repDepths.reduce((a,b)=>a+b.score,0)/repDepths.length):0;
-  // consistency = 100 - normalized stdev
-  const mean = avgDepth; const varc = repDepths.length? repDepths.reduce((a,b)=>a+Math.pow(b.score-mean,2),0)/repDepths.length:0;
-  const cons = Math.max(0, Math.round(100 - Math.sqrt(varc)*1.6));
-  const validRatio = reps? valid/reps : 0;
-  const depthScore = Math.round(Math.max(0,Math.min(100, avgDepth*0.65 + cons*0.15 + validRatio*100*0.20)));
-  $('rscore').textContent=depthScore; $('rvalid').textContent=valid;
-  $('rdepth').textContent=avgDepth+'%'; $('rcons').textContent=cons+'%';
+  const m=summarise(repData);
+  $('rscore').textContent=m.depthScore; $('rgrade').textContent=grade(m.depthScore);
+  $('rvalid').textContent=m.valid; $('rdepth').textContent=m.avgDepth+'%'; $('rcons').textContent=m.cons+'%';
   const d=new Date(); $('rdate').textContent=(d.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+' '+d.getFullYear());
-  $('rbar').innerHTML = repDepths.length? repDepths.map(r=>`<i class="${r.cls==='valid'?'':r.cls==='grey'?'grey':'bad'}" style="height:${Math.max(8,r.score)}%"></i>`).join('') : '<i style="height:8%"></i>';
-  window._result={depthScore,valid,reps,avgDepth,cons,grey};
+  $('rbar').innerHTML = repData.length? repData.map(r=>'<i class="'+(r.cls==='valid'?'':r.cls==='grey'?'grey':'bad')+'" style="height:'+Math.max(8,r.score)+'%"></i>').join('') : '<i style="height:8%"></i>';
+
+  $('bioRows').innerHTML =
+    bioRow('Knee angle at depth','Bottom position — under '+DEEP_KNEE+'° is a full squat', fmtDeg(m.knee), 'avg',
+           m.knee==null?'n':(m.knee<=DEEP_KNEE?'ok':m.knee<=DEEP_KNEE+20?'warn':'bad'),
+           m.knee==null?null:Math.max(0,Math.min(100,(180-m.knee)/(180-70)*100))) +
+    bioRow('Hip angle at depth','How far the hip closes under the torso', fmtDeg(m.hipA), 'avg',
+           m.hipA==null?'n':(m.hipA<=100?'ok':'warn'), null) +
+    bioRow('Trunk lean','From vertical — under '+LEAN_OK+'° keeps the throw cheap', fmtDeg(m.lean), 'avg',
+           m.lean==null?'n':(m.lean<=LEAN_OK?'ok':m.lean<=LEAN_OK+15?'warn':'bad'), null) +
+    bioRow('Tempo','Down / up seconds per rep', (m.ecc==null?'—':fmtSec(m.ecc)+' / '+fmtSec(m.con)), 'ecc / con', 'n', null) +
+    bioRow('Left–right symmetry','Knee angle difference between sides', fmtDeg(m.sym), 'avg',
+           m.sym==null?'n':(m.sym<=SYM_OK?'ok':'bad'), null) +
+    bioRow('Ball path drift','Horizontal travel of the hands, as a share of torso length',
+           m.drift==null?'—':Math.round(m.drift*100)+'%', '', m.drift==null?'n':(m.drift<=0.9?'ok':'warn'), null);
+
+  $('depthChart').innerHTML = '<div class="repbar" style="margin:0;border:none;background:transparent;padding:0;height:78px">'+
+    (repData.length? repData.map(r=>'<i class="'+(r.cls==='valid'?'':r.cls==='grey'?'grey':'bad')+'" style="height:'+Math.max(8,r.score)+'%"></i>').join('')
+                   : '<i style="height:8%"></i>')+'</div>';
+  $('chartEnd').textContent='Rep '+(repData.length||'—');
+  $('cues').innerHTML = cues(m).map(c=>'<div class="cue '+c.cls+'"><span class="d"></span><span>'+c.t+'</span></div>').join('');
+  window._result=m;
 }
 function restart(){ $('result').classList.remove('on'); $('intro').style.display='block'; $('startBtn').disabled=false; $('startBtn').textContent='▶ Start Camera'; }
 
@@ -328,20 +590,25 @@ function buildShareImage(){
   x.fillStyle='#000'; x.fillRect(0,0,1080,1350);
   const g=x.createRadialGradient(860,120,50,860,120,700); g.addColorStop(0,'rgba(255,224,0,.18)'); g.addColorStop(1,'transparent'); x.fillStyle=g; x.fillRect(0,0,1080,1350);
   x.fillStyle='#FFE000'; x.fillRect(0,0,10,1350);
-  x.textAlign='left'; x.fillStyle='#fff'; x.font='700 40px Oswald, sans-serif'; x.fillText('HITFAT', 70, 130);
-  x.fillStyle='#FFE000'; x.fillText('REP LAB', 285, 130);
-  x.fillStyle='#9a9a9a'; x.font='600 22px Inter, sans-serif'; x.fillText('WALL BALL DEPTH ANALYSIS', 72, 168);
-  // big score
-  x.textAlign='center'; x.fillStyle='#FFE000'; x.font='700 380px Oswald, sans-serif'; x.fillText(String(r.depthScore||0), 540, 660);
-  x.fillStyle='#9a9a9a'; x.font='700 30px Inter, sans-serif'; x.fillText('DEPTH SCORE', 540, 720);
-  // stats row
+  x.textAlign='left'; x.fillStyle='#fff'; x.font='800 42px Inter, sans-serif'; x.fillText('HITFAT', 70, 130);
+  x.fillStyle='#FFE000'; x.fillText('REP LAB', 250, 130);
+  x.fillStyle='#9a9a9a'; x.font='600 22px Inter, sans-serif'; x.fillText('WALL BALL BIOMECHANICS', 72, 168);
+  x.textAlign='center'; x.fillStyle='#FFE000'; x.font='700 340px Oswald, sans-serif'; x.fillText(String(r.depthScore||0), 540, 600);
+  x.fillStyle='#9a9a9a'; x.font='700 28px Inter, sans-serif'; x.fillText('DEPTH SCORE', 540, 654);
+  x.fillStyle='#fff'; x.font='600 30px Inter, sans-serif'; x.fillText(grade(r.depthScore||0), 540, 706);
   const stats=[[r.valid||0,'VALID REPS'],[(r.avgDepth||0)+'%','AVG DEPTH'],[(r.cons||0)+'%','CONSISTENCY']];
-  stats.forEach((s,i)=>{ const cx=200+i*340; x.fillStyle='#141414'; roundRect(x,cx-140,840,280,180,20); x.fill(); x.strokeStyle='#262626';x.stroke();
-    x.fillStyle='#fff'; x.font='700 64px Oswald, sans-serif'; x.fillText(String(s[0]),cx,930);
-    x.fillStyle='#9a9a9a'; x.font='700 20px Inter, sans-serif'; x.fillText(s[1],cx,975); });
-  x.fillStyle='#6a6a6a'; x.font='600 24px Inter, sans-serif'; x.fillText('Verified to HYROX standard · hips below knee', 540, 1120);
-  x.fillStyle='#fff'; x.font='700 30px Oswald, sans-serif'; x.fillText('TRAIN · BUILD · RACE', 540, 1200);
-  x.fillStyle='#FFE000'; x.font='700 26px Inter, sans-serif'; x.fillText('hybrid.hitfat.io', 540, 1250);
+  stats.forEach((s,i)=>{ const cx=200+i*340; x.fillStyle='#141414'; roundRect(x,cx-140,780,280,170,20); x.fill(); x.strokeStyle='#262626';x.stroke();
+    x.fillStyle='#fff'; x.font='700 60px Oswald, sans-serif'; x.fillText(String(s[0]),cx,866);
+    x.fillStyle='#9a9a9a'; x.font='700 19px Inter, sans-serif'; x.fillText(s[1],cx,908); });
+  const bio=[[r.knee!=null?Math.round(r.knee)+'°':'—','KNEE AT DEPTH'],
+             [r.lean!=null?Math.round(r.lean)+'°':'—','TRUNK LEAN'],
+             [r.ecc!=null?r.ecc.toFixed(1)+'s':'—','DESCENT']];
+  bio.forEach((s,i)=>{ const cx=200+i*340; x.fillStyle='#0e0e0e'; roundRect(x,cx-140,975,280,150,20); x.fill(); x.strokeStyle='#262626';x.stroke();
+    x.fillStyle='#FFE000'; x.font='700 50px Oswald, sans-serif'; x.fillText(String(s[0]),cx,1050);
+    x.fillStyle='#9a9a9a'; x.font='700 18px Inter, sans-serif'; x.fillText(s[1],cx,1090); });
+  x.fillStyle='#6a6a6a'; x.font='600 23px Inter, sans-serif'; x.fillText('Verified to HYROX standard · hips below knee', 540, 1185);
+  x.fillStyle='#fff'; x.font='700 30px Oswald, sans-serif'; x.fillText('TRAIN · BUILD · RACE', 540, 1245);
+  x.fillStyle='#FFE000'; x.font='700 26px Inter, sans-serif'; x.fillText('hybrid.hitfat.io', 540, 1292);
   return c;
 }
 function roundRect(x,rx,ry,w,h,r){ x.beginPath();x.moveTo(rx+r,ry);x.arcTo(rx+w,ry,rx+w,ry+h,r);x.arcTo(rx+w,ry+h,rx,ry+h,r);x.arcTo(rx,ry+h,rx,ry,r);x.arcTo(rx,ry,rx+w,ry,r);x.closePath(); }
@@ -351,9 +618,8 @@ async function shareResult(){
   canvas.toBlob(async (blob)=>{
     const file=new File([blob],'hitfat-rep-lab.png',{type:'image/png'});
     if(navigator.canShare && navigator.canShare({files:[file]})){
-      try{ await navigator.share({files:[file], title:'HITFAT Rep Lab', text:'My wall ball Depth Score on HITFAT Rep Lab 💪 hybrid.hitfat.io'}); return; }catch(e){}
+      try{ await navigator.share({files:[file], title:'HITFAT Rep Lab', text:'My wall ball biomechanics on HITFAT Rep Lab 💪 hybrid.hitfat.io'}); return; }catch(e){}
     }
-    // fallback: download
     const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='hitfat-rep-lab.png'; a.click(); URL.revokeObjectURL(url);
     $('shareNote').textContent='Image saved — share it to your story or feed 📲';
   },'image/png');
