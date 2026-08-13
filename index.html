@@ -599,6 +599,12 @@
   .modal .sheet{background:var(--surface);border:1px solid var(--line);border-radius:20px 20px 0 0;width:100%;max-width:440px;padding:22px 20px calc(24px + env(safe-area-inset-bottom,0px));max-height:90vh;overflow-y:auto;}
   .modal .sheet h3{font-family:'Oswald';font-weight:700;font-size:21px;letter-spacing:.4px;text-transform:uppercase;margin-bottom:6px;}
   .modal .sheet p.msub{color:var(--dim);font-size:13px;line-height:1.5;margin-bottom:16px;}
+  .paychs{display:flex;gap:8px;margin:12px 0 4px;}
+  .paych{flex:1;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:11px 12px;text-align:left;cursor:pointer;color:#fff;font-family:inherit;}
+  .paych b{display:block;font-size:14px;font-weight:700;margin-bottom:2px;}
+  .paych small{display:block;font-size:11px;color:var(--dim2);line-height:1.35;}
+  .paych.on{border-color:var(--hyrox);background:rgba(255,224,0,.07);}
+  .paych.on b{color:var(--hyrox);}
   .modalrow{display:flex;gap:10px;margin-top:8px;}
   .modalrow button{flex:1;border:none;border-radius:99px;padding:15px;font-family:'Oswald';font-weight:700;font-size:14px;letter-spacing:1px;cursor:pointer;text-transform:uppercase;}
   .modalrow .cancel{background:var(--surface2);color:#fff;border:1px solid var(--line);}
@@ -4629,11 +4635,23 @@ function openFTSession(c,w,key){ window.fromFT=true; window.fromPlan=false; wind
 /* ---- Join / payment (Bayarcash — server-created payment intent, verified callback) ---- */
 function joinProgram(id){ const p=CATALOG[id]; if(!p) return;
   if(!PAYMENTS_LIVE){ nfToast(p.title+' — opening soon. Tap “Notify me”.'); openProgramDetail(id); return; }  // payments not live yet
+  payChannel=1;                                  // always reopen on the default channel
   $('modal-sheet').innerHTML=`<h3>Join ${p.title}</h3>
     <p class="msub">One-time ${fmtPrice(p.price)} — unlocks inside your HITFAT HYBRID account, forever.</p>
-    <div class="infonote">Secure payment via <b>Bayarcash</b> — FPX online banking. Your program unlocks as soon as the payment is confirmed.</div>
+    <div class="paychs">
+      <button class="paych on" id="pch1" onclick="setChannel(1)"><b>FPX</b><small>Online banking</small></button>
+      <button class="paych" id="pch6" onclick="setChannel(6)"><b>DuitNow QR</b><small>Scan with any bank or eWallet app</small></button>
+    </div>
+    <div class="infonote">Secure payment via <b>Bayarcash</b>. Your program unlocks as soon as the payment is confirmed.</div>
     <div class="modalrow"><button class="cancel" onclick="closeModal()">Not now</button><button class="confirm" onclick="payProgram('${id}')">Pay ${fmtPrice(p.price)}</button></div>`;
   $('modal').classList.add('on');
+}
+let payChannel=1;                                // 1 = FPX Online Banking · 6 = DuitNow QR (both enabled on the portal)
+function setChannel(c){
+  payChannel=c;
+  const a=$('pch1'), b=$('pch6');
+  if(a) a.className='paych'+(c===1?' on':'');
+  if(b) b.className='paych'+(c===6?' on':'');
 }
 async function payProgram(id){
   const p=CATALOG[id]; if(!p) return;
@@ -4642,7 +4660,7 @@ async function payProgram(id){
   closeModal(); nfToast('Opening secure payment…');
   try{
     const r=await fetch('/.netlify/functions/pay-create',{ method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ program_id:id, user_id:HF.userId, email:HF.email,
+      body:JSON.stringify({ program_id:id, user_id:HF.userId, email:HF.email, channel:payChannel,
                             name:(HF.data.prefs&&HF.data.prefs.name)||'' }) });
     const d=await r.json();
     if(d && d.url){ location.href=d.url; return; }
