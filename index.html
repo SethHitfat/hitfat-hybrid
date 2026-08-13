@@ -397,7 +397,7 @@
   .nfcard .body{position:absolute;z-index:2;left:0;right:0;bottom:0;padding:12px 12px 13px;}
   .nfcard .t{font-family:'Inter',system-ui,sans-serif;font-size:14.5px;font-weight:600;letter-spacing:-.2px;line-height:1.25;text-transform:none;color:#fff;}
   .nfcard .m{font-size:11.5px;color:#bdbdbd;font-weight:500;margin-top:4px;letter-spacing:0;line-height:1.3;}
-  .nfcard .badge{position:absolute;z-index:3;top:10px;right:11px;font-family:'Inter',system-ui,sans-serif;font-size:9.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;padding:4px 8px;border-radius:99px;background:var(--hyrox);color:var(--hyrox-ink);}
+  .nfcard .badge{position:absolute;z-index:3;top:10px;left:11px;font-family:'Inter',system-ui,sans-serif;font-size:9.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;padding:4px 8px;border-radius:99px;background:var(--hyrox);color:var(--hyrox-ink);}
   .nfcard.soon{cursor:default;}
   .nfcard.soon .bg{filter:grayscale(1) brightness(.4);}
   .nfcard.soon::before{display:none;}
@@ -667,6 +667,7 @@
   .pcard .top::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0) 45%,rgba(10,10,10,.5));}
   .pcard .top .edge{position:absolute;top:0;left:0;width:4px;height:100%;background:var(--hyrox);z-index:2;}
   .pcard .badge{position:absolute;top:10px;right:11px;z-index:3;font-family:'Oswald';font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:4px 9px;border-radius:99px;}
+  .ibdg{display:inline-block;vertical-align:1px;font-family:'Inter',system-ui,sans-serif;font-size:9.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;padding:3px 7px;border-radius:99px;margin-left:8px;white-space:nowrap;}
   .badge.free{background:#1c7d3a;color:#fff;}
   .badge.paid{background:var(--hyrox);color:var(--hyrox-ink);}
   .badge.owned{background:#0e6b8c;color:#fff;}
@@ -4459,13 +4460,13 @@ function programCard(id,full){
     const meta=[p.weeks+' wk', p.days+' days/wk', p.level].join(' · ');
     const sub=(st==='SOON')?('Coming soon · '+meta):meta;
     return `<div class="frow" onclick="openProgramDetail('${id}')">
-      <div class="th" style="background-image:url('${p.img}')"><span class="badge ${badgeCls(st)} bdg">${badgeLabel(id,st)}</span></div>
-      <div class="tx"><div class="t">${p.title}</div><div class="m">${sub}</div></div>
+      <div class="th" style="background-image:url('${p.img}')"></div>
+      <div class="tx"><div class="t">${p.title}<span class="badge ibdg ${badgeCls(st)}">${badgeLabel(id,st)}</span></div><div class="m">${sub}</div></div>
       <div class="chev">›</div></div>`;
   }
   return `<div class="pcard" onclick="openProgramDetail('${id}')">
-    <div class="top" style="background-image:url('${p.img}')"><span class="badge ${badgeCls(st)}">${badgeLabel(id,st)}</span></div>
-    <div class="info"><div class="t">${p.title}</div><div class="m">${p.weeks} wk · ${p.days} days/wk · ${p.level}</div></div></div>`;
+    <div class="top" style="background-image:url('${p.img}')"></div>
+    <div class="info"><div class="t">${p.title}<span class="badge ibdg ${badgeCls(st)}">${badgeLabel(id,st)}</span></div><div class="m">${p.weeks} wk · ${p.days} days/wk · ${p.level}</div></div></div>`;
 }
 function quickCard(i){ const q=QUICK_WORKOUTS[i]; return `<div class="qwcard" onclick="openQuickWorkout(${i})"><span class="badge free">Free</span><div class="t">${q.title}</div><div class="m">${q.tag} · ${totalMins(q)} min · RPE ${q.rpe}</div></div>`; }
 function coachCard(id){ const c=COACHES[id]; const n=coachPrograms(id).length; const ini=c.name.replace('Coach ','')[0];
