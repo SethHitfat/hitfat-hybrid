@@ -1618,6 +1618,34 @@ function printReport(){
 function closeReport(){ $('a4').classList.remove('show'); }
 function saveReportName(v){ localStorage.setItem('hf_wb_name', v||''); openReport(); }
 
+
+/* The most motivated moment in the product: the athlete has just seen, with evidence,
+   what is costing them reps. Point at the block that fixes that exact thing — and only
+   when there is something real to fix. */
+const FIX_PROGRAM = {
+  depth:  {id:'station-builder', t:'Station Builder',   w:'4 weeks', p:'RM59', why:'drills wall ball depth until it holds under fatigue'},
+  torso:  {id:'hybrid-strength', t:'Hybrid Strength',   w:'6 weeks', p:'RM59', why:'builds the trunk and legs that keep your chest tall'},
+  fade:   {id:'build-engine',    t:'Build Your Engine', w:'6 weeks', p:'RM59', why:'stops your depth falling off as the set goes on'},
+  speed:  {id:'hybrid-strength', t:'Hybrid Strength',   w:'6 weeks', p:'RM59', why:'puts more drive behind every throw'}
+};
+function suggestProgram(m, done){
+  if(!done) return '';
+  const ratio=m.valid/Math.max(1,done);
+  let k=null;
+  if(ratio<0.8) k='depth';
+  else if(m.lean!=null && m.lean>LEAN_OK+15) k='torso';
+  else if(m.cons<60) k='fade';
+  else if(m.speed!=null && m.speed<3.4) k='speed';
+  if(!k) return '';                                  // a clean set is sold nothing
+  const f=FIX_PROGRAM[k];
+  return `<div class="fixcard" style="border-color:rgba(255,224,0,.30);cursor:pointer;"
+       onclick="location.href='/?p=${f.id}'">
+      <div class="k">Train it</div>
+      <div class="t">${f.t}</div>
+      <div class="m">${f.w} · ${f.p} — ${f.why}. <span style="color:#8a6d00;font-weight:700;">See the plan →</span></div>
+    </div>`;
+}
+
 function fmtDeg(v){ return v==null?'—':Math.round(v)+'°'; }
 function fmtSec(v){ return v==null?'—':v.toFixed(2)+'s'; }
 function bioRow(name, meta, value, unit, cls, meterPct){
@@ -1677,7 +1705,8 @@ function finish(){
      || '<div class="plain"><span class="d"></span><span>No reps were counted — check the framing and try again.</span></div>';
   { const sh=$('sheet'); if(sh) sh.innerHTML=inbodySheet(m, cfg, hitTarget?secs:0, reps); }
   const fx=fixFirst(m,reps);
-  $('fixCard').innerHTML=`<div class="k">Fix this first</div><div class="t">${fx.t}</div><div class="m">${fx.m}</div>`;
+  $('fixCard').innerHTML=`<div class="k">Fix this first</div><div class="t">${fx.t}</div><div class="m">${fx.m}</div>`
+    + suggestProgram(m, reps);
   $('cues').innerHTML = cues(m).map(c=>'<div class="cue '+c.cls+'"><span class="d"></span><span>'+c.t+'</span></div>').join('');
   window._result=m;
 }
@@ -1756,7 +1785,8 @@ function demoResult(){
   $('rbar').innerHTML=repData.map(r=>'<i class="'+(r.cls==='valid'?'':r.cls==='grey'?'grey':'bad')+'" style="height:'+Math.max(8,r.score)+'%"></i>').join('');
   $('plainRows').innerHTML=plainLines(m,10).map(l=>`<div class="plain"><span class="d"></span><span>${l}</span></div>`).join('');
   const fx=fixFirst(m,10);
-  $('fixCard').innerHTML=`<div class="k">Fix this first</div><div class="t">${fx.t}</div><div class="m">${fx.m}</div>`;
+  $('fixCard').innerHTML=`<div class="k">Fix this first</div><div class="t">${fx.t}</div><div class="m">${fx.m}</div>`
+    + suggestProgram(m, reps);
   $('sheet').innerHTML=inbodySheet(m,cfg,47,10);
   $('progChart').innerHTML=wbChart(cfg.w,cfg.t);
   $('depthChart').innerHTML='<div class="repbar" style="margin:0;border:none;background:transparent;padding:0;height:78px">'

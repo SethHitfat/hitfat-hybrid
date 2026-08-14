@@ -3551,6 +3551,23 @@ function hyroxPredict(){
   const roxzone=8*40;                                             // ~40s per transition
   return { total:runTotal+stationTotal+roxzone, runTotal, stationTotal, roxzone, runSecPerKm, known };
 }
+
+/* ============================================================
+   SUGGESTIONS — the app already knows the athlete's weakness; these connect
+   that knowledge to the block that fixes it. Never shown for something they
+   already own, and never more than one per screen.
+   ============================================================ */
+const AREA_PROGRAM = { stations:'station-builder', running:'run-better', engine:'build-engine', strength:'hybrid-strength' };
+function suggestable(id){ return CATALOG[id] && CATALOG[id].access==='paid' && !ownsProgram(id); }
+function suggestCard(id, why){
+  if(!suggestable(id)) return '';
+  const p=CATALOG[id];
+  return `<div class="benchcard" style="border-color:rgba(255,224,0,.28);cursor:pointer;margin-top:8px;"
+       onclick="openProgramDetail('${id}','progress')">
+      <div class="bt" style="font-size:14px;">${why}</div>
+      <div class="bm">${p.title} · ${p.weeks} weeks · ${fmtPrice(p.price)} — <span style="color:var(--hyrox);">see the plan →</span></div>
+    </div>`;
+}
 function renderPredictor(){
   const el=$('prog-predict'); if(!el) return;
   const p=hyroxPredict();
@@ -3562,7 +3579,13 @@ function renderPredictor(){
       <div class="tt" style="color:#FFE000;font-size:30px;">${fmtDur(p.total)}</div>
       <div class="tm">Run ${fmtDur(p.runTotal)} · Stations ${fmtDur(p.stationTotal)} · Roxzone ${fmtDur(p.roxzone)}</div>
       <div style="font-size:11px;color:#8a8a8a;margin-top:7px;">From your avg run pace (${pace}/km) + ${p.known}/8 station PRs${p.known<8?' — rest are mid-pack estimates':''}. Log HYROX sims to sharpen it.</div>
-    </div>`;
+    </div>
+    ${(function(){                       // whichever half of the race costs more time gets the suggestion
+        const runHeavy = p.runTotal >= p.stationTotal;
+        return suggestCard(runHeavy?'run-better':'station-builder',
+          runHeavy ? ('Running is '+fmtDur(p.runTotal)+' of your projected '+fmtDur(p.total))
+                   : ('Stations are '+fmtDur(p.stationTotal)+' of your projected '+fmtDur(p.total)));
+      })()}`;
 }
 /* ---- Training Calendar (month view, interactive) ---- */
 let calMonth=null, calSelDay=null;
@@ -3648,8 +3671,8 @@ function calcPaceMe(){
 function renderProgress(){
   const wk=weekStats();
   const el=$('prog-score'); if(el){ el.innerHTML=`<div class="sechead" style="margin-top:14px;">Hybrid Score</div>${scoreDashHTML()}
-    <div class="infonote" style="margin-bottom:6px;">${scoreSourceNote()}
-      <span onclick="switchTab('explore');setFilter('weakness')" style="color:var(--hyrox);cursor:pointer;">train it →</span></div>`; }
+    <div class="infonote" style="margin-bottom:6px;">${scoreSourceNote()}</div>
+    ${suggestCard(AREA_PROGRAM[weakestArea()], 'Your weakest area is '+AREA_LABEL[weakestArea()].toLowerCase())}`; }
   $('prog-stats').innerHTML=`<div class="sechead">Activity</div><div class="dstat">
       <div class="c"><b>${HF.totalDone()}</b><small>Total Sessions</small></div>
       <div class="c"><b>${wk.pct}%</b><small>This Week</small></div>
@@ -4440,6 +4463,11 @@ function openRace(id){
     ${(dl!=null&&dl>=0)?`<div class="today" style="text-align:center;padding:14px;"><div style="font-family:'Oswald';font-weight:700;font-size:40px;color:#FFE000;line-height:1;">${dl}</div><div class="tm" style="margin-top:4px;">days to go</div></div>`:''}
     <div class="infonote" style="margin-top:8px;">${r.type||''}${r.price?(' · <b>'+r.price+'</b>'):''}</div>
     ${pred?`<div class="infonote" style="margin-top:8px;">🏁 Your projected time: <b style="color:#FFE000;">${fmtDur(pred.total)}</b> <span style="color:#8a8a8a;">— from your training</span></div>`:''}
+    ${(r.hyrox && suggestable('road-kl') && /kuala lumpur|\bkl\b/i.test(r.name+' '+(r.city||'')))
+        ? `<div class="benchcard" style="border-color:rgba(255,224,0,.28);cursor:pointer;margin-top:8px;"
+             onclick="closeModal();openProgramDetail('road-kl','home')">
+             <div class="bt" style="font-size:14px;">Training for this race?</div>
+             <div class="bm">Road to HYROX KL · 12 weeks built for this event · ${fmtPrice(CATALOG['road-kl'].price)} — <span style="color:var(--hyrox);">see the plan →</span></div></div>` : ''}
     <button onclick="trackRace('${id}')" style="width:100%;padding:11px;border-radius:12px;border:1px solid ${tracked?'#FFE000':'#2a2a2a'};background:#141414;color:${tracked?'#FFE000':'#fff'};font-weight:700;cursor:pointer;margin:2px 0 8px;">${tracked?'★ Tracking — tap to remove':'☆ Track this race'}</button>
     <div class="modalrow"><button class="cancel" onclick="closeModal()">Close</button>${r.url?`<button class="confirm" onclick="window.open('${r.url}','_blank')">Register ↗</button>`:''}</div>`;
   $('modal').classList.add('on');
@@ -5349,6 +5377,11 @@ function handlePaidRedirect(){
     }
     checkPaidPurchases(true);                   // pick up any payment confirmed while away
     try{ syncWallBall(); }catch(e){}
+    try{                                        // ?p=<program> — deep link from the wall ball tool
+      const wanted=new URLSearchParams(location.search).get('p');
+      if(wanted && CATALOG[wanted]){ history.replaceState({},'',location.pathname);
+        setTimeout(()=>{ switchTab('store'); openProgramDetail(wanted,'store'); }, 260); }
+    }catch(e){}
   }catch(e){ console.error(e); }
 }
 
