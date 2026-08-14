@@ -4550,13 +4550,13 @@ function renderExplore(){
 
 /* ---- Programs store (focus: sell HITFAT programs directly) ---- */
 function renderPrograms(){
-  const sec=(t,inner,sub)=>`<div class="exsec"><div class="eh"><h3>${t}</h3>${sub?`<span class="all" style="cursor:default;color:var(--dim)">${sub}</span>`:''}</div>${inner}</div>`;
+  const sec=(t,inner,sub)=>!inner?'':`<div class="exsec"><div class="eh"><h3>${t}</h3>${sub?`<span class="all" style="cursor:default;color:var(--dim)">${sub}</span>`:''}</div>${inner}</div>`;
   let h='';
   const owned=CATALOG_ORDER.filter(id=>ownsProgram(id)&&CATALOG[id].access!=='free');
   if(owned.length) h+=sec('Your Programs', owned.map(id=>programCard(id,true)).join(''));
   h+=sec('Start Here', programCard('first-timer',true), 'Entry · RM19');
   h+=sec('Race Preparation', CATALOG_ORDER.filter(id=>CATALOG[id].tag==='Race Prep'&&id!=='first-timer'&&CATALOG[id].access!=='free').map(id=>programCard(id,true)).join(''));
-  h+=sec('Build Specific Strengths', CATALOG_ORDER.filter(id=>CATALOG[id].access==='soon').map(id=>programCard(id,true)).join(''), 'Coming soon');
+  h+=sec('Build Specific Strengths', CATALOG_ORDER.filter(id=>CATALOG[id].access==='paid'&&CATALOG[id].tag!=='Race Prep'&&id!=='first-timer').map(id=>programCard(id,true)).join(''));
   h+=sec('Free Programs', CATALOG_ORDER.filter(id=>CATALOG[id].access==='free').map(id=>programCard(id,true)).join(''));
   h+=`<div class="exsec"><div class="eh"><h3>More Free Training</h3></div>
     <div class="catcard" onclick="switchTab('programs')" style="margin-bottom:12px;"><div class="body"><div class="ttl">Workout Library</div><div class="cnt">Free sessions by category</div></div><div class="arr">›</div></div>
