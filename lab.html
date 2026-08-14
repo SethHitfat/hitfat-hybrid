@@ -176,6 +176,18 @@
         <div class="step"><div class="n">2</div><div class="t">A <b>side angle</b> reads depth and trunk lean best. Front-on still counts reps and symmetry.</div></div>
         <div class="step"><div class="n">3</div><div class="t">Good lighting. Hold the wall ball as normal and squat to depth each rep.</div></div>
       </div>
+      <div class="card" style="display:flex;align-items:center;gap:12px;">
+        <div style="flex:1;">
+          <div class="mrow" style="background:none;border:none;padding:0;margin:0;">
+            <div><div class="t">Your height</div><div class="m">Turns pixels into metres — needed for ball speed</div></div>
+          </div>
+        </div>
+        <input id="hgt" type="number" min="120" max="230" step="1" placeholder="172"
+          style="width:86px;background:var(--surface2);border:1px solid var(--line);border-radius:12px;color:#fff;
+                 font-family:'Oswald';font-size:18px;font-weight:700;text-align:center;padding:10px 8px;"
+          oninput="localStorage.setItem('hf_height_cm',this.value)">
+        <span style="color:var(--dim);font-size:13px;">cm</span>
+      </div>
       <button class="btn" id="startBtn" onclick="start()">▶ Start Camera</button>
       <div class="note">Runs on your device. Nothing is uploaded. Camera access is required.</div>
       <div class="err" id="introErr"></div>
@@ -196,6 +208,7 @@
             <div class="mchip"><small>Knee</small><b class="deg" id="kneeA">—</b></div>
             <div class="mchip"><small>Hip</small><b class="deg" id="hipA">—</b></div>
             <div class="mchip"><small>Trunk</small><b class="deg" id="trunkA">—</b></div>
+            <div class="mchip"><small>Speed</small><b id="speedA">—</b></div>
             <div class="mchip"><small>Valid</small><b id="validN">0</b></div>
           </div>
         </div>
@@ -265,10 +278,48 @@ const K={LSH:5,RSH:6,LWR:9,RWR:10,LHIP:11,RHIP:12,LKNEE:13,RKNEE:14,LANK:15,RANK
 const MINSCORE=0.35;            // keypoint confidence
 const VALID_TH=0.0;             // hip-below-knee (normalized) → valid at/below 0
 const GREY_BAND=0.06;           // ± band around threshold = "grey zone"
+const G=9.81;                   // ball leaves the hands at hand speed — that is what we measure
+const H_SHOULDER_ANKLE=0.779;   // shoulder-to-ankle as a share of standing height (Drillis & Contini)
 const DEEP_KNEE=95;             // knee angle at the bottom we call a full squat
 const LEAN_OK=40;               // trunk lean from vertical we consider tall enough
 const SYM_OK=10;                // left/right knee difference that still reads as balanced
 
+
+/* ---- scale & release speed ----------------------------------------------
+   MoveNet cannot see the ball, but the ball is in the hands until release, so
+   hand speed at release IS ball speed. Pixels become metres from the athlete's
+   own body: shoulder-to-ankle is a fixed share of standing height. ---------- */
+let pxPerM=null, lastSpeed=null;
+function athleteHeightM(){
+  const v=parseFloat(localStorage.getItem('hf_height_cm')||'');
+  return (v>=120&&v<=230) ? v/100 : 1.72;
+}
+function calibrate(kp){
+  const sh=(ok(kp[K.LSH])&&ok(kp[K.RSH]))?mid(kp[K.LSH],kp[K.RSH]):(ok(kp[K.LSH])?kp[K.LSH]:kp[K.RSH]);
+  const an=(ok(kp[K.LANK])&&ok(kp[K.RANK]))?mid(kp[K.LANK],kp[K.RANK]):(ok(kp[K.LANK])?kp[K.LANK]:kp[K.RANK]);
+  if(!sh||!an||!ok(sh)||!ok(an)) return;
+  const dy=Math.abs(an.y-sh.y); if(dy<60) return;                  // too small to trust
+  const est=dy/(H_SHOULDER_ANKLE*athleteHeightM());
+  pxPerM = (pxPerM==null) ? est : pxPerM*0.9+est*0.1;              // settle over a few frames
+}
+/* fastest upward hand motion in the rep = the throw; apex from projectile motion */
+function releaseMetrics(samples, ankleY){
+  if(!pxPerM || !samples || samples.length<4) return null;
+  let best=null;
+  for(let i=2;i<samples.length;i++){
+    const a=samples[i-2], b=samples[i];
+    const dt=(b.t-a.t)/1000; if(dt<=0.001) continue;
+    const vy=(a.y-b.y)/dt, vx=(b.x-a.x)/dt;                        // screen y grows downward
+    if(vy<=0) continue;
+    const sp=Math.hypot(vx,vy)/pxPerM;
+    if(!best||sp>best.sp) best={sp, vy:vy/pxPerM, y:b.y};
+  }
+  if(!best) return null;
+  const releaseH=(ankleY-best.y)/pxPerM;
+  const apex=releaseH+(best.vy*best.vy)/(2*G);
+  if(best.sp<0.5||best.sp>12||apex<0.5||apex>6) return null;       // reject nonsense
+  return {speed:best.sp, height:apex};
+}
 function pt(kp,i){ return kp[i]; }
 function ok(p){ return p && p.score>MINSCORE; }
 function usableSide(kp){
@@ -365,11 +416,11 @@ function analyze(kp0){
   $('gline').style.bottom=((VALID_TH+0.4)/0.8*100)+'%';
 
   const now=Date.now();
-  if(state==='up'){
+  if(state==='up'){ calibrate(kp);
     if(depth > VALID_TH+0.02){                 // descent crossed into the judged zone
       state='down'; bottom=depth;
       rep={tStart:now, tBottom:now, kneeMin:live.knee||180, hipMin:live.hip||180, leanMax:live.lean||0,
-           sym:symDiff(), pathX:[], torso};
+           sym:symDiff(), pathX:[], torso, wrist:[], ankleY:0};
     }
     setStatus(depth>-0.1?'GO LOWER':'READY', depth>-0.1?'go':'');
   } else {
@@ -378,7 +429,8 @@ function analyze(kp0){
     if(live.hip!=null)  rep.hipMin =Math.min(rep.hipMin,live.hip);
     if(live.lean!=null) rep.leanMax=Math.max(rep.leanMax,live.lean);
     const sd=symDiff(); if(sd!=null) rep.sym=Math.max(rep.sym||0,sd);
-    if(wrist) rep.pathX.push(wrist.x);
+    if(wrist){ rep.pathX.push(wrist.x); rep.wrist.push({x:wrist.x,y:wrist.y,t:now}); }
+    if(ok(ank)) rep.ankleY=Math.max(rep.ankleY, ank.y);            // lowest point on screen = the floor
     setStatus('GO LOWER','go');
     if(depth < VALID_TH-0.03){                 // returned to the top → rep complete
       state='up';
@@ -386,7 +438,9 @@ function analyze(kp0){
       const score = Math.max(0,Math.min(100,Math.round(50 + bottom*120)));
       const drift = rep.pathX.length>2 ? (Math.max.apply(null,rep.pathX)-Math.min.apply(null,rep.pathX))/(rep.torso||1) : null;
       reps++; if(cls==='valid'){valid++;} else if(cls==='grey'){grey++;}
-      repData.push({ score, cls, depth:bottom,
+      const rel=releaseMetrics(rep.wrist, rep.ankleY);
+      if(rel){ lastSpeed=rel.speed; setChip('speedA', rel.speed, v=>''); }
+      repData.push({ score, cls, depth:bottom, speed:rel?rel.speed:null, throwH:rel?rel.height:null,
         kneeMin:Math.round(rep.kneeMin), hipMin:Math.round(rep.hipMin), leanMax:Math.round(rep.leanMax),
         sym:rep.sym!=null?Math.round(rep.sym):null, drift,
         ecc:(rep.tBottom-rep.tStart)/1000, con:(now-rep.tBottom)/1000 });
@@ -405,7 +459,7 @@ function paintChips(){
 }
 function setChip(id,val,cls){
   const el=$(id); if(!el) return;
-  el.textContent = val==null?'—':Math.round(val);
+  el.textContent = val==null?'—':(id==='speedA'?val.toFixed(1):Math.round(val));
   const chip=el.parentNode; chip.className='mchip'+(val==null?'':(cls(val)?' '+cls(val):''));
 }
 
@@ -527,8 +581,11 @@ function summarise(rd){
   const ecc  = avg(rd.map(r=>r.ecc).filter(v=>v!=null&&v<12));
   const con  = avg(rd.map(r=>r.con).filter(v=>v!=null&&v<12));
   const drift= avg(rd.map(r=>r.drift).filter(v=>v!=null));
+  const speeds=rd.map(r=>r.speed).filter(v=>v!=null);
+  const speed=avg(speeds), topSpeed=speeds.length?Math.max.apply(null,speeds):null;
+  const throwH=avg(rd.map(r=>r.throwH).filter(v=>v!=null));
   return {reps:done, valid:validN, grey:rd.filter(r=>r.cls==='grey').length,
-          avgDepth, cons, depthScore, knee, hipA, lean, sym, ecc, con, drift};
+          avgDepth, cons, depthScore, knee, hipA, lean, sym, ecc, con, drift, speed, topSpeed, throwH};
 }
 function grade(s){ return s>=85?'Race standard':s>=70?'Solid — nearly there':s>=50?'Work in progress':'Needs depth work'; }
 function cues(m){
@@ -544,6 +601,7 @@ function cues(m){
   if(m.ecc!=null && m.ecc<0.35) out.push({cls:'', t:'You are dropping fast (<b>'+m.ecc.toFixed(2)+'s</b> down). Fine for a race, but control it in training to build the position.'});
   if(m.ecc!=null && m.ecc>1.4) out.push({cls:'', t:'Descent takes <b>'+m.ecc.toFixed(2)+'s</b> — slow for a workout pace. Sharpen the drop and use the bounce.'});
   if(m.drift!=null && m.drift>0.9) out.push({cls:'', t:'The ball drifts <b>'+Math.round(m.drift*100)+'%</b> of a torso length horizontally. Keep it travelling straight up the same line.'});
+  if(m.speed!=null && m.speed<3.4) out.push({cls:'', t:'Ball leaves the hands at <b>'+m.speed.toFixed(1)+' m/s</b> — on the low side. Drive through the legs and finish the throw, do not press it with the arms.'});
   if(m.cons>=85) out.push({cls:'good', t:'Rep-to-rep consistency <b>'+m.cons+'%</b> — the depth barely changes as you fatigue.'});
   else if(m.cons<60) out.push({cls:'bad', t:'Consistency <b>'+m.cons+'%</b> — depth falls off across the set. That is where no-reps come from in a race.'});
   return out.slice(0,5);
@@ -575,6 +633,10 @@ function finish(){
     bioRow('Tempo','Down / up seconds per rep', (m.ecc==null?'—':fmtSec(m.ecc)+' / '+fmtSec(m.con)), 'ecc / con', 'n', null) +
     bioRow('Left–right symmetry','Knee angle difference between sides', fmtDeg(m.sym), 'avg',
            m.sym==null?'n':(m.sym<=SYM_OK?'ok':'bad'), null) +
+    bioRow('Ball speed at release','Hand speed the moment the ball leaves — best '+(m.topSpeed==null?'—':m.topSpeed.toFixed(1)+' m/s'),
+           m.speed==null?'—':m.speed.toFixed(1), 'm/s avg', m.speed==null?'n':(m.speed>=4?'ok':'warn'), null) +
+    bioRow('Throw height','Estimated apex from release speed and height', m.throwH==null?'—':m.throwH.toFixed(1)+' m', '',
+           m.throwH==null?'n':(m.throwH>=2.7?'ok':'warn'), null) +
     bioRow('Ball path drift','Horizontal travel of the hands, as a share of torso length',
            m.drift==null?'—':Math.round(m.drift*100)+'%', '', m.drift==null?'n':(m.drift<=0.9?'ok':'warn'), null);
 
@@ -605,7 +667,7 @@ function buildShareImage(){
     x.fillStyle='#9a9a9a'; x.font='700 19px Inter, sans-serif'; x.fillText(s[1],cx,908); });
   const bio=[[r.knee!=null?Math.round(r.knee)+'°':'—','KNEE AT DEPTH'],
              [r.lean!=null?Math.round(r.lean)+'°':'—','TRUNK LEAN'],
-             [r.ecc!=null?r.ecc.toFixed(1)+'s':'—','DESCENT']];
+             [r.speed!=null?r.speed.toFixed(1):'—','BALL SPEED M/S']];
   bio.forEach((s,i)=>{ const cx=200+i*340; x.fillStyle='#0e0e0e'; roundRect(x,cx-140,975,280,150,20); x.fill(); x.strokeStyle='#262626';x.stroke();
     x.fillStyle='#FFE000'; x.font='700 50px Oswald, sans-serif'; x.fillText(String(s[0]),cx,1050);
     x.fillStyle='#9a9a9a'; x.font='700 18px Inter, sans-serif'; x.fillText(s[1],cx,1090); });
@@ -628,6 +690,7 @@ async function shareResult(){
   },'image/png');
 }
 window.addEventListener('resize',()=>{ if(running) resize(); });
+try{ const h=localStorage.getItem('hf_height_cm'); if(h) $('hgt').value=h; }catch(e){}
 </script>
 </body>
 </html>
