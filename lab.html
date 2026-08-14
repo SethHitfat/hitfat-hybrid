@@ -1433,7 +1433,7 @@ function a4Canvas(m, cfg, secs, done){
     x.fillStyle='#bfe6cf'; x.fillRect(tx+tw*pc(gLo),ty,Math.max(3,tw*(pc(gHi)-pc(gLo))),th);
     x.beginPath(); x.arc(tx+tw*pc(val),ty+th/2,7*S,0,7); x.fillStyle=inb?OK:WARN; x.fill();
     T('target '+(gLo===min?'≤'+gHi+(unit||''):(gHi===max?'≥'+gLo+(unit||''):gLo+'–'+gHi+(unit||''))),
-      tx+tw,ty+th+9*S,10,400,'#9a9a9a','right');
+      tx,ty+th+9*S,10,400,'#9a9a9a');
     return py+39*S;
   };
 
@@ -1465,11 +1465,11 @@ function a4Canvas(m, cfg, secs, done){
   ly=row('Tempo — up (concentric)',m.con,' s',0,2.5,0.3,1,2,LX,ly,LW);
 
   /* ---- right column ---- */
-  box(RX,ry,RW,128*S,'#d8d8d8');
+  box(RX,ry,RW,140*S,'#d8d8d8');
   T(String(m.depthScore||0),RX+RW/2,ry+86*S,66,700,INK,'center','Oswald, Inter, sans-serif');
-  T('DEPTH SCORE / 100',RX+RW/2,ry+105*S,11,700,MUT,'center');
-  T(grade(m.depthScore||0),RX+RW/2,ry+122*S,14,700,INK,'center');
-  ry+=142*S;
+  T('DEPTH SCORE / 100',RX+RW/2,ry+112*S,11,700,MUT,'center');
+  T(grade(m.depthScore||0),RX+RW/2,ry+130*S,14,700,INK,'center');
+  ry+=154*S;
 
   const fx=fixFirst(m,done);
   x.fillStyle='#fffbe8'; x.fillRect(RX,ry,RW,4);
@@ -1558,10 +1558,13 @@ function a4Canvas(m, cfg, secs, done){
     const RULE=A4H-A4M-72*S, room=RULE-ry-26*S;
     if(room<140) return;
     ry=section('What was measured',RX,ry,RW);
-    const h=Math.min(300*S, RULE-ry-20*S);
+    const h=Math.min(340*S, RULE-ry-18*S);
     if(h<120) return;
-    drawFigure(x, wbPose(0.52), RX+RW*0.42, ry+h, h*0.92,
-      {ink:'#111', grid:'#e2e2e2', accent:'#c8890c', good:'#137a43', ballFill:'rgba(255,224,0,.35)'});
+    x.fillStyle='#fafafa'; x.fillRect(RX,ry,RW,h);                 // a panel, so it reads as part of the sheet
+    x.strokeStyle='#e6e6e6'; x.lineWidth=1; x.strokeRect(RX+.5,ry+.5,RW,h);
+    drawFigure(x, wbPose(0.55), RX+RW*0.40, ry+h-14*S, (h-30*S)*1.15,
+      {ink:'#111', grid:'#e0e0e0', accent:'#c8890c', good:'#137a43', ballFill:'rgba(255,224,0,.40)'});
+    T('Bottom position — the moment every rep is judged',RX+12*S,ry+h-4*S,10,400,'#9a9a9a');
     ry+=h+14*S;
   })();
 
