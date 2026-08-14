@@ -1197,7 +1197,7 @@ const IMG={
   rowRace:"img-row-race.jpg",        wallball:"img-wallball.jpg",
   runTrack:"img-run-track.jpg",      runPark:"img-run-park.jpg",
   treadmill:"img-run-treadmill.jpg", sprintTurf:"img-sprint-turf.jpg",
-  broadjump:"img-broadjump.jpg",
+  broadjump:"img-broadjump.jpg",  rowGym:"img-row-gym.jpg",
   found:"https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=700&q=70",
   power:"https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=700&q=70",
   complete:"https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=700&q=70",
@@ -1638,7 +1638,7 @@ const TRAINING_PLAN={
 
 const CATEGORIES=[
   {
-    name:"Foundation", img:IMG.skiergClub,
+    name:"Foundation", img:IMG.rowGym,
     desc:"HYROX Performance Foundational. Base, technique & endurance. 15 varied circuit/interval sessions.",
     workouts:[
       // ===== HYROX FOUNDATIONAL #2 =====
@@ -1913,7 +1913,7 @@ const CATEGORIES=[
     ]
   },
   {
-    name:"Power", img:IMG.sledpushRace,
+    name:"Power", img:IMG.broadjump,
     desc:"HYROX Performance Power. Strength & explosive power. Multi-block: strength sections, partner work, AMRAP triplets.",
     workouts:[
       // ===== POWER #197 =====
@@ -2087,7 +2087,7 @@ const CATEGORIES=[
     ]
   },
   {
-    name:"Complete", img:IMG.broadjump,
+    name:"Complete", img:IMG.sledpushRace,
     desc:"Full race-style sessions. Stations + runs back to back, simulating official HYROX format.",
     workouts:[
       S("Complete · Full Sim #1",9,["SkiErg","Sled","Rower","Wall Ball","Sandbag"],"Full 8-station + run simulation — official Open weights.",
