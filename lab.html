@@ -177,6 +177,41 @@
   .det summary:after{content:' ▾';color:var(--dim);}
   .det[open] summary:after{content:' ▴';}
   .det summary span{display:block;font-size:12.5px;font-weight:400;color:var(--dim);margin-top:3px;}
+  /* ---- the read-out sheet: dense, banded, scannable like a body scan ---- */
+  .sheet{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#0b0b0b;}
+  .shead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:13px 14px;
+         border-bottom:1px solid var(--line);background:#111;}
+  .shead b{font-weight:800;font-size:15px;} .shead span{font-weight:800;font-size:15px;color:var(--hyrox);}
+  .shead small{display:block;font-size:10.5px;color:var(--dim);margin-top:2px;letter-spacing:.3px;}
+  .sid{text-align:right;} .sid span{display:block;font-family:'Oswald';font-size:11px;color:var(--dim);letter-spacing:.8px;}
+  .sid span:first-child{color:#fff;font-size:12.5px;}
+  .ssum{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line);}
+  .ssum .c{padding:11px 6px;text-align:center;border-right:1px solid var(--line);}
+  .ssum .c:last-child{border-right:none;}
+  .ssum .c b{display:block;font-family:'Oswald';font-size:21px;color:#fff;line-height:1;}
+  .ssum .c small{display:block;font-size:9px;letter-spacing:.6px;color:var(--dim);text-transform:uppercase;margin-top:5px;}
+  .sec{padding:12px 14px;border-bottom:1px solid var(--line);}
+  .sec:last-of-type{border-bottom:none;}
+  .sect{font-family:'Oswald';font-size:10.5px;letter-spacing:2px;color:var(--hyrox);font-weight:700;
+        text-transform:uppercase;margin-bottom:11px;}
+  .sr{margin-bottom:13px;} .sr:last-child{margin-bottom:2px;}
+  .sh{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:13px;color:#d6d6d6;}
+  .sh b{font-family:'Oswald';font-size:16px;color:#fff;} .sh b u{text-decoration:none;font-size:10px;color:var(--dim);}
+  .sh b.ok{color:var(--ok);} .sh b.out{color:var(--hyrox);} .sh b.na{font-size:11px;color:var(--dim2);font-family:'Inter';}
+  .strk{position:relative;height:7px;border-radius:99px;background:rgba(255,255,255,.10);margin-top:7px;}
+  .strk .band{position:absolute;top:0;bottom:0;background:rgba(46,194,126,.30);border-radius:99px;}
+  .strk .miss{position:absolute;inset:0;border-radius:99px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.06) 0 6px,transparent 6px 12px);}
+  .strk .mk{position:absolute;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;
+            background:var(--hyrox);border:2px solid #0b0b0b;box-shadow:0 0 0 1px rgba(0,0,0,.6);}
+  .strk .mk.ok{background:var(--ok);}
+  .sf{display:flex;justify-content:space-between;font-size:9.5px;color:var(--dim2);margin-top:5px;}
+  .sf .tg{color:var(--dim);}
+  .htab{width:100%;border-collapse:collapse;font-size:12px;}
+  .htab th{font-family:'Oswald';font-size:9px;letter-spacing:1.2px;color:var(--dim);text-transform:uppercase;
+           text-align:left;padding:0 0 7px;font-weight:700;}
+  .htab td{padding:7px 0;border-top:1px solid rgba(255,255,255,.06);color:#cfcfcf;}
+  .htab td b{font-family:'Oswald';font-size:14px;color:#fff;}
+  .sfoot{padding:11px 14px;font-size:10.5px;color:var(--dim2);line-height:1.5;background:#0e0e0e;}
   /* biomechanics report */
   .bio{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:6px 16px;margin-bottom:12px;}
   .brow{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.06);}
@@ -330,10 +365,11 @@
       <div class="chart" id="progChart"></div>
 
       <details class="det">
-        <summary>Full analysis <span>angles, tempo, every rep</span></summary>
-        <div class="bio" id="bioRows" style="margin-top:12px;"></div>
-        <div class="chart"><div id="depthChart"></div><div class="cl"><span>Rep 1</span><span id="chartEnd">Rep —</span></div></div>
+        <summary>Full read-out <span>every measurement against its target range</span></summary>
+        <div id="sheet" style="margin-top:12px;"></div>
+        <div class="chart" style="margin-top:12px;"><div id="depthChart"></div><div class="cl"><span>Rep 1</span><span id="chartEnd">Rep —</span></div></div>
         <div id="cues"></div>
+        <div class="bio" id="bioRows" style="display:none;"></div>
       </details>
 
       <div class="actions">
@@ -940,6 +976,84 @@ function fixFirst(m, done){
   return {t:'Keep this exact set', m:'Depth, torso and tempo are all where they should be. Repeat it heavier or faster.'};
 }
 
+
+/* ============================================================
+   THE SHEET — an InBody-style read-out
+   Every number in this tool has a range an athlete should sit in, so each one
+   gets the same treatment: a band scale with under / target / over, and a marker
+   showing exactly where this set landed. Read it in one pass, like a body scan.
+   ============================================================ */
+function wallTargetM(w){ return w>=9 ? 3.05 : 2.75; }   // HYROX target height: 10ft men, 9ft women
+function scaleRow(o){
+  // o: {label, val, unit, min, max, gLo, gHi, dp, note}
+  if(o.val==null) return `<div class="sr"><div class="sh"><span>${o.label}</span><b class="na">not measured</b></div>
+      <div class="strk"><i class="miss"></i></div></div>`;
+  const span=(o.max-o.min)||1;
+  const pct=v=>Math.max(0,Math.min(100,((v-o.min)/span)*100));
+  const gl=pct(o.gLo), gh=pct(o.gHi), at=pct(o.val);
+  const inband=o.val>=o.gLo&&o.val<=o.gHi;
+  const dp=o.dp==null?0:o.dp;
+  return `<div class="sr">
+    <div class="sh"><span>${o.label}</span><b class="${inband?'ok':'out'}">${Number(o.val).toFixed(dp)}<u>${o.unit||''}</u></b></div>
+    <div class="strk">
+      <i class="band" style="left:${gl}%;width:${Math.max(2,gh-gl)}%"></i>
+      <i class="mk ${inband?'ok':'out'}" style="left:${at}%"></i>
+    </div>
+    <div class="sf"><span>${o.min}</span><span class="tg">target ${o.gLo===o.min?'≤ '+o.gHi:(o.gHi===o.max?'≥ '+o.gLo:o.gLo+'–'+o.gHi)}${o.unit||''}</span><span>${o.max}</span></div>
+  </div>`;
+}
+function sheetSection(title, rows){ return `<div class="sec"><div class="sect">${title}</div>${rows}</div>`; }
+function inbodySheet(m, cfg, secs, done){
+  const d=new Date();
+  const stamp=d.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]
+    +' '+d.getFullYear()+'  '+d.getHours()+':'+(d.getMinutes()<10?'0':'')+d.getMinutes();
+  const validPct = done? Math.round(m.valid/done*100) : null;
+  const tgtH=wallTargetM(cfg.w);
+
+  const head=`<div class="shead">
+      <div><b>HITFAT</b> <span>BIOMECHANICS</span><small>Wall ball analysis</small></div>
+      <div class="sid"><span>${cfg.w} kg × ${cfg.t} reps</span><span>${stamp}</span></div>
+    </div>`;
+
+  const summary=`<div class="ssum">
+      <div class="c"><b>${secs?fmtClock(secs):'—'}</b><small>Set time</small></div>
+      <div class="c"><b>${done||0}</b><small>Reps</small></div>
+      <div class="c"><b>${m.valid||0}</b><small>Valid</small></div>
+      <div class="c"><b>${(secs&&done)?(done/(secs/60)).toFixed(1):'—'}</b><small>Reps/min</small></div>
+    </div>`;
+
+  const depth=sheetSection('Depth analysis',
+    scaleRow({label:'Depth score', val:m.depthScore, unit:'', min:0, max:100, gLo:70, gHi:100})+
+    scaleRow({label:'Reps at full depth', val:validPct, unit:'%', min:0, max:100, gLo:90, gHi:100})+
+    scaleRow({label:'Consistency across the set', val:m.cons, unit:'%', min:0, max:100, gLo:75, gHi:100}));
+
+  const joints=sheetSection('Joint analysis',
+    scaleRow({label:'Knee angle at the bottom', val:m.knee, unit:'°', min:60, max:140, gLo:60, gHi:DEEP_KNEE})+
+    scaleRow({label:'Hip angle at the bottom', val:m.hipA, unit:'°', min:50, max:140, gLo:50, gHi:100})+
+    scaleRow({label:'Trunk lean from upright', val:m.lean, unit:'°', min:0, max:70, gLo:0, gHi:LEAN_OK})+
+    scaleRow({label:'Left–right difference', val:m.sym, unit:'°', min:0, max:30, gLo:0, gHi:SYM_OK}));
+
+  const thr=sheetSection('Throw analysis',
+    scaleRow({label:'Ball speed at release', val:m.speed, unit:' m/s', min:1, max:8, gLo:4, gHi:8, dp:1})+
+    scaleRow({label:'Throw height', val:m.throwH, unit:' m', min:1, max:4, gLo:tgtH, gHi:4, dp:2})+
+    scaleRow({label:'Ball path drift', val:m.drift==null?null:m.drift*100, unit:'%', min:0, max:200, gLo:0, gHi:90}));
+
+  const tempo=sheetSection('Tempo',
+    scaleRow({label:'Down (eccentric)', val:m.ecc, unit:' s', min:0, max:2.5, gLo:0.4, gHi:1.2, dp:2})+
+    scaleRow({label:'Up (concentric)', val:m.con, unit:' s', min:0, max:2.5, gLo:0.3, gHi:1.0, dp:2}));
+
+  const hist=wbHistory(cfg.w,cfg.t).slice(-6);
+  const history= hist.length? `<div class="sec"><div class="sect">History · ${cfg.w} kg × ${cfg.t}</div>
+      <table class="htab"><tr><th>Date</th><th>Time</th><th>Valid</th><th>Score</th></tr>
+      ${hist.map(x=>{ const dd=new Date(x.d);
+        return `<tr><td>${dd.getDate()}/${dd.getMonth()+1}</td><td><b>${fmtClock(x.secs)}</b></td>
+          <td>${x.valid==null?'—':x.valid+'/'+x.t}</td><td>${x.score==null?'—':x.score}</td></tr>`; }).join('')}
+      </table></div>` : '';
+
+  return `<div class="sheet">${head}${summary}${depth}${joints}${thr}${tempo}${history}
+    <div class="sfoot">Measured on device from ${done||0} rep${done===1?'':'s'} · target height for a ${cfg.w} kg ball is ${tgtH.toFixed(2)} m · hips below knee per HYROX rulebook 8.8.6</div></div>`;
+}
+
 function fmtDeg(v){ return v==null?'—':Math.round(v)+'°'; }
 function fmtSec(v){ return v==null?'—':v.toFixed(2)+'s'; }
 function bioRow(name, meta, value, unit, cls, meterPct){
@@ -997,6 +1111,7 @@ function finish(){
   $('chartEnd').textContent='Rep '+(repData.length||'—');
   $('plainRows').innerHTML = plainLines(m,reps).map(l=>`<div class="plain"><span class="d"></span><span>${l}</span></div>`).join('')
      || '<div class="plain"><span class="d"></span><span>No reps were counted — check the framing and try again.</span></div>';
+  { const sh=$('sheet'); if(sh) sh.innerHTML=inbodySheet(m, cfg, hitTarget?secs:0, reps); }
   const fx=fixFirst(m,reps);
   $('fixCard').innerHTML=`<div class="k">Fix this first</div><div class="t">${fx.t}</div><div class="m">${fx.m}</div>`;
   $('cues').innerHTML = cues(m).map(c=>'<div class="cue '+c.cls+'"><span class="d"></span><span>'+c.t+'</span></div>').join('');
