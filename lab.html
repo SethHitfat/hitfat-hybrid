@@ -86,7 +86,11 @@
   .status.go{color:var(--hyrox);border-color:var(--hyrox);}
   .status.valid{color:#fff;background:var(--ok);border-color:var(--ok);}
   .status.grey{color:#fff;background:var(--grey);border-color:var(--grey);}
-  .controls{display:flex;gap:10px;pointer-events:auto;}
+  .controls{display:flex;gap:10px;pointer-events:auto;transition:opacity .35s;}
+  .controls.hide{opacity:0;pointer-events:none;}
+  .wmark{position:absolute;left:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font-weight:800;
+         font-size:12.5px;letter-spacing:.4px;color:rgba(255,255,255,.55);pointer-events:none;}
+  .wmark span{color:var(--hyrox);}
   .controls .btn{flex:1;padding:15px;}
   .gauge{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:14px;height:40%;background:rgba(0,0,0,.5);
          border:1px solid rgba(255,255,255,.15);border-radius:99px;overflow:hidden;pointer-events:none;}
@@ -94,6 +98,11 @@
   .gauge .line{position:absolute;left:-6px;right:-6px;height:2px;background:var(--ok);}
 
 
+  .chiprow{display:flex;gap:8px;flex-wrap:wrap;}
+  .wchip{flex:1 1 auto;min-width:58px;background:var(--surface2);border:1px solid var(--line);color:#dcdcdc;
+         border-radius:12px;padding:11px 8px;font-family:'Oswald';font-size:15px;font-weight:700;cursor:pointer;}
+  .wchip.on{background:var(--hyrox);border-color:var(--hyrox);color:var(--ink);}
+  .cl{display:flex;justify-content:space-between;font-size:11px;color:var(--dim2);margin-top:6px;}
   /* ---- analysis panels (sports-broadcast style) ---- */
   .pan{background:rgba(8,8,8,.62);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.10);
        border-radius:14px;padding:10px 12px;pointer-events:none;}
@@ -195,6 +204,9 @@
       <div class="mrow"><div class="ic" style="background:rgba(48,213,200,.14);color:#30D5C8">⏱</div>
         <div><div class="t">Tempo &amp; symmetry</div><div class="m">Down/up seconds per rep and left–right balance</div></div></div>
 
+      <h2>Your set</h2>
+      <div id="setup"></div>
+
       <h2>Set up for accuracy</h2>
       <div class="card">
         <div class="step"><div class="n">1</div><div class="t">Prop your phone at <b>hip height</b>, ~2–3m away, so your <b>full body</b> is in frame.</div></div>
@@ -235,6 +247,13 @@
               <div class="repbar"><i id="repFill"></i></div>
             </div>
             <div class="pan" style="min-width:150px;">
+              <div class="lb">Time</div>
+              <div class="n" style="display:flex;align-items:baseline;gap:6px;">
+                <b id="clockV" style="font-family:'Oswald';font-size:32px;font-weight:700;color:var(--hyrox);line-height:.9;">0:00</b>
+                <span id="paceV" style="font-family:'Oswald';font-size:13px;color:var(--dim);">—</span>
+              </div>
+            </div>
+            <div class="pan" style="min-width:150px;">
               <div class="lb">Depth</div>
               <div class="dep" id="depBox"><span class="v" id="depV">—</span></div>
               <div class="s" id="depS">Waiting for a rep</div>
@@ -267,7 +286,8 @@
           </div>
         </div>
         <div class="status" id="status">GET READY</div>
-        <div class="controls">
+        <div class="wmark">HITFAT <span>BIOMECHANICS</span></div>
+        <div class="controls" id="ctrls">
           <button class="btn sec" onclick="flipCam()">⟲ Flip</button>
           <button class="btn" onclick="finish()">Finish ✓</button>
         </div>
@@ -280,7 +300,17 @@
     <div class="pad">
       <div class="rcard" id="rcard">
         <div class="rb"><div class="l">HITFAT <span class="y">BIOMECHANICS</span></div><div class="d" id="rdate">—</div></div>
-        <div class="bigscore"><div class="v" id="rscore">0</div><div class="l">Depth Score</div><div class="g" id="rgrade">—</div></div>
+        <div class="bigscore">
+          <div class="v" id="rtime">0:00</div>
+          <div class="l" id="rsetlbl">Set time</div>
+          <div class="g" id="rdelta">—</div>
+        </div>
+        <div class="rgrid" style="margin-bottom:10px;">
+          <div class="c"><b id="rscore">0</b><small>Depth Score</small></div>
+          <div class="c"><b id="rrpm">—</b><small>Reps / min</small></div>
+          <div class="c"><b id="rbest">—</b><small>Your best</small></div>
+        </div>
+        <div class="g" id="rgrade" style="text-align:center;font-size:13px;color:#fff;font-weight:600;">—</div>
         <div class="rgrid">
           <div class="c"><b id="rvalid">0</b><small>Valid Reps</small></div>
           <div class="c"><b id="rdepth">0%</b><small>Avg Depth</small></div>
@@ -295,6 +325,9 @@
 
       <h2>Depth per rep</h2>
       <div class="chart"><div id="depthChart"></div><div class="cl"><span>Rep 1</span><span id="chartEnd">Rep —</span></div></div>
+
+      <h2>Your progress</h2>
+      <div class="chart" id="progChart"></div>
 
       <h2>Coaching notes</h2>
       <div id="cues"></div>
@@ -338,6 +371,75 @@ const DEEP_KNEE=95;             // knee angle at the bottom we call a full squat
 const LEAN_OK=40;               // trunk lean from vertical we consider tall enough
 const SYM_OK=10;                // left/right knee difference that still reads as balanced
 
+
+
+/* ============================================================
+   SET CONFIGURATION + LOG
+   The tool stops being a one-off demo here: pick a weight and a rep target,
+   the clock runs, the set is saved, and every later set is measured against it.
+   ============================================================ */
+const WB_WEIGHTS=[4,6,9,10];
+const WB_TARGETS=[10,25,50,80,100];
+function wbCfg(){
+  const w=parseFloat(localStorage.getItem('hf_wb_w')||'9'), t=parseInt(localStorage.getItem('hf_wb_t')||'10',10);
+  return { w: WB_WEIGHTS.indexOf(w)>-1?w:9, t: WB_TARGETS.indexOf(t)>-1?t:10 };
+}
+function setWb(k,v){ localStorage.setItem('hf_wb_'+k,v); renderSetup(); }
+function wbLog(){ try{ const a=JSON.parse(localStorage.getItem('hf_wb_log')||'[]'); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+function saveWb(e){ const l=wbLog(); l.push(e); localStorage.setItem('hf_wb_log', JSON.stringify(l.slice(-300))); }
+function wbHistory(w,t){ return wbLog().filter(x=>x.w===w&&x.t===t&&x.secs>0); }
+function bestFor(w,t){ const h=wbHistory(w,t); return h.length?Math.min.apply(null,h.map(x=>x.secs)):null; }
+function fmtClock(sec){
+  sec=Math.max(0,Math.round(sec||0));
+  const m=Math.floor(sec/60), s=sec%60;
+  return m+':'+(s<10?'0':'')+s;
+}
+function repsPerMin(reps,secs){ return (!secs||!reps)?null:(reps/(secs/60)); }
+
+/* ---- the improvement chart: one line, one story — is the set getting faster? ---- */
+function wbChart(w,t){
+  const h=wbHistory(w,t).slice(-12);
+  if(h.length<2) return '<div class="note" style="margin:0;text-align:left;">Log two sets at this weight and target and your trend appears here.</div>';
+  const secs=h.map(x=>x.secs), lo=Math.min.apply(null,secs), hi=Math.max.apply(null,secs);
+  const pad=Math.max(2,(hi-lo)*0.18), min=lo-pad, max=hi+pad, W=300, H=110;
+  const px=i=>h.length<2?0:(i/(h.length-1))*(W-16)+8;
+  const py=v=>H-10-((v-min)/(max-min||1))*(H-26);
+  const pts=secs.map((v,i)=>px(i).toFixed(1)+','+py(v).toFixed(1));
+  const area='M'+px(0).toFixed(1)+','+(H-8)+' L'+pts.join(' L')+' L'+px(h.length-1).toFixed(1)+','+(H-8)+' Z';
+  const dots=secs.map((v,i)=>`<circle cx="${px(i).toFixed(1)}" cy="${py(v).toFixed(1)}" r="${i===h.length-1?4:2.6}"
+      fill="${v===lo?'#2ec27e':'#FFE000'}"/>`).join('');
+  const first=secs[0], last=secs[secs.length-1], diff=first-last;
+  const trend = diff>0 ? `<b style="color:#2ec27e">${diff.toFixed(0)}s faster</b> than your first logged set`
+              : diff<0 ? `<b style="color:#ff5a5a">${Math.abs(diff).toFixed(0)}s slower</b> than your first logged set`
+                       : 'Same as your first logged set';
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;">
+      <defs><linearGradient id="wbg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="rgba(255,224,0,.30)"/><stop offset="1" stop-color="rgba(255,224,0,0)"/></linearGradient></defs>
+      <path d="${area}" fill="url(#wbg)"/>
+      <polyline points="${pts.join(' ')}" fill="none" stroke="#FFE000" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+      ${dots}
+    </svg>
+    <div class="cl"><span>${h.length} sets</span><span>best ${fmtClock(lo)}</span></div>
+    <div class="note" style="margin-top:8px;text-align:left;">${trend}.</div>`;
+}
+function renderSetup(){
+  const c=wbCfg(), el=$('setup'); if(!el) return;
+  const chip=(on,label,onclick)=>`<button class="wchip ${on?'on':''}" onclick="${onclick}">${label}</button>`;
+  el.innerHTML=`
+    <div class="card">
+      <div class="kick">Ball weight</div>
+      <div class="chiprow">${WB_WEIGHTS.map(w=>chip(c.w===w,w+' kg',`setWb('w',${w})`)).join('')}</div>
+      <div class="kick" style="margin-top:16px;">Rep target</div>
+      <div class="chiprow">${WB_TARGETS.map(t=>chip(c.t===t,t,`setWb('t',${t})`)).join('')}</div>
+      <div class="note" style="text-align:left;margin-top:10px;">
+        ${c.t===100?'100 reps at 9 kg is the HYROX Open wall ball station.':'The clock starts on your first rep and stops on rep '+c.t+'.'}
+      </div>
+    </div>
+    <div class="card">
+      <div class="kick">Your progress · ${c.w} kg × ${c.t}</div>
+      ${wbChart(c.w,c.t)}
+    </div>`;
+}
 
 /* ---- scale & release speed ----------------------------------------------
    MoveNet cannot see the ball, but the ball is in the hands until release, so
@@ -412,10 +514,12 @@ async function start(){
   }
   $('loading').style.display='none';
   resize(); running=true; reps=0;valid=0;grey=0;repData=[];state='up';smoothKP=null;trail=[];
+  const cfg=wbCfg(); REP_TARGET=cfg.t; setTs=null; endTs=null;
   $('repN').textContent='0';$('validN').textContent='0';
   pxPerM=null; lastSpeed=null; lastArc=null;
   paintRepPanel(); paintDepth(null); paintForm(null);
   setChip('speedA',null,v=>''); setChip('peakA',null,v=>'');
+  armControlFade();
   loop();
 }
 function resize(){ overlay.width=video.videoWidth||overlay.clientWidth; overlay.height=video.videoHeight||overlay.clientHeight; }
@@ -424,6 +528,7 @@ async function loop(){
   let poses=[];
   try{ poses = await detector.estimatePoses(video, {maxPoses:1, flipHorizontal:false}); }catch(e){}
   ctx.clearRect(0,0,overlay.width,overlay.height);
+  paintClock();
   if(poses[0]){ analyze(poses[0].keypoints); }
   raf=requestAnimationFrame(loop);
 }
@@ -501,12 +606,14 @@ function analyze(kp0){
         kneeMin:Math.round(rep.kneeMin), hipMin:Math.round(rep.hipMin), leanMax:Math.round(rep.leanMax),
         sym:rep.sym!=null?Math.round(rep.sym):null, drift,
         ecc:(rep.tBottom-rep.tStart)/1000, con:(now-rep.tBottom)/1000 });
+      if(setTs==null) setTs=now;                       // first rep starts the clock
       const justDone=repData[repData.length-1];
       $('validN').textContent=valid;
       paintRepPanel(); paintDepth(justDone); paintForm(justDone);
       if(rel){ setChip('peakA', rel.height, v=>''); lastArc={x:rep.wrist[rep.wrist.length-1].x, y:rep.wrist[rep.wrist.length-1].y,
                                                             v:rel.speed, h:rel.height, t:now}; }
       flash(cls);
+      if(reps>=REP_TARGET){ endTs=Date.now(); setTimeout(finish,700); }   // target hit — let the last beep land
     }
   }
 }
@@ -525,10 +632,21 @@ function setChip(id,val,cls){
 }
 
 
+
+/* the clock starts on the first rep, not on the camera — warm-up time is not the set */
+let setTs=null, endTs=null;
+function setSecs(){ return setTs==null?0:(((endTs||Date.now())-setTs)/1000); }
+function paintClock(){
+  const c=$('clockV'); if(!c) return;
+  const sec=setSecs(); c.textContent=fmtClock(sec);
+  const p=$('paceV');
+  if(p) p.textContent = (reps>1&&sec>0) ? (sec/reps).toFixed(1)+'s/rep' : '—';
+}
+
 /* ---- panel state ---------------------------------------------------------
    The form check reports the LAST COMPLETED REP, not the current frame — a list
    that flickers every frame is unreadable and tells the athlete nothing. ----- */
-const REP_TARGET=100;                      // HYROX Open standard
+let REP_TARGET=100;                        // replaced by the athlete's choice at start
 let lastArc=null;                          // projected ball flight, drawn for a moment after release
 function setCheck(id,pass){
   const el=$(id); if(!el) return;
@@ -699,6 +817,18 @@ function label(c2,txt,x,y,color,U,center){
 }
 function roundRectPath(x,rx,ry,w,h,r){ x.beginPath();x.moveTo(rx+r,ry);x.arcTo(rx+w,ry,rx+w,ry+h,r);x.arcTo(rx+w,ry+h,rx,ry+h,r);x.arcTo(rx,ry+h,rx,ry,r);x.arcTo(rx,ry,rx+w,ry,r);x.closePath(); }
 
+
+/* Athletes record this screen for social — so the buttons get out of the way,
+   and one tap anywhere brings them back. */
+let ctrlTimer=null;
+function armControlFade(){
+  const c=$('ctrls'); if(!c) return;
+  c.classList.remove('hide');
+  clearTimeout(ctrlTimer);
+  ctrlTimer=setTimeout(()=>{ if(running) c.classList.add('hide'); }, 4000);
+}
+document.addEventListener('pointerdown',()=>{ if(running) armControlFade(); });
+
 let ac=null;
 function beep(cls){ try{ if(!ac)ac=new (window.AudioContext||window.webkitAudioContext)(); const o=ac.createOscillator(),g=ac.createGain(); o.connect(g);g.connect(ac.destination); o.frequency.value=cls==='valid'?880:cls==='grey'?520:300; o.type='sine'; g.gain.setValueAtTime(.001,ac.currentTime); g.gain.exponentialRampToValueAtTime(.3,ac.currentTime+.01); g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.18); o.start();o.stop(ac.currentTime+.2);}catch(e){} }
 function flipCam(){ facing = facing==='user'?'environment':'user'; stop(); start(); }
@@ -760,7 +890,25 @@ function bioRow(name, meta, value, unit, cls, meterPct){
 function finish(){
   stop(); $('intro').style.display='none'; $('live').classList.remove('on'); $('result').classList.add('on');
   const m=summarise(repData);
+  const cfg=wbCfg(), secs=setSecs(), hitTarget=reps>=REP_TARGET&&secs>0;
+  const prevBest=bestFor(cfg.w,cfg.t);
   $('rscore').textContent=m.depthScore; $('rgrade').textContent=grade(m.depthScore);
+  $('rtime').textContent = hitTarget?fmtClock(secs):String(reps);
+  $('rsetlbl').textContent = hitTarget ? (cfg.t+' reps · '+cfg.w+' kg') : 'Reps completed';
+  const rpm=repsPerMin(reps,secs); $('rrpm').textContent = rpm?rpm.toFixed(1):'—';
+  $('rbest').textContent = prevBest?fmtClock(prevBest):'—';
+  if(hitTarget){
+    if(prevBest==null) $('rdelta').textContent='First set at this weight and target — this is the time to beat.';
+    else if(secs<prevBest) $('rdelta').innerHTML='<b style="color:#2ec27e">'+Math.round(prevBest-secs)+'s faster</b> than your best';
+    else if(secs>prevBest) $('rdelta').innerHTML=Math.round(secs-prevBest)+'s off your best';
+    else $('rdelta').textContent='Exactly your best time';
+    saveWb({ d:new Date().toISOString(), w:cfg.w, t:cfg.t, secs:Math.round(secs), reps:reps, valid:m.valid,
+             score:m.depthScore, knee:m.knee?Math.round(m.knee):null, speed:m.speed?+m.speed.toFixed(1):null });
+    if(prevBest!=null && secs<prevBest) $('rbest').textContent=fmtClock(secs);
+  } else {
+    $('rdelta').textContent='Set stopped before '+cfg.t+' reps — not logged.';
+  }
+  window._wbSet={secs:hitTarget?secs:null, w:cfg.w, t:cfg.t, rpm:rpm, best:prevBest};
   $('rvalid').textContent=m.valid; $('rdepth').textContent=m.avgDepth+'%'; $('rcons').textContent=m.cons+'%';
   const d=new Date(); $('rdate').textContent=(d.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+' '+d.getFullYear());
   $('rbar').innerHTML = repData.length? repData.map(r=>'<i class="'+(r.cls==='valid'?'':r.cls==='grey'?'grey':'bad')+'" style="height:'+Math.max(8,r.score)+'%"></i>').join('') : '<i style="height:8%"></i>';
@@ -801,10 +949,23 @@ function buildShareImage(){
   x.textAlign='left'; x.fillStyle='#fff'; x.font='800 42px Inter, sans-serif'; x.fillText('HITFAT', 70, 130);
   x.fillStyle='#FFE000'; x.fillText('BIOMECHANICS', 250, 130);
   x.fillStyle='#9a9a9a'; x.font='600 22px Inter, sans-serif'; x.fillText('WALL BALL ANALYSIS', 72, 168);
-  x.textAlign='center'; x.fillStyle='#FFE000'; x.font='700 340px Oswald, sans-serif'; x.fillText(String(r.depthScore||0), 540, 600);
-  x.fillStyle='#9a9a9a'; x.font='700 28px Inter, sans-serif'; x.fillText('DEPTH SCORE', 540, 654);
-  x.fillStyle='#fff'; x.font='600 30px Inter, sans-serif'; x.fillText(grade(r.depthScore||0), 540, 706);
-  const stats=[[r.valid||0,'VALID REPS'],[(r.avgDepth||0)+'%','AVG DEPTH'],[(r.cons||0)+'%','CONSISTENCY']];
+  const set=window._wbSet||{};
+  x.textAlign='center';
+  if(set.secs){
+    x.fillStyle='#FFE000'; x.font='700 300px Oswald, sans-serif'; x.fillText(fmtClock(set.secs), 540, 580);
+    x.fillStyle='#fff'; x.font='700 40px Inter, sans-serif'; x.fillText(set.t+' WALL BALLS · '+set.w+' KG', 540, 648);
+    if(set.best && set.secs<set.best){
+      x.fillStyle='#2ec27e'; x.font='700 30px Inter, sans-serif';
+      x.fillText(Math.round(set.best-set.secs)+'s FASTER THAN MY BEST', 540, 700);
+    } else {
+      x.fillStyle='#9a9a9a'; x.font='600 28px Inter, sans-serif'; x.fillText(grade(r.depthScore||0), 540, 700);
+    }
+  } else {
+    x.fillStyle='#FFE000'; x.font='700 340px Oswald, sans-serif'; x.fillText(String(r.depthScore||0), 540, 600);
+    x.fillStyle='#9a9a9a'; x.font='700 28px Inter, sans-serif'; x.fillText('DEPTH SCORE', 540, 654);
+    x.fillStyle='#fff'; x.font='600 30px Inter, sans-serif'; x.fillText(grade(r.depthScore||0), 540, 706);
+  }
+  const stats=[[r.valid||0,'VALID REPS'],[(r.depthScore||0),'DEPTH SCORE'],[(r.cons||0)+'%','CONSISTENCY']];
   stats.forEach((s,i)=>{ const cx=200+i*340; x.fillStyle='#141414'; roundRect(x,cx-140,780,280,170,20); x.fill(); x.strokeStyle='#262626';x.stroke();
     x.fillStyle='#fff'; x.font='700 60px Oswald, sans-serif'; x.fillText(String(s[0]),cx,866);
     x.fillStyle='#9a9a9a'; x.font='700 19px Inter, sans-serif'; x.fillText(s[1],cx,908); });
@@ -834,6 +995,7 @@ async function shareResult(){
 }
 window.addEventListener('resize',()=>{ if(running) resize(); });
 try{ const h=localStorage.getItem('hf_height_cm'); if(h) $('hgt').value=h; }catch(e){}
+renderSetup();
 </script>
 </body>
 </html>
