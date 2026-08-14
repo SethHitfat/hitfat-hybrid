@@ -1386,7 +1386,7 @@ const RACE_8={PRO:klBuild8('PRO'),OPEN:klBuild8('OPEN'),Beginner:klBuild8('Begin
 const PROGRAMS={
   'race-16':{ id:'race-16', title:'16-Week Race Build', weeks:16, days:5, tag:'Race Prep', featured:true,
     blurb:'The full build — most prep time, lowest weekly rate. Extended base all the way to the line.',
-    img:IMG.complete, status:'live', levels:['PRO','OPEN','Beginner'], data:RACE_16,
+    img:IMG.sledpushRace, status:'live', levels:['PRO','OPEN','Beginner'], data:RACE_16,
     opens:'2026-06-01T00:00:00+08:00', closes:'2026-08-22T23:59:00+08:00' },
   'race-12':{ id:'race-12', title:'12-Week Sharpen', weeks:12, days:5, tag:'Race Prep',
     blurb:'Lock in pace, power and every station — Base, Pace, Accelerate, Prime, Race.',
@@ -1442,10 +1442,10 @@ const CATALOG = {
      summary:'A 4-week structured starter for anyone curious about HYROX: hybrid basics → engine + strength → stations → mini simulation.' },
   // ---- RACE-SPECIFIC (real data) ----
   'race-8':  { id:'race-8',  title:'8-Week Race Prep', coach:'seth', owner:'HITFAT', revShare:0, weeks:8,  days:5, level:'PRO / OPEN / Beginner',
-     goal:'Complete, race-ready block', tag:'Race Prep', access:'paid', price:99,  plan:'RACE_8', img:IMG.power,
+     goal:'Complete, race-ready block', tag:'Race Prep', access:'paid', price:99,  plan:'RACE_8', img:IMG.skiergRace,
      summary:'A complete final block. Nothing wasted before race day.' },
   'race-12': { id:'race-12', title:'12-Week Race Ready', coach:'seth', owner:'HITFAT', revShare:0, weeks:12, days:5, level:'PRO / OPEN / Beginner',
-     goal:'Lock in pace, power & every station', tag:'Race Prep', access:'paid', price:149, plan:'PRO_PROGRAM', img:IMG.complete,
+     goal:'Lock in pace, power & every station', tag:'Race Prep', access:'paid', price:149, plan:'PRO_PROGRAM', img:IMG.sledpullRace,
      summary:'Base → Pace → Accelerate → Prime → Race. Full preparation for race day.' },
   'road-kl': { id:'road-kl', title:'Road to HYROX KL', coach:'seth', owner:'HITFAT', revShare:0, weeks:12, days:5, level:'PRO / OPEN / Beginner',
      goal:'Race-specific prep for HYROX Kuala Lumpur', tag:'Race Prep', access:'paid', price:199, plan:'PRO_PROGRAM', img:IMG.sledpullClub, event:'kl',
@@ -2646,7 +2646,7 @@ function renderHome(){
         </div></div>`;
   } else {
     $('home-today').innerHTML=`<div class="sechead" style="margin-top:0;">Today's Training</div>
-      <div class="plan wide" style="background-image:url('${IMG.found}')" onclick="openQuickWorkout(0)">
+      <div class="plan wide" style="background-image:url('${IMG.runPark}')" onclick="openQuickWorkout(0)">
         <div class="ov"></div>
         <div class="pi"><div class="tx"><div class="k">Rest &amp; Recovery</div><div class="t">Recovery Day</div>
           <div class="d">Mobility or an easy walk — let the work settle.</div></div>
