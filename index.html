@@ -1506,16 +1506,105 @@ function inWishlist(id){ return !!HF.data.wishlist[id]; }
 
 /* ---- HYBRID SCORE (0–100 across Engine / Strength / Stations / Running) ---- */
 const SCORE_KEYS = ['engine','strength','stations','running'];
-function seedScores(){
-  // Derived each time: starts low for beginners/first-timers, grows with training volume.
-  const lvl = HF.data.prefs && HF.data.prefs.level;
-  const base = {Beginner:26, Intermediate:42, Advanced:58}[lvl] || 28;   // first-timer ≈ high-20s, not 50
-  const bump = Math.min(38, Math.round((HF.totalDone()||0)*0.7));         // +0.7 per session, capped +38
-  const s = { engine:base+bump, strength:base+3+bump, stations:base-5+bump, running:base-1+bump };
-  SCORE_KEYS.forEach(function(k){ s[k]=Math.max(1, Math.min(99, s[k])); });
-  HF.data.scores = s;
+/* ============================================================
+   HYBRID SCORE — measured, not assumed
+   The old score was one number (sessions logged) wearing four hats: the axes were
+   fixed offsets, so "weakest area" was always Stations for everybody and the score
+   never noticed an athlete getting faster. Each axis is now derived from data the
+   app already holds, and blends in as the evidence for it arrives.
+   ============================================================ */
+const SCORE_SOURCE = {
+  running:'your best Strava pace and weekly distance',
+  engine:'weekly training volume and consistency',
+  stations:'wall ball depth scores and HYROX sim splits',
+  strength:'strength, sled and carry sessions logged'
+};
+function clamp99(v){ return Math.max(1, Math.min(99, Math.round(v))); }
+
+/* pace 3:30/km ≈ 99 · 5:30 ≈ 62 · 7:30 ≈ 30 */
+function paceScore(secPerKm){
+  if(!secPerKm) return null;
+  return clamp99(100 - ((secPerKm-210)/240)*70);
 }
-function scoreBreakdown(){ seedScores(); const s=HF.data.scores||{}; const o={}; SCORE_KEYS.forEach(function(k){ o[k]=Math.round(s[k]||50); }); return o; }
+function runMetrics(){
+  const ss=Object.values(HF.data.sessions).filter(s=>s&&s.date&&s.dist>0);
+  if(!ss.length) return {pace:null, kmPerWeek:0, n:0};
+  const fast=ss.filter(s=>s.dist>=2000&&s.spd>0).sort((a,b)=>b.spd-a.spd)[0];
+  const now=Date.now(), recent=ss.filter(s=>(now-new Date(s.date))<28*864e5);
+  const km=recent.reduce((a,s)=>a+(s.dist||0),0)/1000;
+  return { pace: fast?1000/fast.spd:null, kmPerWeek: km/4, n: ss.length };
+}
+function axisRunning(){
+  const m=runMetrics();
+  if(!m.n) return null;
+  const p=paceScore(m.pace);
+  const vol=clamp99(20+m.kmPerWeek*2.2);            // 20 km/wk ≈ 64, 35 km/wk ≈ 97
+  const evidence=Math.min(1, m.n/4);
+  return { value: p==null?vol:Math.round(p*0.7+vol*0.3), evidence };
+}
+function axisEngine(){
+  const wk=weeklyAgg(4);
+  const weeksWithData=wk.filter(b=>b.mins>0).length;
+  if(!weeksWithData) return null;
+  const avgMins=wk.reduce((a,b)=>a+b.mins,0)/Math.max(1,weeksWithData);
+  const avgSess=wk.reduce((a,b)=>a+b.count,0)/Math.max(1,weeksWithData);
+  const volume=clamp99(18+avgMins/3.2);             // 240 min/wk ≈ 93
+  const consistency=clamp99(20+avgSess*13);         // 5 sessions/wk ≈ 85
+  return { value: Math.round(volume*0.65+consistency*0.35), evidence: Math.min(1, weeksWithData/3) };
+}
+function axisStations(){
+  const wb=(HF.data.wallball||[]).filter(x=>x&&x.score>0);
+  const sims=(HF.data.sims||[]);
+  const prs=Object.keys(stationPRs()||{}).length;
+  if(!wb.length && !sims.length) return null;
+  const wbScore = wb.length ? wb.slice(-5).reduce((a,x)=>a+x.score,0)/Math.min(5,wb.length) : null;
+  const coverage = clamp99(25 + prs*8);             // all 8 stations logged ≈ 89
+  const value = wbScore==null ? coverage
+              : (sims.length ? Math.round(wbScore*0.6+coverage*0.4) : Math.round(wbScore));
+  return { value, evidence: Math.min(1, (wb.length+sims.length*2)/4) };
+}
+const STRENGTH_RE=/strength|power|sled|carry|farmer|lunge|squat|deadlift|grip/i;
+function axisStrength(){
+  const now=Date.now();
+  const ss=Object.values(HF.data.sessions).filter(s=>s&&s.date&&(now-new Date(s.date))<28*864e5);
+  if(!ss.length) return null;
+  const hits=ss.filter(s=>STRENGTH_RE.test(s.name||s.stype||'')).length;
+  return { value: clamp99(22+hits*6.5), evidence: Math.min(1, ss.length/6) };   // 8 in 4 weeks ≈ 74
+}
+/* the old formula stays as the starting point, so day one still shows something */
+function seedScores(){
+  const lvl = HF.data.prefs && HF.data.prefs.level;
+  const base = {Beginner:26, Intermediate:42, Advanced:58}[lvl] || 28;
+  const bump = Math.min(38, Math.round((HF.totalDone()||0)*0.7));
+  return { engine:base+bump, strength:base+3+bump, stations:base-5+bump, running:base-1+bump };
+}
+function scoreBreakdown(){
+  const seed=seedScores();
+  const measured={ running:axisRunning(), engine:axisEngine(), stations:axisStations(), strength:axisStrength() };
+  const out={};
+  SCORE_KEYS.forEach(function(k){
+    const m=measured[k];
+    // blend: with no evidence the athlete keeps their starting number; with full
+    // evidence the measurement takes over completely
+    out[k] = (!m) ? clamp99(seed[k])
+                  : clamp99(seed[k]*(1-m.evidence) + m.value*m.evidence);
+  });
+  HF.data.scores=out;
+  return out;
+}
+/* how much of the score is real measurement rather than the starting estimate */
+function scoreConfidence(){
+  const measured={ running:axisRunning(), engine:axisEngine(), stations:axisStations(), strength:axisStrength() };
+  const vals=SCORE_KEYS.map(k=>measured[k]?measured[k].evidence:0);
+  return Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*100);
+}
+function scoreSourceNote(){
+  const c=scoreConfidence();
+  const weak=weakestArea();
+  if(c<25) return 'Mostly an estimate so far — train and sync, and each area starts measuring itself.';
+  return 'Weakest: '+AREA_LABEL[weak]+' — measured from '+SCORE_SOURCE[weak]+'. '+c+'% of your score is now real data.';
+}
+
 function hybridScore(){ const b=scoreBreakdown(); return Math.round(SCORE_KEYS.reduce(function(a,k){return a+b[k];},0)/SCORE_KEYS.length); }
 function weakestArea(){ const b=scoreBreakdown(); return SCORE_KEYS.reduce(function(lo,k){ return b[k]<b[lo]?k:lo; }, SCORE_KEYS[0]); }
 const AREA_LABEL = {engine:'Engine', strength:'Strength', stations:'Stations', running:'Running'};
@@ -3548,7 +3637,8 @@ function calcPaceMe(){
 function renderProgress(){
   const wk=weekStats();
   const el=$('prog-score'); if(el){ el.innerHTML=`<div class="sechead" style="margin-top:14px;">Hybrid Score</div>${scoreDashHTML()}
-    <div class="infonote" style="margin-bottom:6px;">Weakest area: <b>${AREA_LABEL[weakestArea()]}</b> — <span onclick="switchTab('explore');setFilter('weakness')" style="color:var(--hyrox);cursor:pointer;">train it →</span></div>`; }
+    <div class="infonote" style="margin-bottom:6px;">${scoreSourceNote()}
+      <span onclick="switchTab('explore');setFilter('weakness')" style="color:var(--hyrox);cursor:pointer;">train it →</span></div>`; }
   $('prog-stats').innerHTML=`<div class="sechead">Activity</div><div class="dstat">
       <div class="c"><b>${HF.totalDone()}</b><small>Total Sessions</small></div>
       <div class="c"><b>${wk.pct}%</b><small>This Week</small></div>
