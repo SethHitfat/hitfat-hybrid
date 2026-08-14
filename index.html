@@ -4262,7 +4262,7 @@ function suggestedWODIndex(mode){
 }
 function currentWODIndex(){ return suggestedWODIndex(todayReadiness().mode); }
 const SPOTLIGHTS=[
-  {badge:'AI · FREE', t:'HITFAT Rep Lab', m:'AI wall-ball depth judge · live count · shareable Depth Score', go:"location.href='lab.html'"},
+  {badge:'AI · FREE', t:'HITFAT Biomechanics', m:'Wall ball · joint angles, depth and tempo from your camera', go:"location.href='lab.html'"},
   {badge:'FREE', t:'Target: Wall Balls', m:'3 focused sessions to keep wall balls unbroken', go:"switchTab('target')"},
   {badge:'FREE', t:'Foundation Starter', m:'Free 4-week Base phase — unlock the full 13 weeks anytime', go:"openProgramDetail('foundation-starter')"},
   {badge:'FREE', t:'Target: Sled Push', m:'Build leg drive & the legs to run straight off the sled', go:"switchTab('target')"},
@@ -4536,7 +4536,7 @@ function renderExplore(){
     // Featured free AI tool — traffic/UGC hook
     h+=`<div class="exsec"><div class="pcard full" onclick="location.href='lab.html'" style="cursor:pointer;">
       <div class="top" style="height:112px;background:radial-gradient(420px 200px at 82% -10%,rgba(255,224,0,.22),transparent 60%),linear-gradient(155deg,#1d1d1d 0%,#0a0a0a 100%);"><div class="edge"></div><span class="badge free">AI · FREE</span></div>
-      <div class="info"><div class="t">HITFAT Rep Lab</div><div class="m">AI wall ball depth judge · live rep count · shareable Depth Score</div></div></div></div>`;
+      <div class="info"><div class="t">HITFAT Biomechanics</div><div class="m">Wall ball · joint angles, depth and tempo from your camera</div></div></div></div>`;
     h+=sec('Quick Workouts — FREE', hs(QUICK_WORKOUTS.map((_,i)=>quickCard(i)).join('')), "setFilter('quick')");
     h+=sec('Popular Programs', hs(['first-timer','race-12','road-kl','race-8'].map(id=>programCard(id)).join('')), "setFilter('programs')");
     h+=sec('Free Programs', ['hybrid-starter','foundation-starter'].map(id=>programCard(id,true)).join(''));

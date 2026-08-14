@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>HITFAT Rep Lab — Wall Ball Biomechanics</title>
+<title>HITFAT Biomechanics — Wall Ball</title>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Rep Lab">
+<meta name="apple-mobile-web-app-title" content="Biomechanics">
 <meta name="theme-color" content="#000000">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
@@ -150,13 +150,16 @@
 <body>
 <div class="app">
   <div class="brandbar">
-    <div class="logo">HITFAT <span class="y">REP LAB</span><small>Wall ball biomechanics</small></div>
+    <div class="logo">HITFAT <span class="y">BIOMECHANICS</span><small>Wall ball</small></div>
     <span class="badge">Free · AI</span>
   </div>
 
   <!-- INTRO -->
   <div class="scr" id="intro">
     <div class="pad">
+      <div style="border-radius:16px;overflow:hidden;border:1px solid var(--line);margin:0 0 16px;">
+        <img src="img-wallball-ai.jpg" alt="Wall ball analysis overlay" style="width:100%;display:block;">
+      </div>
       <h1>Judge your <span class="y">wall ball</span> mechanics</h1>
       <div class="sub">On-device pose analysis measures every rep against the HYROX depth standard — <b>hips below the knee</b> (rulebook 8.8.6) — and reads the joint angles behind it.</div>
 
@@ -209,7 +212,7 @@
   <div class="scr" id="result">
     <div class="pad">
       <div class="rcard" id="rcard">
-        <div class="rb"><div class="l">HITFAT <span class="y">REP LAB</span></div><div class="d" id="rdate">—</div></div>
+        <div class="rb"><div class="l">HITFAT <span class="y">BIOMECHANICS</span></div><div class="d" id="rdate">—</div></div>
         <div class="bigscore"><div class="v" id="rscore">0</div><div class="l">Depth Score</div><div class="g" id="rgrade">—</div></div>
         <div class="rgrid">
           <div class="c"><b id="rvalid">0</b><small>Valid Reps</small></div>
@@ -246,7 +249,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.1.3/dist/pose-detection.min.js"></script>
 <script>
 /* ============================================================
-   HITFAT REP LAB — wall ball biomechanics
+   HITFAT BIOMECHANICS — wall ball
    Pose (MoveNet) → depth verdict + joint angles, tempo, symmetry
    and ball-path drift, reported per rep.
    Tunable constants below for on-device calibration.
@@ -591,8 +594,8 @@ function buildShareImage(){
   const g=x.createRadialGradient(860,120,50,860,120,700); g.addColorStop(0,'rgba(255,224,0,.18)'); g.addColorStop(1,'transparent'); x.fillStyle=g; x.fillRect(0,0,1080,1350);
   x.fillStyle='#FFE000'; x.fillRect(0,0,10,1350);
   x.textAlign='left'; x.fillStyle='#fff'; x.font='800 42px Inter, sans-serif'; x.fillText('HITFAT', 70, 130);
-  x.fillStyle='#FFE000'; x.fillText('REP LAB', 250, 130);
-  x.fillStyle='#9a9a9a'; x.font='600 22px Inter, sans-serif'; x.fillText('WALL BALL BIOMECHANICS', 72, 168);
+  x.fillStyle='#FFE000'; x.fillText('BIOMECHANICS', 250, 130);
+  x.fillStyle='#9a9a9a'; x.font='600 22px Inter, sans-serif'; x.fillText('WALL BALL ANALYSIS', 72, 168);
   x.textAlign='center'; x.fillStyle='#FFE000'; x.font='700 340px Oswald, sans-serif'; x.fillText(String(r.depthScore||0), 540, 600);
   x.fillStyle='#9a9a9a'; x.font='700 28px Inter, sans-serif'; x.fillText('DEPTH SCORE', 540, 654);
   x.fillStyle='#fff'; x.font='600 30px Inter, sans-serif'; x.fillText(grade(r.depthScore||0), 540, 706);
@@ -616,11 +619,11 @@ async function shareResult(){
   $('shareNote').textContent='';
   const canvas=buildShareImage();
   canvas.toBlob(async (blob)=>{
-    const file=new File([blob],'hitfat-rep-lab.png',{type:'image/png'});
+    const file=new File([blob],'hitfat-biomechanics.png',{type:'image/png'});
     if(navigator.canShare && navigator.canShare({files:[file]})){
-      try{ await navigator.share({files:[file], title:'HITFAT Rep Lab', text:'My wall ball biomechanics on HITFAT Rep Lab 💪 hybrid.hitfat.io'}); return; }catch(e){}
+      try{ await navigator.share({files:[file], title:'HITFAT Biomechanics', text:'My wall ball biomechanics on HITFAT Biomechanics 💪 hybrid.hitfat.io'}); return; }catch(e){}
     }
-    const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='hitfat-rep-lab.png'; a.click(); URL.revokeObjectURL(url);
+    const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='hitfat-biomechanics.png'; a.click(); URL.revokeObjectURL(url);
     $('shareNote').textContent='Image saved — share it to your story or feed 📲';
   },'image/png');
 }
