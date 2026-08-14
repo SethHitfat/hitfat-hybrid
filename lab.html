@@ -61,6 +61,9 @@
   .note{font-size:12px;color:var(--dim2);line-height:1.5;text-align:center;margin-top:14px;}
 
   /* what it measures — quiet rows, gray chevron-free, same language as the app lists */
+  .figwrap{border:1px solid var(--line);border-radius:16px;background:#0b0b0b;padding:10px 10px 6px;margin-bottom:16px;}
+  .figwrap canvas{width:100%;height:auto;display:block;}
+  .figcap{font-size:11.5px;color:var(--dim);line-height:1.45;padding:6px 4px 4px;}
   .mrow{display:flex;gap:12px;align-items:center;padding:12px 14px;background:var(--surface);border:1px solid var(--line);
         border-radius:14px;margin-bottom:8px;}
   .mrow .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:15px;flex:0 0 auto;}
@@ -316,9 +319,11 @@
   <!-- INTRO -->
   <div class="scr" id="intro">
     <div class="pad">
-      <div style="border-radius:16px;overflow:hidden;border:1px solid var(--line);margin:0 0 16px;">
+      <div style="border-radius:16px;overflow:hidden;border:1px solid var(--line);margin:0 0 12px;">
         <img src="img-wallball-ai.jpg" alt="Wall ball analysis overlay" style="width:100%;display:block;">
       </div>
+      <div class="figwrap"><canvas id="figCanvas" width="720" height="420"></canvas>
+        <div class="figcap">Every rep, measured: knee and hip angles, depth against the hip–knee line, and the throw.</div></div>
       <h1>Judge your <span class="y">wall ball</span> mechanics</h1>
       <div class="sub">On-device pose analysis measures every rep against the HYROX depth standard — <b>hips below the knee</b> (rulebook 8.8.6) — and reads the joint angles behind it.</div>
 
@@ -1084,6 +1089,92 @@ function fixFirst(m, done){
    gets the same treatment: a band scale with under / target / over, and a marker
    showing exactly where this set landed. Read it in one pass, like a body scan.
    ============================================================ */
+
+/* ============================================================
+   THE FIGURE — a wall ball rep drawn as a kinematic diagram
+   One model serves two places: an animated loop on the intro (so a stranger
+   understands the tool in three seconds) and a still, annotated pose on the
+   A4 report (so the numbers have a picture attached).
+   pose(t) returns joint coordinates for t = 0..1 through one rep.
+   ============================================================ */
+function wbPose(t){
+  // 0 = standing, ~0.55 = bottom of the squat, 1 = extended at release.
+  // Segment lengths are FIXED — bones do not stretch, and without that the knee angle
+  // and the hip-below-knee rule contradict each other.
+  const ease=x=>x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2;
+  const down = t<0.45 ? ease(t/0.45) : (t<0.60 ? 1 : 1-ease(Math.min(1,(t-0.60)/0.40)));
+  const rise = t<0.60 ? 0 : ease(Math.min(1,(t-0.60)/0.40));
+  const SHIN=0.26, THIGH=0.245, TORSO=0.30, ARM=0.17;
+  const RAD=Math.PI/180;
+  const ankle={x:0, y:0};
+  const kx=0.02+0.06*down;                                   // knee travels forward over the foot
+  const knee={x:kx, y:Math.sqrt(Math.max(0.0001,SHIN*SHIN-kx*kx))};
+  const th=(86-88*down)*RAD;                                 // thigh: near vertical → just past horizontal
+  const hip={x:knee.x-THIGH*Math.cos(th), y:knee.y+THIGH*Math.sin(th)};
+  const lean=(4+30*down)*RAD;                                // torso folds forward as the hips drop
+  const sh={x:hip.x+TORSO*Math.sin(lean), y:hip.y+TORSO*Math.cos(lean)};
+  const head={x:sh.x+0.02*Math.sin(lean), y:sh.y+0.115};
+  // arms hold the ball at the chest, then extend up on the drive
+  const elbow={x:sh.x+0.055+0.02*rise, y:sh.y-0.075+0.05*rise};
+  const wrist={x:elbow.x+0.06+0.01*rise, y:elbow.y+0.03+0.14*rise};
+  const ball={x:wrist.x+0.045, y:wrist.y+0.035+0.9*Math.max(0,rise-0.6)*2.5};
+  return {ankle,knee,hip,sh,elbow,wrist,head,ball,down,rise,H:1};
+}
+function wbAngles(p){
+  const ang=(a,b,c)=>{ const abx=a.x-b.x, aby=a.y-b.y, cbx=c.x-b.x, cby=c.y-b.y;
+    const m=(Math.hypot(abx,aby)*Math.hypot(cbx,cby))||1;
+    return Math.acos(Math.max(-1,Math.min(1,(abx*cbx+aby*cby)/m)))*180/Math.PI; };
+  return { knee:ang(p.hip,p.knee,p.ankle), hip:ang(p.sh,p.hip,p.knee),
+           trunk:Math.abs(Math.atan2(p.sh.x-p.hip.x,(p.sh.y-p.hip.y))*180/Math.PI) };
+}
+/* draw the figure into any 2D context; sc = pixels per body height */
+function drawFigure(x, p, ox, oy, sc, o){
+  o=o||{};
+  const P=q=>({x:ox+q.x*sc, y:oy-q.y*sc});
+  const A=P(p.ankle), K=P(p.knee), Hp=P(p.hip), S2=P(p.sh), E=P(p.elbow), W=P(p.wrist), Hd=P(p.head), B=P(p.ball);
+  const ink=o.ink||'#111', accent=o.accent||'#FFE000', good=o.good||'#137a43', lw=Math.max(2,sc*0.016);
+
+  if(o.floor!==false){ x.strokeStyle=o.grid||'#dcdcdc'; x.lineWidth=1;
+    x.beginPath(); x.moveTo(ox-sc*0.5,A.y); x.lineTo(ox+sc*0.75,A.y); x.stroke(); }
+
+  // depth line — the rule the whole tool judges
+  if(o.depthLine!==false){
+    x.save(); x.setLineDash([sc*0.03,sc*0.025]); x.strokeStyle=p.down>0.72?good:accent; x.lineWidth=Math.max(1.5,lw*0.6);
+    x.beginPath(); x.moveTo(ox-sc*0.45,K.y); x.lineTo(ox+sc*0.7,K.y); x.stroke(); x.restore();
+    if(o.labels!==false){ x.font='700 '+(sc*0.045)+'px Oswald, Inter, sans-serif';
+      x.fillStyle=p.down>0.72?good:accent; x.textAlign='left';
+      x.fillText(p.down>0.72?'HIP BELOW KNEE':'DEPTH LINE', ox+sc*0.5, K.y-sc*0.02); }
+  }
+  // segments
+  x.lineCap='round'; x.lineJoin='round'; x.strokeStyle=ink; x.lineWidth=lw;
+  const seg=(a,b)=>{ x.beginPath(); x.moveTo(a.x,a.y); x.lineTo(b.x,b.y); x.stroke(); };
+  seg(A,K); seg(K,Hp); seg(Hp,S2); seg(S2,E); seg(E,W);
+  x.beginPath(); x.arc(Hd.x,Hd.y,sc*0.055,0,7); x.fillStyle=ink; x.fill();
+  // the ball
+  x.beginPath(); x.arc(B.x,B.y,sc*0.075,0,7);
+  x.fillStyle=o.ballFill||'rgba(255,224,0,.22)'; x.fill();
+  x.strokeStyle=accent; x.lineWidth=lw*0.8; x.stroke();
+  // joints
+  [[A,'#888'],[K,good],[Hp,accent],[S2,'#888'],[E,'#888'],[W,'#888']].forEach(function(j){
+    x.beginPath(); x.arc(j[0].x,j[0].y,sc*0.028,0,7);
+    x.fillStyle='#fff'; x.fill(); x.strokeStyle=j[1]; x.lineWidth=lw*0.7; x.stroke();
+  });
+  // angle arcs at knee and hip
+  if(o.angles!==false){
+    const a=wbAngles(p);
+    const arc=(v,b,c,r,col,txt)=>{
+      const a1=Math.atan2(b.y-v.y,b.x-v.x), a2=Math.atan2(c.y-v.y,c.x-v.x);
+      let d=a2-a1; while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI;
+      x.beginPath(); x.strokeStyle=col; x.lineWidth=lw*0.7; x.arc(v.x,v.y,r,a1,a1+d,d<0); x.stroke();
+      const mid=a1+d/2;
+      x.font='700 '+(sc*0.05)+'px Oswald, Inter, sans-serif'; x.fillStyle=col; x.textAlign='center';
+      x.fillText(txt, v.x+Math.cos(mid)*(r+sc*0.07), v.y+Math.sin(mid)*(r+sc*0.07)+sc*0.015);
+    };
+    arc(K,Hp,A,sc*0.10, a.knee<=95?good:accent, Math.round(a.knee)+'°');
+    arc(Hp,S2,K,sc*0.09, ink, Math.round(a.hip)+'°');
+  }
+}
+
 function wallTargetM(w){ return w>=9 ? 3.05 : 2.75; }   // HYROX target height: 10ft men, 9ft women
 function scaleRow(o){
   // o: {label, val, unit, min, max, gLo, gHi, dp, note}
@@ -1332,7 +1423,7 @@ function a4Canvas(m, cfg, secs, done){
     T(label,px,py,13,400,'#333');
     if(val==null){
       T('not measured',px+pw,py,11.5,400,'#a5a5a5','right');
-      x.fillStyle='#efefef'; x.fillRect(px+pw*0.52,py+10*S,pw*0.48,7*S); return py+32*S;
+      x.fillStyle='#efefef'; x.fillRect(px+pw*0.52,py+12*S,pw*0.48,8*S); return py+39*S;
     }
     const inb=val>=gLo&&val<=gHi;
     T(Number(val).toFixed(dp||0)+(unit||''),px+pw,py,16,700,inb?OK:WARN,'right','Oswald, Inter, sans-serif');
@@ -1341,9 +1432,9 @@ function a4Canvas(m, cfg, secs, done){
     const pc=v=>Math.max(0,Math.min(1,(v-min)/((max-min)||1)));
     x.fillStyle='#bfe6cf'; x.fillRect(tx+tw*pc(gLo),ty,Math.max(3,tw*(pc(gHi)-pc(gLo))),th);
     x.beginPath(); x.arc(tx+tw*pc(val),ty+th/2,7*S,0,7); x.fillStyle=inb?OK:WARN; x.fill();
-    T(min+'–'+max+(unit||''),tx,ty+26*S,10,400,'#9a9a9a');
-    T('target '+(gLo===min?'≤'+gHi:(gHi===max?'≥'+gLo:gLo+'–'+gHi)),tx+tw,ty+26*S,10,400,'#9a9a9a','right');
-    return py+37*S;
+    T('target '+(gLo===min?'≤'+gHi+(unit||''):(gHi===max?'≥'+gLo+(unit||''):gLo+'–'+gHi+(unit||''))),
+      tx+tw,ty+th+9*S,10,400,'#9a9a9a','right');
+    return py+39*S;
   };
 
   const validPct=done?Math.round(m.valid/done*100):null, tgtH=wallTargetM(cfg.w);
@@ -1460,6 +1551,18 @@ function a4Canvas(m, cfg, secs, done){
     T(fmtClock(hi),RX,py(hi)-12*S,10,600,'#9a9a9a');
     T(fmtClock(lo)+' best',RX+RW,py(lo)+20*S,10,700,'#137a43','right');
     ry=base+18*S;
+  })();
+
+  /* ---- what was measured: the pose, annotated ---- */
+  (function(){
+    const RULE=A4H-A4M-72*S, room=RULE-ry-26*S;
+    if(room<140) return;
+    ry=section('What was measured',RX,ry,RW);
+    const h=Math.min(300*S, RULE-ry-20*S);
+    if(h<120) return;
+    drawFigure(x, wbPose(0.52), RX+RW*0.42, ry+h, h*0.92,
+      {ink:'#111', grid:'#e2e2e2', accent:'#c8890c', good:'#137a43', ballFill:'rgba(255,224,0,.35)'});
+    ry+=h+14*S;
   })();
 
   /* ---- footer ---- */
@@ -1663,6 +1766,23 @@ function demoResult(){
   if(location.search.indexOf('a4=1')>-1) setTimeout(openReport,120);
 }
 try{ if(location.search.indexOf('demo=1')>-1) setTimeout(demoResult,60); }catch(e){}
+
+
+/* the intro loop: one rep, forever, at a readable speed */
+(function(){
+  const c=document.getElementById('figCanvas'); if(!c) return;
+  const x=c.getContext('2d'); let t0=null;
+  function frame(ts){
+    if(t0==null) t0=ts;
+    const t=((ts-t0)/2600)%1;                       // 2.6 s per rep
+    x.clearRect(0,0,c.width,c.height);
+    x.fillStyle='#0b0b0b'; x.fillRect(0,0,c.width,c.height);
+    drawFigure(x, wbPose(t), c.width*0.36, c.height*0.92, c.height*0.78,
+      {ink:'#f0f0f0', grid:'#2a2a2a', accent:'#FFE000', good:'#2ec27e', ballFill:'rgba(255,224,0,.18)'});
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
 
 window.addEventListener('resize',()=>{ if(running) resize(); });
 try{ const h=localStorage.getItem('hf_height_cm'); if(h) $('hgt').value=h; }catch(e){}
