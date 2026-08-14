@@ -1443,7 +1443,7 @@ const CATALOG = {
   'hybrid-beginner':{ id:'hybrid-beginner',title:'Hybrid Beginner',   coach:'seth', owner:'HITFAT', revShare:0, weeks:8, days:4, level:'Beginner',     goal:'Your first structured hybrid build', tag:'Hybrid',   access:'soon', price:59, plan:null, img:IMG.found,   summary:'A beginner-friendly build into hybrid training and your first race.' },
   'build-engine':   { id:'build-engine',   title:'Build Your Engine', coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:4, level:'Intermediate', goal:'Improve your aerobic engine',        tag:'Engine',   access:'soon', price:59, plan:null, img:IMG.engine,  summary:'Improve your aerobic engine systematically for hybrid racing.' },
   'hybrid-strength':{ id:'hybrid-strength',title:'Hybrid Strength',   coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:3, level:'Intermediate', goal:'Strength for hybrid power',          tag:'Strength', access:'soon', price:59, plan:null, img:IMG.power,   summary:'Structured strength — squats, carries, sled — to power every station.' },
-  'run-better':     { id:'run-better',     title:'Run Better for HYROX', coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:4, level:'Intermediate', goal:'Improve compromised running',     tag:'Running',  access:'soon', price:59, plan:null, img:IMG.found,   summary:'Improve your compromised running through structured progression.' },
+  'run-better':     { id:'run-better',     title:'Run Better for HYROX', coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:4, level:'Intermediate', goal:'Improve compromised running',     tag:'Running',  access:'paid', price:59, plan:null, img:IMG.found,   summary:'Improve your compromised running through structured progression.' },
   'station-builder':{ id:'station-builder',title:'Station Builder',   coach:'seth', owner:'HITFAT', revShare:0, weeks:4, days:3, level:'Intermediate', goal:'Bring up weak HYROX stations',       tag:'Strength', access:'soon', price:59, plan:null, img:IMG.complete,summary:'Focused progression to bring up your weakest HYROX stations.' },
 };
 const CATALOG_ORDER = ['first-timer','race-12','road-kl','race-8','hybrid-starter','foundation-starter','foundation-13','hybrid-beginner','build-engine','hybrid-strength','run-better','station-builder'];
@@ -4598,6 +4598,7 @@ function programPhases(id){
   else if(id==='hybrid-starter') ph=[['1','Base','Weeks 1–3'],['2','Build','Weeks 4–6'],['3','Hybrid','Weeks 7–8'],['4','Simulation','Week 9']];
   else if(id==='foundation-13') ph=[['1','Base','Foundation'],['2','Pace','Threshold'],['3','Power','Accelerate'],['4','Prime','Taper']];
   else if(id==='foundation-starter') ph=[['1','Base','Weeks 1–4 · free taster']];
+  else if(id==='run-better') ph=[['1','Base & pacing','Weeks 1–2'],['2','Threshold','Week 3'],['3','Deload & test','Week 4'],['4','Race pace','Week 5'],['5','Sharpen & simulate','Week 6']];
   else ph=null;
   if(!ph) return '';
   return `<div class="sechead" style="margin:20px 0 12px;">Program Phases</div><div class="phaselist2">${ph.map(x=>`<div class="ph2"><div class="n">${x[0]}</div><div class="i"><div class="t">${x[1]}</div><div class="m">${x[2]}</div></div></div>`).join('')}</div>`;
@@ -4630,6 +4631,7 @@ function openProgramContent(id){
   if(id==='foundation-starter'||id==='foundation-13'){ switchTab('plans'); return; }
   if(id==='hybrid-starter'){ switchTab('pro'); try{ renderMyPlan(); }catch(e){} return; }
   if(id==='first-timer'){ openFirstTimer(); return; }
+  if(id==='run-better'){ openRunBetter(); return; }
   nfToast((CATALOG[id]?CATALOG[id].title:'This program')+' — full content finalising, coming soon.');
 }
 /* ---- HYROX First Timer (RM19) — real 4-week plan built from the library ---- */
@@ -4658,6 +4660,210 @@ function renderFirstTimer(){
 }
 function toggleFT(key,c,w){ if(HF.isDone(key)) HF.undone(key); else HF.markDone(key,{name:CATEGORIES[c].workouts[w].title}); renderFirstTimer(); }
 function openFTSession(c,w,key){ window.fromFT=true; window.fromPlan=false; window.fromHome=false; window.fromKL=false; window.pendingKey=key; openDetail(c,w); }
+
+/* ============================================================
+   ████  RUN BETTER FOR HYROX (RM59) — 6 weeks × 4 days  ████
+   The one program the app can coach better than a PDF: every session
+   is prescribed from the athlete's OWN best Strava run, and Strava
+   imports prove the work was done.
+   Paces are derived, never stored — they re-anchor themselves as the
+   athlete gets faster.
+   ============================================================ */
+
+/* best average pace over a run of 2 km+ is treated as threshold pace (sec/km) */
+function rbBase(){
+  const pb=personalBests();
+  return (pb && pb.fastest && pb.fastest.spd>0) ? 1000/pb.fastest.spd : null;
+}
+const RB_OFFSET={interval:-15, tempo:0, race:25, easy:70, long:80};   // sec/km from threshold
+const RB_FEEL={interval:'hard — 3-word breaths', tempo:'comfortably hard', race:'HYROX 1 km effort',
+               easy:'conversational', long:'easy, nose breathing'};
+function rbPace(zone){ const b=rbBase(); return b==null?null:Math.round(b+(RB_OFFSET[zone]||0)); }
+function fmtSecPace(s){ s=Math.round(s); const m=Math.floor(s/60), ss=s%60; return m+':'+(ss<10?'0':'')+ss; }
+function rbTarget(zone){
+  const p=rbPace(zone);
+  return p==null ? RB_FEEL[zone] : (fmtSecPace(p-8)+'–'+fmtSecPace(p+8)+' /km');
+}
+/* how long a rep should actually take this athlete — drives the session clock */
+function rbSecs(km,zone){ const p=rbPace(zone); return Math.round(km*(p==null?330:p)); }
+
+const rbMove=(label,km,zone)=>mv(label+' — '+rbTarget(zone), '', rbSecs(km,zone));
+const rbTime=(label,mins,zone)=>mv(label+' — '+rbTarget(zone), '', Math.round(mins*60));
+const rbBlock=(phase,mins,format,moves,note,rounds)=>
+  Object.assign({phase,mins,format,moves}, note?{note}:{}, rounds?{rounds}:{});
+const rbWorkout=(title,tag,rpe,desc,blocks)=>({title,tag,rpe,equip:['Running shoes'],desc,blocks,timer:true});
+
+/* station work inside a compromised run — the reason this is a HYROX plan, not a running plan */
+const rbStation=(name,key,secs)=>mv(name,key,secs);
+
+const RUN_BETTER=[
+ {week:1, phase:'Base & pacing', days:[
+   {t:'Speed', mk:()=>rbWorkout('6 × 400 m','Intervals',7,
+     'Short reps to wake up leg speed. Start controlled — the last rep should match the first.',[
+     WARMS[0](),
+     rbBlock('Intervals',16,'6 × 400 m · 90 s walk',[rbMove('400 m',0.4,'interval'),rest(90)],'If rep 5 slows badly, you started too fast.',6),
+     COOLS[0]()])},
+   {t:'Compromised', mk:()=>rbWorkout('4 × (400 m + Wall Balls)','Compromised',8,
+     'The HYROX skill: running on legs that are already burning. Move straight from the ball to the run.',[
+     WARMS[1](),
+     rbBlock('Rounds',22,'4 rounds · 60 s rest',[rbMove('400 m',0.4,'race'),rbStation('Wall Ball','wallball',90),rest(60)],'No stopping between the ball and the run.',4),
+     COOLS[0]()])},
+   {t:'Tempo', mk:()=>rbWorkout('20 Min Tempo','Threshold',7,
+     'One continuous effort at threshold — the pace you could hold for about an hour.',[
+     WARMS[2](),
+     rbBlock('Tempo',20,'20 min continuous',[rbTime('20 min steady',20,'tempo')],'Even effort beats a fast start.'),
+     COOLS[1]()])},
+   {t:'Long', mk:()=>rbWorkout('40 Min Easy','Aerobic',4,
+     'Pure aerobic base. If you cannot hold a conversation, you are running it too hard.',[
+     rbBlock('Easy run',40,'40 min continuous',[rbTime('40 min easy',40,'easy')],'This is the session most people ruin by rushing.')])}
+ ]},
+ {week:2, phase:'Build', days:[
+   {t:'Speed', mk:()=>rbWorkout('5 × 800 m','Intervals',8,
+     'Longer reps, same discipline. Hold the pace to the last 200 m.',[
+     WARMS[0](),
+     rbBlock('Intervals',24,'5 × 800 m · 2 min walk',[rbMove('800 m',0.8,'interval'),rest(120)],null,5),
+     COOLS[0]()])},
+   {t:'Compromised', mk:()=>rbWorkout('4 × (600 m + Lunges)','Compromised',8,
+     'Walking lunges wreck the same muscles the run needs. That is the point.',[
+     WARMS[1](),
+     rbBlock('Rounds',26,'4 rounds · 60 s rest',[rbMove('600 m',0.6,'race'),rbStation('Walking Lunge','wlunge',90),rest(60)],null,4),
+     COOLS[0]()])},
+   {t:'Tempo', mk:()=>rbWorkout('24 Min Tempo','Threshold',7,
+     'Four minutes longer than last week at the same effort.',[
+     WARMS[2](),
+     rbBlock('Tempo',24,'24 min continuous',[rbTime('24 min steady',24,'tempo')]),
+     COOLS[1]()])},
+   {t:'Long', mk:()=>rbWorkout('45 Min Easy','Aerobic',4,
+     'Add five minutes, keep the same easy effort.',[
+     rbBlock('Easy run',45,'45 min continuous',[rbTime('45 min easy',45,'easy')])])}
+ ]},
+ {week:3, phase:'Threshold', days:[
+   {t:'Speed', mk:()=>rbWorkout('4 × 1 km','Intervals',8,
+     'Race-distance reps. This is the exact effort you will repeat eight times on race day.',[
+     WARMS[0](),
+     rbBlock('Intervals',28,'4 × 1 km · 2 min walk',[rbMove('1 km',1,'interval'),rest(120)],'Rep 4 is the one that matters.',4),
+     COOLS[0]()])},
+   {t:'Compromised', mk:()=>rbWorkout('5 × (400 m + Burpees)','Compromised',9,
+     'Burpee broad jumps spike the heart rate before you run. Learn to settle it while moving.',[
+     WARMS[1](),
+     rbBlock('Rounds',26,'5 rounds · 45 s rest',[rbMove('400 m',0.4,'race'),rbStation('Burpee Broad Jump','burpee',60),rest(45)],null,5),
+     COOLS[0]()])},
+   {t:'Tempo', mk:()=>rbWorkout('2 × 12 Min Tempo','Threshold',8,
+     'Split threshold lets you hold a slightly quicker pace for more total work.',[
+     WARMS[2](),
+     rbBlock('Tempo',26,'2 × 12 min · 3 min jog',[rbTime('12 min steady',12,'tempo'),rest(180)],null,2),
+     COOLS[1]()])},
+   {t:'Long', mk:()=>rbWorkout('50 Min Easy','Aerobic',4,
+     'Longest run of the block. Easy the whole way.',[
+     rbBlock('Easy run',50,'50 min continuous',[rbTime('50 min easy',50,'easy')])])}
+ ]},
+ {week:4, phase:'Deload & test', days:[
+   {t:'Speed', mk:()=>rbWorkout('8 × 200 m','Intervals',6,
+     'Short and sharp. Legs stay fast while the load comes down.',[
+     WARMS[0](),
+     rbBlock('Intervals',14,'8 × 200 m · 60 s walk',[rbMove('200 m',0.2,'interval'),rest(60)],null,8),
+     COOLS[0]()])},
+   {t:'Compromised', mk:()=>rbWorkout('3 × (800 m + Farmers Carry)','Compromised',7,
+     'Lighter week — keep the pattern, drop the volume.',[
+     WARMS[1](),
+     rbBlock('Rounds',22,'3 rounds · 90 s rest',[rbMove('800 m',0.8,'race'),rbStation('Farmers Carry','farmers',90),rest(90)],null,3),
+     COOLS[0]()])},
+   {t:'Tempo', mk:()=>rbWorkout('1 km Time Trial','Test',9,
+     'All out over 1 km. This re-anchors every pace in the next two weeks — sync Strava afterwards.',[
+     WARMS[2](),
+     rbBlock('Time trial',12,'1 km — best effort',[rbMove('1 km all out',1,'interval')],'Warm up properly, then empty the tank.'),
+     COOLS[1]()])},
+   {t:'Long', mk:()=>rbWorkout('35 Min Easy','Aerobic',3,
+     'Recovery long run. Slower than easy if your legs ask for it.',[
+     rbBlock('Easy run',35,'35 min continuous',[rbTime('35 min easy',35,'easy')])])}
+ ]},
+ {week:5, phase:'Race pace', days:[
+   {t:'Speed', mk:()=>rbWorkout('5 × 1 km @ Race Pace','Race pace',8,
+     'Five of the eight race runs, at the pace you intend to hold on the day.',[
+     WARMS[0](),
+     rbBlock('Intervals',32,'5 × 1 km · 90 s walk',[rbMove('1 km',1,'race'),rest(90)],'If you cannot hold it for five, it is not your race pace.',5),
+     COOLS[0]()])},
+   {t:'Compromised', mk:()=>rbWorkout('6 × (400 m + Station)','Compromised',9,
+     'Six transitions. Roxzone time is won here — start running immediately.',[
+     WARMS[1](),
+     rbBlock('Rounds',30,'6 rounds · 45 s rest',[rbMove('400 m',0.4,'race'),rbStation('Sandbag Lunge','sandbag_lunge',75),rest(45)],null,6),
+     COOLS[0]()])},
+   {t:'Tempo', mk:()=>rbWorkout('2 × 15 Min Tempo','Threshold',8,
+     'Peak threshold volume for the block.',[
+     WARMS[2](),
+     rbBlock('Tempo',33,'2 × 15 min · 3 min jog',[rbTime('15 min steady',15,'tempo'),rest(180)],null,2),
+     COOLS[1]()])},
+   {t:'Long', mk:()=>rbWorkout('55 Min Easy','Aerobic',4,
+     'Longest easy run of the program.',[
+     rbBlock('Easy run',55,'55 min continuous',[rbTime('55 min easy',55,'easy')])])}
+ ]},
+ {week:6, phase:'Sharpen & simulate', days:[
+   {t:'Speed', mk:()=>rbWorkout('4 × 600 m Fast','Intervals',8,
+     'Sharp and short. You are topping up speed, not building fitness.',[
+     WARMS[0](),
+     rbBlock('Intervals',20,'4 × 600 m · 2 min walk',[rbMove('600 m',0.6,'interval'),rest(120)],null,4),
+     COOLS[0]()])},
+   {t:'Simulation', mk:()=>rbWorkout('Half Race Simulation','Simulation',9,
+     'Four run–station pairs, back to back. The rehearsal for race day pacing.',[
+     WARMS[1](),
+     rbBlock('Rounds',40,'4 rounds · no rest',[rbMove('1 km',1,'race'),rbStation('Wall Ball','wallball',90),rbStation('Burpee Broad Jump','burpee',60)],'Run straight out of every station. Log it in the Sim Logger afterwards.',4),
+     COOLS[0]()])},
+   {t:'Tempo', mk:()=>rbWorkout('20 Min Tempo','Threshold',7,
+     'Back to where you started — at a pace that should now feel easier.',[
+     WARMS[2](),
+     rbBlock('Tempo',20,'20 min continuous',[rbTime('20 min steady',20,'tempo')],'Compare this to week 1. That gap is your progress.'),
+     COOLS[1]()])},
+   {t:'Long', mk:()=>rbWorkout('30 Min Shakeout','Aerobic',3,
+     'Short, light, done. Finish the block feeling fresh.',[
+     rbBlock('Easy run',30,'30 min continuous',[rbTime('30 min easy',30,'easy')])])}
+ ]}
+];
+
+function rbKey(w,d){ return 'rb-w'+w+'-d'+d; }
+function rbSession(w,d){ const day=RUN_BETTER[w-1] && RUN_BETTER[w-1].days[d-1]; return day?day.mk():null; }
+function openRunBetter(){
+  if(window.klTicker){ clearInterval(window.klTicker); window.klTicker=null; }
+  hidePanels();
+  $('progdetail').style.display='block'; $('tabs').style.display='flex'; curTab='progdetail'; pdBackTab='store';
+  renderRunBetter(); $('screen').scrollTop=0;
+}
+/* the pace card is the product: their own numbers, not a generic table */
+function rbPaceCard(){
+  const b=rbBase();
+  if(b==null) return `<div class="infonote" style="margin:0 2px 14px;">Your paces are generic until we know your running.
+    <b>Connect Strava</b> in Profile and sync once — every session below then targets your own pace, and re-anchors as you get faster.</div>`;
+  const row=(n,z)=>`<div class="prow"><span class="pd">${n}</span><span class="pr" style="color:#fff;font-weight:600;">${rbTarget(z)}</span></div>`;
+  return `<div class="benchcard" style="margin:0 2px 14px;">
+    <div class="bt">Your target paces</div>
+    <div class="bm">From your best Strava run — they move as you do.</div>
+    ${row('Intervals','interval')}${row('Tempo / threshold','tempo')}${row('Race pace (1 km reps)','race')}${row('Easy','easy')}</div>`;
+}
+function renderRunBetter(){
+  let openWk=null;
+  for(const wk of RUN_BETTER){ for(let d=1; d<=wk.days.length; d++){ if(!HF.isDone(rbKey(wk.week,d))){ openWk=wk.week; break; } } if(openWk) break; }
+  if(openWk===null) openWk=RUN_BETTER.length;
+  const weeks=RUN_BETTER.map(wk=>{
+    let wdone=0;
+    const rows=wk.days.map((day,i)=>{
+      const d=i+1, key=rbKey(wk.week,d), on=HF.isDone(key), w=day.mk();
+      if(on) wdone++;
+      return `<div class="klses" onclick="openRBSession(${wk.week},${d})"><div class="kday">D${d}</div>
+        <div class="kbody"><div class="kt">${w.title}</div><div class="km">${day.t} · RPE ${w.rpe} · ${totalMins(w)} min</div></div>
+        <div class="ktick ${on?'on':''}" onclick="event.stopPropagation();toggleRB('${key}',${wk.week},${d});">✓</div></div>`;
+    }).join('');
+    return `<div class="klwk ${wk.week===openWk?'open':''}"><div class="klwkh" onclick="this.parentNode.classList.toggle('open')">
+      <span class="wn">WEEK ${wk.week}</span><span class="wp">${wk.phase}</span><span class="wd">${wdone}/${wk.days.length}</span><span class="wc">›</span></div>
+      <div class="klbody">${rows}</div></div>`;
+  }).join('');
+  $('pgd-body').innerHTML=`<div class="hgroup"><div class="k">Run Better for HYROX · OWNED</div><h2>6-WEEK RUNNING BLOCK</h2>
+    <p>Four sessions a week: speed, compromised running, threshold and an easy long run. Runs you log to Strava tick themselves off.</p></div>
+    ${rbPaceCard()}${weeks}`;
+}
+function toggleRB(key,w,d){ const s=rbSession(w,d); if(HF.isDone(key)) HF.undone(key); else HF.markDone(key,{name:s?s.title:'Run session', mins:s?totalMins(s):40}); renderRunBetter(); }
+function openRBSession(w,d){
+  const s=rbSession(w,d); if(!s) return;
+  openWorkoutObject(s, 'Run Better · Week '+w, rbKey(w,d), 'store');
+}
 
 /* ---- Join / payment (Bayarcash — server-created payment intent, verified callback) ---- */
 function joinProgram(id){ const p=CATALOG[id]; if(!p) return;

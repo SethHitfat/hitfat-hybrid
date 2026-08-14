@@ -8,7 +8,7 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type'
 };
-const PRICES = { 'first-timer': 19, 'race-8': 99, 'race-12': 149, 'road-kl': 199, 'foundation-13': 79 };
+const PRICES = { 'first-timer': 19, 'race-8': 99, 'race-12': 149, 'road-kl': 199, 'foundation-13': 79, 'run-better': 59 };
 const CHANNELS = [1, 6];               // 1 = FPX Online Banking, 6 = DuitNow QR
 
 exports.handler = async (event) => {
