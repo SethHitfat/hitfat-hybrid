@@ -694,6 +694,13 @@
   .frow .tx .m .pz,.pcard .info .m .pz{color:var(--hyrox);font-weight:700;}
   .frow .tx .m .oz,.pcard .info .m .oz{color:#2ec27e;font-weight:600;}
   .frow .tx .m .sz,.pcard .info .m .sz{color:#ff6b6b;font-weight:700;letter-spacing:.6px;}
+  /* store hero carousel — swipeable, auto-advances until the buyer takes over */
+  .heroes{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .heroes::-webkit-scrollbar{display:none;}
+  .heroes .plan{flex:0 0 100%;width:100%;scroll-snap-align:center;height:224px;}
+  .hdots{display:flex;gap:6px;justify-content:center;margin:11px 0 18px;}
+  .hdots i{width:6px;height:6px;border-radius:99px;background:rgba(255,255,255,.24);transition:width .22s,background .22s;}
+  .hdots i.on{width:20px;background:var(--hyrox);}
   .frow .tx .g{font-size:12.5px;color:var(--dim2);margin-top:3px;line-height:1.35;}
   .frow .tx .g .pop{color:var(--hyrox);font-weight:700;}
   .frow .chev{flex:none;color:#5a5a5a;font-size:17px;line-height:1;margin-left:2px;}
@@ -4569,27 +4576,58 @@ function renderPrograms(){
   let h='';
   const owned=CATALOG_ORDER.filter(id=>ownsProgram(id)&&CATALOG[id].access!=='free');
   // featured: the cheapest door the buyer has not walked through yet
-  const featId=['first-timer','race-12','run-better'].find(x=>!ownsProgram(x))||null;   // nothing left to sell → no hero
-  if(featId){
-  const f=CATALOG[featId], fst=programState(featId);
-  h+=`<div class="plan wide" style="background-image:url('${f.img}');height:224px;margin-bottom:18px;" onclick="openProgramDetail('${featId}','store')">
-    <div class="ov"></div>
-    <div class="pi"><div class="tx">
-      <div class="k">${featId===POPULAR_ID?'Most popular':(featId==='first-timer'?'Start here':'Featured')}</div>
-      <div class="t" style="font-size:20px;">${f.title}</div>
-      <div class="d">${f.goal}</div>
-      <div class="d" style="color:#8f8f8f;margin-top:1px;">${f.weeks} weeks · ${f.weeks*f.days} sessions</div>
-    </div>
-    <button class="join" onclick="event.stopPropagation();${fst==='PAID'?`joinProgram('${featId}')`:`openProgramContent('${featId}')`}">${fst==='PAID'?'Join — '+fmtPrice(f.price):'Open'}</button></div></div>`;
+  // up to three doors the buyer has not walked through — swipeable, and it rotates itself
+  const heroIds=['first-timer','race-12','run-better'].filter(x=>!ownsProgram(x)).slice(0,3);
+  if(heroIds.length){
+    h+=`<div class="heroes" id="store-heroes">${heroIds.map(hid=>{
+      const f=CATALOG[hid], fst=programState(hid);
+      const kick=(hid===POPULAR_ID)?'Most popular':(hid==='first-timer'?'Start here':'Featured');
+      return `<div class="plan" style="background-image:url('${f.img}')" onclick="openProgramDetail('${hid}','store')">
+        <div class="ov"></div>
+        <div class="pi"><div class="tx">
+          <div class="k">${kick}</div>
+          <div class="t" style="font-size:20px;">${f.title}</div>
+          <div class="d">${f.goal}</div>
+          <div class="d" style="color:#8f8f8f;margin-top:1px;">${f.weeks} weeks · ${f.weeks*f.days} sessions</div>
+        </div>
+        <button class="join" onclick="event.stopPropagation();${fst==='PAID'?`joinProgram('${hid}')`:`openProgramContent('${hid}')`}">${fst==='PAID'?'Join — '+fmtPrice(f.price):'Open'}</button></div></div>`;
+    }).join('')}</div>
+    <div class="hdots" id="store-dots">${heroIds.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('')}</div>`;
   }
   if(owned.length) h+=sec('Your Programs', owned.map(id=>programCard(id,true)).join(''));
-  h+=sec('Race Preparation', CATALOG_ORDER.filter(id=>CATALOG[id].tag==='Race Prep'&&id!==featId&&!ownsProgram(id)&&CATALOG[id].access!=='free').map(id=>programCard(id,true)).join(''));
-  h+=sec('Build Specific Strengths', CATALOG_ORDER.filter(id=>CATALOG[id].access==='paid'&&CATALOG[id].tag!=='Race Prep'&&id!==featId&&!ownsProgram(id)).map(id=>programCard(id,true)).join(''));
+  h+=sec('Race Preparation', CATALOG_ORDER.filter(id=>CATALOG[id].tag==='Race Prep'&&heroIds.indexOf(id)<0&&!ownsProgram(id)&&CATALOG[id].access!=='free').map(id=>programCard(id,true)).join(''));
+  h+=sec('Build Specific Strengths', CATALOG_ORDER.filter(id=>CATALOG[id].access==='paid'&&CATALOG[id].tag!=='Race Prep'&&heroIds.indexOf(id)<0&&!ownsProgram(id)).map(id=>programCard(id,true)).join(''));
   h+=sec('Free Programs', CATALOG_ORDER.filter(id=>CATALOG[id].access==='free').map(id=>programCard(id,true)).join(''));
   h+=`<div class="exsec"><div class="eh"><h3>More Free Training</h3></div>
     <div class="catcard" onclick="switchTab('programs')" style="margin-bottom:12px;"><div class="body"><div class="ttl">Workout Library</div><div class="cnt">Free sessions by category</div></div><div class="arr">›</div></div>
     <div class="catcard" onclick="switchTab('target')"><div class="body"><div class="ttl">Target Sessions</div><div class="cnt">Fix a weak station or quality</div></div><div class="arr">›</div></div></div>`;
   $('store-body').innerHTML=h; $('screen').scrollTop=0;
+  startHeroRotate(heroIds.length);
+}
+
+
+/* The carousel advances on its own so the store never looks static — but the moment the
+   buyer touches it they are in control, otherwise a slide could move under their thumb
+   as they reach for Join. */
+let heroTimer=null, heroIdx=0, heroLocked=false;
+function heroPaint(){
+  const d=$('store-dots'); if(!d) return;
+  [].forEach.call(d.children,(el,i)=>{ el.className = i===heroIdx?'on':''; });
+}
+function startHeroRotate(n){
+  clearInterval(heroTimer); heroTimer=null; heroIdx=0; heroLocked=false;
+  const el=$('store-heroes'); if(!el || n<2) return;
+  const take=()=>{ heroLocked=true; clearInterval(heroTimer); heroTimer=null; };
+  el.addEventListener('pointerdown',take,{once:true});
+  el.addEventListener('touchstart',take,{once:true,passive:true});
+  el.addEventListener('scroll',()=>{ heroIdx=Math.round(el.scrollLeft/Math.max(1,el.clientWidth)); heroPaint(); },{passive:true});
+  heroTimer=setInterval(()=>{
+    const e=$('store-heroes');
+    if(!e || heroLocked || curTab!=='store'){ clearInterval(heroTimer); heroTimer=null; return; }
+    heroIdx=(heroIdx+1)%n;
+    e.scrollTo({left:e.clientWidth*heroIdx, behavior:'smooth'});
+    heroPaint();
+  }, 6000);
 }
 
 /* ---- Coaches (marketplace COMING SOON — HITFAT is the sole publisher for now) ---- */
