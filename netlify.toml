@@ -33,3 +33,14 @@
   from = "/lab"
   to = "/lab.html"
   status = 200
+
+# the Google OAuth consent screen requires these to be reachable at clean URLs
+[[redirects]]
+  from = "/privacy"
+  to = "/privacy.html"
+  status = 200
+
+[[redirects]]
+  from = "/terms"
+  to = "/terms.html"
+  status = 200

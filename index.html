@@ -1000,6 +1000,8 @@
         <button class="pflink" onclick="openTrackSelect(true)"><span>Change Track</span><span class="arr">›</span></button>
         <button class="pflink" onclick="restartOnboarding()"><span>Redo Onboarding</span><span class="arr">›</span></button>
         <button class="pflink" onclick="showReadiness(true)"><span>View Readiness &amp; Safety Notice</span><span class="arr">›</span></button>
+        <button class="pflink" onclick="window.open('/privacy','_blank')"><span>Privacy Policy</span><span class="arr">›</span></button>
+        <button class="pflink" onclick="window.open('/terms','_blank')"><span>Terms of Use</span><span class="arr">›</span></button>
         <button class="pflink danger" onclick="confirmReset()"><span>Reset Progress</span><span class="arr">↺</span></button>
         <button class="pflink" id="pf-signout" onclick="signOut()"><span>Sign Out</span><span class="arr">→</span></button>
         <div class="attribution">
@@ -1116,7 +1118,7 @@
   <div class="authmsg" id="auth-msg"></div>
   <div class="authforgot" id="auth-forgot"><a onclick="authForgot()">Forgot password?</a></div>
   <div class="authtoggle" id="auth-switch">New here? <a onclick="authToggle()">Create an account</a></div>
-  <div class="authnote">By continuing you agree to train at your own pace and responsibility. This app provides structured training, not medical advice.</div>
+  <div class="authnote">By continuing you agree to train at your own pace and responsibility. This app provides structured training, not medical advice. <a href="/terms" style="color:var(--hyrox);">Terms</a> · <a href="/privacy" style="color:var(--hyrox);">Privacy</a></div>
 </div></div>
 
 <!-- Supabase client (loaded from CDN — needs internet + a hosted URL for Google login) -->
