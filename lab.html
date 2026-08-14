@@ -171,12 +171,15 @@
   .fixcard .k{font-family:'Oswald';font-size:10px;letter-spacing:2px;color:var(--hyrox);font-weight:700;margin-bottom:7px;}
   .fixcard .t{font-size:17px;font-weight:800;letter-spacing:-.2px;margin-bottom:5px;}
   .fixcard .m{font-size:14px;color:#cfcfcf;line-height:1.5;}
-  .det{margin-top:22px;border-top:1px solid var(--line);padding-top:14px;}
-  .det summary{cursor:pointer;font-size:15px;font-weight:700;list-style:none;}
+  .det{margin-top:18px;}
+  .det summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:12px;
+       background:var(--surface);border:1px solid rgba(255,224,0,.30);border-radius:14px;padding:15px 16px;}
   .det summary::-webkit-details-marker{display:none;}
-  .det summary:after{content:' ▾';color:var(--dim);}
-  .det[open] summary:after{content:' ▴';}
+  .det summary b{flex:1;font-size:15.5px;font-weight:700;}
   .det summary span{display:block;font-size:12.5px;font-weight:400;color:var(--dim);margin-top:3px;}
+  .det summary i{font-style:normal;font-family:'Oswald';font-size:10px;letter-spacing:1.4px;color:var(--ink);
+       background:var(--hyrox);border-radius:99px;padding:5px 10px;font-weight:700;flex:none;}
+  .det[open] summary i:after{content:' ▴';} .det summary i:after{content:' ▾';}
   /* ---- the read-out sheet: dense, banded, scannable like a body scan ---- */
   .sheet{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#0b0b0b;}
   .shead{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:13px 14px;
@@ -365,7 +368,7 @@
       <div class="chart" id="progChart"></div>
 
       <details class="det">
-        <summary>Full read-out <span>every measurement against its target range</span></summary>
+        <summary><b>Full read-out<span>Every measurement against its target range, plus your history</span></b><i>Open</i></summary>
         <div id="sheet" style="margin-top:12px;"></div>
         <div class="chart" style="margin-top:12px;"><div id="depthChart"></div><div class="cl"><span>Rep 1</span><span id="chartEnd">Rep —</span></div></div>
         <div id="cues"></div>
@@ -1174,6 +1177,37 @@ async function shareResult(){
     $('shareNote').textContent='Image saved — share it to your story or feed 📲';
   },'image/png');
 }
+
+/* ?demo=1 renders a representative set so the read-out can be reviewed without
+   training. It is never written to the log. */
+function demoResult(){
+  const cfg=wbCfg();
+  const m={reps:10, valid:8, grey:1, avgDepth:78, cons:83, depthScore:79, knee:88, hipA:95, lean:37,
+           sym:6, ecc:0.72, con:0.58, drift:0.55, speed:4.3, topSpeed:4.8, throwH:3.12};
+  reps=10; repData=[]; 
+  for(let i=0;i<10;i++) repData.push({score:70+((i*7)%22), cls:i===3?'grey':(i===7?'bad':'valid')});
+  $('intro').style.display='none'; $('live').classList.remove('on'); $('result').classList.add('on');
+  $('rtime').textContent=fmtClock(47); $('rsetlbl').textContent=cfg.t+' reps · '+cfg.w+' kg';
+  $('rdelta').innerHTML='<b style="color:#2ec27e">5s faster</b> than your best';
+  $('rscore').textContent=m.depthScore; $('rrpm').textContent='12.8'; $('rbest').textContent='0:52';
+  $('rgrade').textContent=grade(m.depthScore);
+  const d=new Date(); $('rdate').textContent=d.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+' '+d.getFullYear();
+  $('rbar').innerHTML=repData.map(r=>'<i class="'+(r.cls==='valid'?'':r.cls==='grey'?'grey':'bad')+'" style="height:'+Math.max(8,r.score)+'%"></i>').join('');
+  $('plainRows').innerHTML=plainLines(m,10).map(l=>`<div class="plain"><span class="d"></span><span>${l}</span></div>`).join('');
+  const fx=fixFirst(m,10);
+  $('fixCard').innerHTML=`<div class="k">Fix this first</div><div class="t">${fx.t}</div><div class="m">${fx.m}</div>`;
+  $('sheet').innerHTML=inbodySheet(m,cfg,47,10);
+  $('progChart').innerHTML=wbChart(cfg.w,cfg.t);
+  $('depthChart').innerHTML='<div class="repbar" style="margin:0;border:none;background:transparent;padding:0;height:78px">'
+    +repData.map(r=>'<i class="'+(r.cls==='valid'?'':r.cls==='grey'?'grey':'bad')+'" style="height:'+Math.max(8,r.score)+'%"></i>').join('')+'</div>';
+  $('chartEnd').textContent='Rep 10';
+  $('cues').innerHTML=cues(m).map(c=>'<div class="cue '+c.cls+'"><span class="d"></span><span>'+c.t+'</span></div>').join('');
+  $('shareNote').textContent='Sample set — nothing was recorded or saved.';
+  window._result=m; window._wbSet={secs:47,w:cfg.w,t:cfg.t,best:52};
+  const det=document.querySelector('.det'); if(det) det.open=true;
+}
+try{ if(location.search.indexOf('demo=1')>-1) setTimeout(demoResult,60); }catch(e){}
+
 window.addEventListener('resize',()=>{ if(running) resize(); });
 try{ const h=localStorage.getItem('hf_height_cm'); if(h) $('hgt').value=h; }catch(e){}
 renderSetup();
