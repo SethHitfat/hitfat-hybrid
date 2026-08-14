@@ -679,8 +679,10 @@
   .badge.ibdg.soon,.badge.ibdg.done{color:var(--dim);font-size:12.5px;font-weight:600;}
 
   .pcard .info{padding:12px 14px 14px;}
-  .pcard .info .t{display:flex;align-items:center;gap:8px;font-family:'Inter',system-ui,sans-serif;font-size:15.5px;font-weight:600;letter-spacing:-.2px;text-transform:none;color:#fff;line-height:1.25;}
-  .pcard .info .t .ibdg{margin-left:auto;flex:none;}
+  .pcard .info .t{font-family:'Inter',system-ui,sans-serif;font-size:15.5px;font-weight:600;letter-spacing:-.2px;
+    text-transform:none;color:#fff;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .pcard .info .m{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
 
   /* Apple Fitness+ style list row: rounded thumbnail left, text right, chevron */
   .frow{display:flex;align-items:center;gap:14px;padding:9px 0;cursor:pointer;transition:opacity .12s;}
@@ -4532,20 +4534,34 @@ function renderExplore(){
   const hs=cards=>`<div class="hscroll">${cards}</div>`;
   let h='';
   if(exFilter==='all'){
+    // Explore is for discovery — free tools, free training, the library.
+    // The store lives in the Programs tab; repeating it here three times taught nobody anything.
     const owned=CATALOG_ORDER.filter(id=>ownsProgram(id)&&CATALOG[id].access!=='free');
-    if(owned.length) h+=sec('Continue Training', owned.map(id=>programCard(id)).join('')&&hs(owned.map(id=>programCard(id)).join('')));
-    // Featured free AI tool — traffic/UGC hook
+    if(owned.length) h+=sec('Continue Training', hs(owned.map(id=>programCard(id)).join('')));
+
     h+=`<div class="exsec"><div class="pcard full" onclick="location.href='lab.html'" style="cursor:pointer;">
-      <div class="top" style="height:112px;background:radial-gradient(420px 200px at 82% -10%,rgba(255,224,0,.22),transparent 60%),linear-gradient(155deg,#1d1d1d 0%,#0a0a0a 100%);"><div class="edge"></div><span class="badge free">AI · FREE</span></div>
-      <div class="info"><div class="t">HITFAT Biomechanics</div><div class="m">Wall ball · joint angles, depth and tempo from your camera</div></div></div></div>`;
+      <div class="top" style="height:150px;background-image:url('img-wallball-ai.jpg');background-size:cover;background-position:center;">
+        <span class="badge free">AI · FREE</span></div>
+      <div class="info"><div class="t">HITFAT Biomechanics</div>
+        <div class="m">Wall ball · depth, joint angles, ball speed and your set time — from your camera</div></div></div></div>`;
+
+    h+=`<div class="exsec"><div class="plan wide" style="height:150px;background:linear-gradient(135deg,#1d1a05 0%,#0f0f0f 55%,#0a0a0a 100%);border:1px solid rgba(255,224,0,.18);" onclick="openTimerHome()">
+        <div class="ov"></div>
+        <div class="pi"><div class="tx"><div class="k">⏱ Timer · no video</div><div class="t">HITFAT Timer</div>
+          <div class="d">${SESSIONS.length} timed sessions across ${TIMER_CATS.length} categories — tap Next as you go.</div></div>
+          <button class="join" onclick="event.stopPropagation();openTimerHome()">Open</button></div></div></div>`;
+
     h+=sec('Quick Workouts — FREE', hs(QUICK_WORKOUTS.map((_,i)=>quickCard(i)).join('')), "setFilter('quick')");
-    h+=sec('Popular Programs', hs(['first-timer','race-12','road-kl','race-8'].map(id=>programCard(id)).join('')), "setFilter('programs')");
+
+    h+=`<div class="exsec"><div class="eh"><h3>Fix a weakness</h3></div>
+      <div class="catcard" onclick="switchTab('target')" style="margin-bottom:10px;"><div class="body"><div class="ttl">Target Sessions</div><div class="cnt">Pick a station or quality and drill it</div></div><div class="arr">›</div></div>
+      <div class="catcard" onclick="switchTab('programs')"><div class="body"><div class="ttl">Workout Library</div><div class="cnt">Every free session, by category</div></div><div class="arr">›</div></div></div>`;
+
     h+=sec('Free Programs', ['hybrid-starter','foundation-starter'].map(id=>programCard(id,true)).join(''));
-    h+=sec('Race Preparation', hs(CATALOG_ORDER.filter(id=>CATALOG[id].tag==='Race Prep').map(id=>programCard(id)).join('')), "setFilter('race')");
-    h+=sec('HITFAT Programs', hs(coachPrograms('seth').map(id=>programCard(id)).join('')), "setFilter('programs')");
-    h+=`<div class="exsec"><div class="eh"><h3>More Training</h3></div>
-      <div class="catcard" onclick="switchTab('target')" style="margin-bottom:12px;"><div class="body"><div class="ttl">Target Sessions</div><div class="cnt">Fix a weak station or quality</div></div><div class="arr">›</div></div>
-      <div class="catcard" onclick="switchTab('programs')"><div class="body"><div class="ttl">Workout Library</div><div class="cnt">Free sessions by category</div></div><div class="arr">›</div></div></div>`;
+
+    // one route into the store, not three copies of it
+    const store=['first-timer','race-12','road-kl','run-better'].filter(id=>!ownsProgram(id)).slice(0,4);
+    if(store.length) h+=sec('Paid Programs', hs(store.map(id=>programCard(id)).join('')), "switchTab('store')");
   } else if(exFilter==='quick'){
     h+=`<div class="plan wide" style="background:linear-gradient(135deg,#1d1a05 0%,#0f0f0f 55%,#0a0a0a 100%);border:1px solid rgba(255,224,0,.18);margin-bottom:6px;" onclick="openTimerHome()">
         <div class="ov"></div>
