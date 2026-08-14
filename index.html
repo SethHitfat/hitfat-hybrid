@@ -1186,15 +1186,16 @@ const V = {
    Block: phase, mins, format?, rounds?, note?, moves[]
    Move: name, vimeo, time(saat) atau reps  |  Rehat: {name:'Rehat',rest:saat}
    ============================================================ */
+const IMGW="img-sled-klcc.jpg";     // default session photo across the app
 const IMG={
-  ftimer:"img-first-timer.jpg",          // sled pull, race floor
-  foundation:"img-foundation.jpg",       // sled push, KLCC skyline
-  skierg:"img-engine.jpg",               // ski erg, race floor
+  sledpull:"img-sled-pull.jpg",          // rope sled pull, race floor
+  sledklcc:"img-sled-klcc.jpg",          // sled push, KLCC skyline
+  skierg:"img-skierg.jpg",               // ski erg, race floor
   found:"https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=700&q=70",
   power:"https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=700&q=70",
   complete:"https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=700&q=70",
   engine:"https://images.unsplash.com/photo-1538805060514-97d9cc17730c?w=700&q=70",
-  w:"https://images.unsplash.com/photo-1599058917212-d750089bc07e?w=600&q=70",
+  w:IMGW,
 };
 
 // helper warmup & cooldown standard
@@ -1422,15 +1423,15 @@ const CATALOG = {
      goal:'Build strength, endurance & hybrid fitness', tag:'Hybrid', access:'free', price:0, plan:'HYBRID_PLAN', img:IMG.engine,
      summary:'Your free foundation — build a hybrid engine toward the HITFAT Hybrid Simulation. No race ticket needed.' },
   'foundation-starter': { id:'foundation-starter', title:'Foundation Starter', coach:'seth', owner:'HITFAT', revShare:0, weeks:4, days:3, level:'All levels',
-     goal:'Base phase — build your foundation', tag:'Hybrid', access:'free', price:0, plan:'TRAINING_PLAN', img:IMG.foundation,
+     goal:'Base phase — build your foundation', tag:'Hybrid', access:'free', price:0, plan:'TRAINING_PLAN', img:IMG.sledpull,
      summary:'A free 4-week Base phase taster from the HITFAT 13-Week Foundation — build aerobic base, technique & consistency. Unlock the full 13 weeks anytime.' },
   // ---- PAID full 13-week (Base taster is free above; Pace/Accelerate/Prime unlock here) ----
   'foundation-13': { id:'foundation-13', title:'13-Week Foundation', coach:'seth', owner:'HITFAT', revShare:0, weeks:13, days:3, level:'All levels',
-     goal:'Base, pace, power, taper', tag:'Hybrid', access:'paid', price:79, plan:'TRAINING_PLAN', img:IMG.foundation,
+     goal:'Base, pace, power, taper', tag:'Hybrid', access:'paid', price:79, plan:'TRAINING_PLAN', img:IMG.sledpull,
      summary:'The full 13-week structured build: Base → Pace → Accelerate → Prime. Progressive phases that develop a complete hybrid engine — everything after the free Base taster.' },
   // ---- RM19 ENTRY (real data) ----
   'first-timer': { id:'first-timer', title:'HYROX First Timer', coach:'seth', owner:'HITFAT', revShare:0, weeks:4, days:4, level:'Beginner',
-     goal:'Prepare for your first HYROX', tag:'Race Prep', access:'paid', price:19, plan:'FIRST_TIMER', img:IMG.ftimer,
+     goal:'Prepare for your first HYROX', tag:'Race Prep', access:'paid', price:19, plan:'FIRST_TIMER', img:IMG.skierg,
      summary:'A 4-week structured starter for anyone curious about HYROX: hybrid basics → engine + strength → stations → mini simulation.' },
   // ---- RACE-SPECIFIC (real data) ----
   'race-8':  { id:'race-8',  title:'8-Week Race Prep', coach:'seth', owner:'HITFAT', revShare:0, weeks:8,  days:5, level:'PRO / OPEN / Beginner',
@@ -1444,7 +1445,7 @@ const CATALOG = {
      summary:'Everything to arrive in KL ready: countdown, race pacing, station strategy, simulations & the 12-week build.' },
   // ---- CORE PAID (COMING SOON — no dummy content until real workouts are ready) ----
   'hybrid-beginner':{ id:'hybrid-beginner',title:'Hybrid Beginner',   coach:'seth', owner:'HITFAT', revShare:0, weeks:8, days:4, level:'Beginner',     goal:'Your first structured hybrid build', tag:'Hybrid',   access:'paid', price:59, plan:null, img:IMG.found,   summary:'A beginner-friendly build into hybrid training and your first race.' },
-  'build-engine':   { id:'build-engine',   title:'Build Your Engine', coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:4, level:'Intermediate', goal:'Improve your aerobic engine',        tag:'Engine',   access:'paid', price:59, plan:null, img:IMG.skierg,  summary:'Improve your aerobic engine systematically for hybrid racing.' },
+  'build-engine':   { id:'build-engine',   title:'Build Your Engine', coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:4, level:'Intermediate', goal:'Improve your aerobic engine',        tag:'Engine',   access:'paid', price:59, plan:null, img:IMG.engine,  summary:'Improve your aerobic engine systematically for hybrid racing.' },
   'hybrid-strength':{ id:'hybrid-strength',title:'Hybrid Strength',   coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:3, level:'Intermediate', goal:'Strength for hybrid power',          tag:'Strength', access:'paid', price:59, plan:null, img:IMG.power,   summary:'Structured strength — squats, carries, sled — to power every station.' },
   'run-better':     { id:'run-better',     title:'Run Better for HYROX', coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:4, level:'Intermediate', goal:'Improve compromised running',     tag:'Running',  access:'paid', price:59, plan:null, img:IMG.found,   summary:'Improve your compromised running through structured progression.' },
   'station-builder':{ id:'station-builder',title:'Station Builder',   coach:'seth', owner:'HITFAT', revShare:0, weeks:4, days:3, level:'Intermediate', goal:'Bring up weak HYROX stations',       tag:'Strength', access:'paid', price:59, plan:null, img:IMG.complete,summary:'Focused progression to bring up your weakest HYROX stations.' },
