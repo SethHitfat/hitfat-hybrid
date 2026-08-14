@@ -4576,8 +4576,12 @@ function renderPrograms(){
   let h='';
   const owned=CATALOG_ORDER.filter(id=>ownsProgram(id)&&CATALOG[id].access!=='free');
   // featured: the cheapest door the buyer has not walked through yet
-  // up to three doors the buyer has not walked through — swipeable, and it rotates itself
-  const heroIds=['first-timer','race-12','run-better'].filter(x=>!ownsProgram(x)).slice(0,3);
+  // four doors the buyer has not walked through — swipeable, and it rotates itself.
+  // Road to HYROX KL always earns a slide: it is the flagship and the local race.
+  const HERO_ORDER=['first-timer','race-12','road-kl','run-better','race-8','foundation-13',
+                    'hybrid-beginner','build-engine','hybrid-strength','station-builder'];
+  let heroIds=HERO_ORDER.filter(x=>CATALOG[x]&&CATALOG[x].access==='paid'&&!ownsProgram(x)).slice(0,4);
+  if(!ownsProgram('road-kl') && heroIds.indexOf('road-kl')<0) heroIds=heroIds.slice(0,3).concat('road-kl');
   if(heroIds.length){
     h+=`<div class="heroes" id="store-heroes">${heroIds.map(hid=>{
       const f=CATALOG[hid], fst=programState(hid);
