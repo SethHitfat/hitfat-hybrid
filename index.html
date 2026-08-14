@@ -3047,7 +3047,7 @@ const HF = {
   userId:null, email:null,
   // owned: {programId:{date}}  scores: {engine,strength,stations,running}  wishlist: {programId:1}  purchases: [{id,title,price,date}]
   data:{ track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[], races:{}, raceGoal:'' },
-  _defaults(){ return { track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[], races:{}, raceGoal:'' }; },
+  _defaults(){ return { track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[], races:{}, raceGoal:'', wallball:[] }; },
   cacheKey(){ return this.KEY + (this.userId ? '_'+this.userId : ''); },
   setUser(id, email){ this.userId=id||null; this.email=email||null; },
   apply(obj){ // replace working data from a plain object (cloud or cache)
@@ -3058,6 +3058,7 @@ const HF = {
       d.owned=Object.assign({},obj.owned||{}); d.scores=Object.assign({},obj.scores||{});
       d.wishlist=Object.assign({},obj.wishlist||{}); d.purchases=Array.isArray(obj.purchases)?obj.purchases.slice():[];
       d.strava=obj.strava||null; d.sims=Array.isArray(obj.sims)?obj.sims.slice():[]; d.races=Object.assign({},obj.races||{}); d.raceGoal=obj.raceGoal||'';
+      d.wallball=Array.isArray(obj.wallball)?obj.wallball.slice():[];
     }
     this.data=d;
   },
@@ -3528,7 +3529,7 @@ function renderProgress(){
     </div>
     <div class="trkbar" style="margin-top:6px;"><i style="width:${wk.pct}%"></i></div>
     <div class="trkmeta"><b>${wk.done}</b> / ${wk.target} planned sessions this week</div>`;
-  try{ renderLoad(); renderTrend(); renderPB(); renderPredictor(); renderPaceMe(); renderSim(); }catch(e){ console.error(e); }
+  try{ renderLoad(); renderTrend(); renderPB(); renderPredictor(); renderPaceMe(); renderSim(); renderWallBall(); }catch(e){ console.error(e); }
   const bm=nextBenchmark();
   $('prog-bench').innerHTML=`<div class="benchcard"><div class="bt">${bm.name}</div><div class="bm">${bm.when}</div></div>
     <div class="benchcard"><div class="bt">Weekly Consistency</div><div class="bm">${wk.done} done this week · ${HF.totalDone()} all-time</div></div>`;
@@ -5048,6 +5049,60 @@ function openLibSession(id,w,d){
   }
 }
 
+
+/* ============================================================
+   WALL BALL LOG SYNC
+   The Biomechanics tool is a separate page with no auth of its own — it just writes
+   `hf_wb_log` to localStorage. The app owns the account, so the app does the syncing:
+   merge both directions on open, so a set logged on one device shows up on the next.
+   ============================================================ */
+const WB_KEY='hf_wb_log';
+function wbId(x){ return [x.d,x.w,x.t,x.secs].join('|'); }
+function wbClean(a){
+  if(!Array.isArray(a)) return [];
+  return a.filter(x=>x&&x.d&&x.w>0&&x.t>0&&x.secs>0);
+}
+function syncWallBall(){
+  let local=[];
+  try{ local=wbClean(JSON.parse(localStorage.getItem(WB_KEY)||'[]')); }catch(e){}
+  const cloud=wbClean(HF.data.wallball);
+  const seen={}, merged=[];
+  cloud.concat(local).forEach(x=>{ const k=wbId(x); if(!seen[k]){ seen[k]=1; merged.push(x); } });
+  merged.sort((a,b)=>new Date(a.d)-new Date(b.d));
+  const keep=merged.slice(-300);
+  const changedCloud = keep.length!==cloud.length;
+  const changedLocal = keep.length!==local.length;
+  if(changedCloud){ HF.data.wallball=keep; HF.save(); }          // rides the existing cloud sync
+  if(changedLocal){ try{ localStorage.setItem(WB_KEY, JSON.stringify(keep)); }catch(e){} }
+  return keep;
+}
+/* best time per target, at the weight the athlete uses most */
+function wbBests(){
+  const log=wbClean(HF.data.wallball);
+  if(!log.length) return null;
+  const byW={}; log.forEach(x=>{ byW[x.w]=(byW[x.w]||0)+1; });
+  const w=Object.keys(byW).sort((a,b)=>byW[b]-byW[a])[0];
+  const rows=[];
+  [10,25,50,80,100].forEach(t=>{
+    const set=log.filter(x=>String(x.w)===String(w)&&x.t===t);
+    if(set.length) rows.push({t, secs:Math.min.apply(null,set.map(x=>x.secs)), n:set.length});
+  });
+  return rows.length?{w:w, rows:rows, last:log[log.length-1]}:null;
+}
+function renderWallBall(){
+  const el=$('prog-wb'); if(!el) return;
+  const b=wbBests();
+  if(!b){ el.innerHTML=''; return; }
+  const fmt=sec=>{ sec=Math.round(sec); return Math.floor(sec/60)+':'+((sec%60)<10?'0':'')+(sec%60); };
+  el.innerHTML=`<div class="sechead">Wall Ball</div>
+    <div class="benchcard" style="cursor:pointer;" onclick="location.href='lab.html'">
+      <div class="bt">Best times · ${b.w} kg</div>
+      <div class="bm">Measured in HITFAT Biomechanics — tap to train a set.</div>
+      ${b.rows.map(r=>`<div class="prow"><span class="pd">${r.t} reps</span>
+        <span class="pr" style="color:#fff;font-weight:600;">${fmt(r.secs)}<span style="color:var(--dim2);font-weight:400;font-size:11px;"> · ${r.n} set${r.n>1?'s':''}</span></span></div>`).join('')}
+    </div>`;
+}
+
 /* ---- Join / payment (Bayarcash — server-created payment intent, verified callback) ---- */
 function joinProgram(id){ const p=CATALOG[id]; if(!p) return;
   if(!PAYMENTS_LIVE){ nfToast(p.title+' — opening soon. Tap “Notify me”.'); openProgramDetail(id); return; }  // payments not live yet
@@ -5147,6 +5202,7 @@ function handlePaidRedirect(){
       }
     }
     checkPaidPurchases(true);                   // pick up any payment confirmed while away
+    try{ syncWallBall(); }catch(e){}
   }catch(e){ console.error(e); }
 }
 
