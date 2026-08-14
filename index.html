@@ -4265,7 +4265,7 @@ function suggestedWODIndex(mode){
 }
 function currentWODIndex(){ return suggestedWODIndex(todayReadiness().mode); }
 const SPOTLIGHTS=[
-  {badge:'AI · FREE', t:'HITFAT Biomechanics', m:'Wall ball · joint angles, depth and tempo from your camera', go:"location.href='lab.html'"},
+  {badge:'AI · FREE', t:'Wall Ball Analysis', m:'Depth, joint angles and ball speed — see why you lose reps', go:"location.href='lab.html'"},
   {badge:'FREE', t:'Target: Wall Balls', m:'3 focused sessions to keep wall balls unbroken', go:"switchTab('target')"},
   {badge:'FREE', t:'Foundation Starter', m:'Free 4-week Base phase — unlock the full 13 weeks anytime', go:"openProgramDetail('foundation-starter')"},
   {badge:'FREE', t:'Target: Sled Push', m:'Build leg drive & the legs to run straight off the sled', go:"switchTab('target')"},
@@ -4542,8 +4542,9 @@ function renderExplore(){
     h+=`<div class="exsec"><div class="pcard full" onclick="location.href='lab.html'" style="cursor:pointer;">
       <div class="top" style="height:150px;background-image:url('img-wallball-ai.jpg');background-size:cover;background-position:center;">
         <span class="badge free">AI · FREE</span></div>
-      <div class="info"><div class="t">HITFAT Biomechanics</div>
-        <div class="m">Wall ball · depth, joint angles, ball speed and your set time — from your camera</div></div></div></div>`;
+      <div class="info"><div class="k" style="font-family:'Oswald';font-size:10px;letter-spacing:1.8px;color:var(--hyrox);font-weight:700;text-transform:uppercase;margin-bottom:5px;">HITFAT Biomechanics</div>
+        <div class="t">Wall Ball Analysis</div>
+        <div class="m" style="white-space:normal;">Depth, joint angles and ball speed — see exactly why you lose reps</div></div></div></div>`;
 
     h+=`<div class="exsec"><div class="plan wide" style="height:150px;background:linear-gradient(135deg,#1d1a05 0%,#0f0f0f 55%,#0a0a0a 100%);border:1px solid rgba(255,224,0,.18);" onclick="openTimerHome()">
         <div class="ov"></div>

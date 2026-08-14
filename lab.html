@@ -3,21 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>HITFAT Biomechanics — Wall Ball</title>
+<title>Wall Ball Analysis — free AI form check | HITFAT</title>
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Biomechanics">
+<meta name="apple-mobile-web-app-title" content="Wall Ball">
 <meta name="theme-color" content="#000000">
-<meta property="og:title" content="HITFAT Biomechanics — Wall Ball">
-<meta property="og:description" content="Free AI wall ball analysis. Depth, joint angles, ball speed and your set time — on your phone, nothing uploaded.">
-<meta property="og:image" content="https://hybrid.hitfat.io/img-wallball-ai.jpg">
+<meta property="og:title" content="Wall Ball Analysis — free AI form check">
+<meta property="og:description" content="See exactly why you lose reps: depth, joint angles, ball speed and your set time — measured on your phone, nothing uploaded.">
+<meta property="og:image" content="https://hybrid.hitfat.io/img-wallball-og.jpg">
 <meta property="og:url" content="https://hybrid.hitfat.io/lab">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="HITFAT Biomechanics — Wall Ball">
-<meta name="twitter:description" content="Free AI wall ball analysis — depth, joint angles, ball speed, set time.">
-<meta name="twitter:image" content="https://hybrid.hitfat.io/img-wallball-ai.jpg">
+<meta name="twitter:title" content="Wall Ball Analysis — free AI form check">
+<meta name="twitter:description" content="See exactly why you lose reps — depth, joint angles, ball speed, set time.">
+<meta name="twitter:image" content="https://hybrid.hitfat.io/img-wallball-og.jpg">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
   :root{ --bg:#000; --surface:#0e0e0e; --surface2:#161616; --line:#232323; --txt:#fff; --dim:#9a9a9a; --dim2:#6a6a6a;
@@ -324,7 +324,7 @@
       </div>
       <div class="figwrap"><canvas id="figCanvas" width="720" height="420"></canvas>
         <div class="figcap">Every rep, measured: knee and hip angles, depth against the hip–knee line, and the throw.</div></div>
-      <h1>Judge your <span class="y">wall ball</span> mechanics</h1>
+      <h1>See why you lose <span class="y">wall ball</span> reps</h1>
       <div class="sub">On-device pose analysis measures every rep against the HYROX depth standard — <b>hips below the knee</b> (rulebook 8.8.6) — and reads the joint angles behind it.</div>
 
       <div class="mrow"><div class="ic" style="background:rgba(255,224,0,.14);color:#FFE000">📐</div>
@@ -1732,7 +1732,7 @@ async function shareResult(){
     if(navigator.canShare && navigator.canShare({files:[file]})){
       try{ await navigator.share({files:[file], title:'HITFAT Biomechanics', text:(function(){ const w=window._wbSet||{};
         return (w.secs? (w.t+' wall balls at '+w.w+'kg in '+fmtClock(w.secs)+' ') : 'My wall ball analysis ')
-          +'— measured by AI on my phone. Try it free: hybrid.hitfat.io/lab'; })()}); return; }catch(e){}
+          +'— full analysis on my phone. Try it free: hybrid.hitfat.io/lab'; })()}); return; }catch(e){}
     }
     const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='hitfat-biomechanics.png'; a.click(); URL.revokeObjectURL(url);
     $('shareNote').textContent='Image saved — share it to your story or feed 📲';
