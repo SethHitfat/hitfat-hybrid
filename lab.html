@@ -77,7 +77,7 @@
   #overlay{position:absolute;inset:0;width:100%;height:100%;transform:scaleX(-1);}
   #overlay.rear{transform:none;}
   .hud{position:absolute;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;
-       padding:calc(14px + env(safe-area-inset-top,0px)) 16px calc(16px + env(safe-area-inset-bottom,0px));}
+       padding:calc(12px + env(safe-area-inset-top,0px)) 12px calc(42px + env(safe-area-inset-bottom,0px));}
   .hud .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
   .repbox{background:rgba(0,0,0,.55);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.12);
           border-radius:16px;padding:9px 16px;text-align:center;}
@@ -97,11 +97,10 @@
   .status.grey{color:#fff;background:var(--grey);border-color:var(--grey);}
   .controls{display:flex;gap:10px;pointer-events:auto;transition:opacity .35s;}
   .controls.hide{opacity:0;pointer-events:none;}
-  .wmark{position:absolute;left:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font-weight:800;
-         font-size:12.5px;letter-spacing:.4px;color:rgba(255,255,255,.55);pointer-events:none;}
+  .wmark{position:absolute;left:0;right:0;bottom:calc(6px + env(safe-area-inset-bottom,0px));text-align:center;
+         font-weight:800;font-size:11.5px;letter-spacing:.6px;color:rgba(255,255,255,.62);pointer-events:none;}
   .wmark span{color:var(--hyrox);}
-  .wmark i{display:block;font-style:normal;font-weight:600;font-size:10.5px;letter-spacing:1.2px;
-           color:rgba(255,255,255,.42);margin-top:2px;}
+  .wmark i{font-style:normal;font-weight:600;font-size:10.5px;letter-spacing:1.2px;color:var(--hyrox);opacity:.75;margin-left:7px;}
   .controls .btn{flex:1;padding:15px;}
   .gauge{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:14px;height:40%;background:rgba(0,0,0,.5);
          border:1px solid rgba(255,255,255,.15);border-radius:99px;overflow:hidden;pointer-events:none;}
@@ -118,30 +117,26 @@
          border-radius:12px;padding:11px 8px;font-family:'Oswald';font-size:15px;font-weight:700;cursor:pointer;}
   .wchip.on{background:var(--hyrox);border-color:var(--hyrox);color:var(--ink);}
   .cl{display:flex;justify-content:space-between;font-size:11px;color:var(--dim2);margin-top:6px;}
-  /* ---- analysis panels (sports-broadcast style) ---- */
-  .pan{background:rgba(8,8,8,.62);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.10);
-       border-radius:14px;padding:10px 12px;pointer-events:none;}
-  .pan .lb{font-family:'Oswald';font-size:9px;letter-spacing:1.8px;color:var(--hyrox);font-weight:700;
-           text-transform:uppercase;margin-bottom:6px;}
-  .hudL{display:flex;flex-direction:column;gap:8px;align-items:flex-start;max-width:56%;}
-  .hudR{display:flex;flex-direction:column;gap:8px;align-items:stretch;min-width:118px;}
-  .repwrap .n{display:flex;align-items:baseline;gap:5px;}
-  .repwrap .n b{font-family:'Oswald';font-size:44px;font-weight:700;line-height:.9;color:#fff;}
-  .repwrap .n span{font-family:'Oswald';font-size:16px;color:var(--dim);}
-  .repbar{height:4px;border-radius:99px;background:rgba(255,255,255,.16);overflow:hidden;margin-top:7px;}
+  /* ---- analysis panels — compact, so the athlete stays the subject ---- */
+  .pan{background:rgba(8,8,8,.58);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.10);
+       border-radius:12px;padding:7px 10px;pointer-events:none;}
+  .pan .lb{font-family:'Oswald';font-size:8.5px;letter-spacing:1.6px;color:var(--hyrox);font-weight:700;
+           text-transform:uppercase;display:block;margin-bottom:2px;}
+  .hud .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .mid{display:flex;justify-content:space-between;gap:8px;margin-top:8px;}
+  .pnl{flex:1 1 0;min-width:0;max-width:49%;}
+  .pnl2{flex:1 1 0;min-width:0;max-width:49%;display:flex;flex-direction:column;}
+  .pan .n{display:flex;align-items:baseline;gap:5px;}
+  .pan .n b{font-family:'Oswald';font-size:30px;font-weight:700;line-height:.92;color:#fff;}
+  .pan .n b.clk{color:var(--hyrox);font-size:26px;}
+  .pan .n span{font-family:'Oswald';font-size:12px;color:var(--dim);}
+  .pan .sub{font-family:'Oswald';font-size:11px;letter-spacing:.6px;color:var(--dim);margin-top:3px;}
+  .pan .v{font-family:'Oswald';font-size:17px;font-weight:700;color:var(--grey);line-height:1.1;}
+  .pan .v b{font-family:'Oswald';color:#fff;} .pan .v u{text-decoration:none;font-size:10px;color:var(--dim);margin-left:3px;}
+  .pan .s{font-size:10.5px;color:var(--dim);margin-top:2px;line-height:1.3;}
+  #depBox.good .v{color:var(--ok);} #depBox.bad .v{color:var(--bad);}
+  .repbar{height:3px;border-radius:99px;background:rgba(255,255,255,.16);overflow:hidden;margin-top:5px;}
   .repbar i{display:block;height:100%;width:0;background:var(--hyrox);border-radius:99px;transition:width .25s;}
-  .dep{display:flex;align-items:center;gap:8px;}
-  .dep .v{font-family:'Oswald';font-size:17px;font-weight:700;color:var(--grey);}
-  .dep.good .v{color:var(--ok);} .dep.bad .v{color:var(--bad);}
-  .dep .s{font-size:10.5px;color:var(--dim);margin-top:1px;}
-  .fchk{display:flex;flex-direction:column;gap:5px;}
-  .fchk .r{display:flex;align-items:center;justify-content:space-between;gap:14px;font-size:11px;color:#d0d0d0;}
-  .fchk .r i{width:15px;height:15px;border-radius:50%;display:grid;place-items:center;font-size:9px;font-style:normal;
-             background:rgba(255,255,255,.12);color:var(--dim);flex:none;}
-  .fchk .r.on i{background:var(--ok);color:#062;} .fchk .r.off i{background:var(--bad);color:#400;}
-  .met{display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
-  .met b{font-family:'Oswald';font-size:22px;font-weight:700;color:#fff;line-height:1;}
-  .met s{text-decoration:none;font-size:10px;color:var(--dim);}
   /* result */
   #result{display:none;}
   #result.on{display:block;}
@@ -167,6 +162,21 @@
   .verline{font-size:11.5px;color:var(--dim);text-align:center;margin-top:10px;}
   .verline b{color:var(--hyrox);}
 
+  .plain{display:flex;gap:11px;align-items:flex-start;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.06);
+         font-size:14.5px;line-height:1.45;color:#e2e2e2;}
+  .plain:last-child{border-bottom:none;}
+  .plain .d{width:7px;height:7px;border-radius:50%;background:var(--hyrox);flex:none;margin-top:7px;}
+  .fixcard{background:linear-gradient(150deg,rgba(255,224,0,.10),rgba(255,224,0,.03));border:1px solid rgba(255,224,0,.28);
+           border-radius:16px;padding:16px;margin:12px 0 4px;}
+  .fixcard .k{font-family:'Oswald';font-size:10px;letter-spacing:2px;color:var(--hyrox);font-weight:700;margin-bottom:7px;}
+  .fixcard .t{font-size:17px;font-weight:800;letter-spacing:-.2px;margin-bottom:5px;}
+  .fixcard .m{font-size:14px;color:#cfcfcf;line-height:1.5;}
+  .det{margin-top:22px;border-top:1px solid var(--line);padding-top:14px;}
+  .det summary{cursor:pointer;font-size:15px;font-weight:700;list-style:none;}
+  .det summary::-webkit-details-marker{display:none;}
+  .det summary:after{content:' ▾';color:var(--dim);}
+  .det[open] summary:after{content:' ▴';}
+  .det summary span{display:block;font-size:12.5px;font-weight:400;color:var(--dim);margin-top:3px;}
   /* biomechanics report */
   .bio{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:6px 16px;margin-bottom:12px;}
   .brow{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.06);}
@@ -261,50 +271,20 @@
       <div class="loading" id="loading"><div class="box"><div class="spin"></div><div class="s">Loading AI model…</div></div></div>
       <div class="hud">
         <div class="top">
-          <div class="hudL">
-            <div class="pan repwrap" style="min-width:150px;">
-              <div class="lb">Reps</div>
-              <div class="n"><b id="repN">0</b><span id="repTgt">/ 100</span></div>
-              <div class="repbar"><i id="repFill"></i></div>
-            </div>
-            <div class="pan" style="min-width:150px;">
-              <div class="lb">Time</div>
-              <div class="n" style="display:flex;align-items:baseline;gap:6px;">
-                <b id="clockV" style="font-family:'Oswald';font-size:32px;font-weight:700;color:var(--hyrox);line-height:.9;">0:00</b>
-                <span id="paceV" style="font-family:'Oswald';font-size:13px;color:var(--dim);">—</span>
-              </div>
-            </div>
-            <div class="pan" style="min-width:150px;">
-              <div class="lb">Depth</div>
-              <div class="dep" id="depBox"><span class="v" id="depV">—</span></div>
-              <div class="s" id="depS">Waiting for a rep</div>
-            </div>
-            <div class="pan fchk" id="formChk" style="min-width:170px;">
-              <div class="lb">Form check</div>
-              <div class="r" id="fc-depth"><span>Squat depth</span><i>✓</i></div>
-              <div class="r" id="fc-knee"><span>Knee angle</span><i>✓</i></div>
-              <div class="r" id="fc-torso"><span>Torso upright</span><i>✓</i></div>
-              <div class="r" id="fc-path"><span>Ball path</span><i>✓</i></div>
-              <div class="r" id="fc-sym"><span>Left–right</span><i>✓</i></div>
-            </div>
+          <div class="pan pnl">
+            <div class="lb">Reps</div>
+            <div class="n"><b id="repN">0</b><span id="repTgt">/ 100</span></div>
+            <div class="repbar"><i id="repFill"></i></div>
           </div>
-          <div class="hudR">
-            <div class="pan">
-              <div class="lb">Ball speed</div>
-              <div class="met"><b id="speedA">—</b><s>m/s</s></div>
-            </div>
-            <div class="pan">
-              <div class="lb">Peak height</div>
-              <div class="met"><b id="peakA">—</b><s>m</s></div>
-            </div>
-            <div class="pan">
-              <div class="lb">Live angles</div>
-              <div class="met"><s>Knee</s><b class="deg" id="kneeA" style="font-size:16px;">—</b></div>
-              <div class="met"><s>Hip</s><b class="deg" id="hipA" style="font-size:16px;">—</b></div>
-              <div class="met"><s>Trunk</s><b class="deg" id="trunkA" style="font-size:16px;">—</b></div>
-              <div class="met"><s>Valid</s><b id="validN" style="font-size:16px;">0</b></div>
-            </div>
+          <div class="pan pnl">
+            <div class="lb">Time</div>
+            <div class="n"><b id="clockV" class="clk">0:00</b><span id="paceV">—</span></div>
+            <div class="sub" id="angLine">— · — · —</div>
           </div>
+        </div>
+        <div class="mid">
+          <div class="pan pnl2" id="depBox"><span class="lb">Depth</span><span class="v" id="depV">—</span><span class="s" id="depS">Waiting for a rep</span></div>
+          <div class="pan pnl2"><span class="lb">Ball</span><span class="v"><b id="speedA">—</b><u>m/s</u></span><span class="s"><b id="peakA">—</b> m peak</span></div>
         </div>
         <div class="status" id="status">GET READY</div>
         <div class="wmark">HITFAT <span>BIOMECHANICS</span><i>hybrid.hitfat.io</i></div>
@@ -341,17 +321,20 @@
         <div class="verline">Verified to HYROX depth standard — <b>hips below knee</b></div>
       </div>
 
-      <h2>Biomechanics</h2>
-      <div class="bio" id="bioRows"></div>
+      <h2>What that means</h2>
+      <div class="bio" id="plainRows"></div>
 
-      <h2>Depth per rep</h2>
-      <div class="chart"><div id="depthChart"></div><div class="cl"><span>Rep 1</span><span id="chartEnd">Rep —</span></div></div>
+      <div class="fixcard" id="fixCard"></div>
 
       <h2>Your progress</h2>
       <div class="chart" id="progChart"></div>
 
-      <h2>Coaching notes</h2>
-      <div id="cues"></div>
+      <details class="det">
+        <summary>Full analysis <span>angles, tempo, every rep</span></summary>
+        <div class="bio" id="bioRows" style="margin-top:12px;"></div>
+        <div class="chart"><div id="depthChart"></div><div class="cl"><span>Rep 1</span><span id="chartEnd">Rep —</span></div></div>
+        <div id="cues"></div>
+      </details>
 
       <div class="actions">
         <button class="btn" onclick="shareResult()">Share Result</button>
@@ -535,7 +518,7 @@ async function start(){
     return;
   }
   $('loading').style.display='none';
-  resize(); running=true; armed=false; reps=0;valid=0;grey=0;repData=[];state='up';smoothKP=null;trail=[];
+  resize(); running=true; armed=false; trail=[]; reps=0;valid=0;grey=0;repData=[];state='up';smoothKP=null;trail=[];
   const cfg=wbCfg(); REP_TARGET=cfg.t; setTs=null; endTs=null;
   $('repN').textContent='0';$('validN').textContent='0';
   pxPerM=null; lastSpeed=null; lastArc=null;
@@ -593,7 +576,7 @@ function analyze(kp0){
   drawScene(kp,s);
   paintChips();
 
-  if(!ok(hip)||!ok(knee)){ setStatus('MOVE INTO FRAME',''); return; }
+  if(!ok(hip)||!ok(knee)){ trail=[]; setStatus('MOVE INTO FRAME',''); return; }
   // scale-invariant depth: (hipY - kneeY) / torso(shoulder→hip). >0 = hip below knee.
   const depth=(hip.y - knee.y)/torso;
   // gauge (map depth -0.4..0.4 → 0..100%)
@@ -601,7 +584,7 @@ function analyze(kp0){
   $('gline').style.bottom=((VALID_TH+0.4)/0.8*100)+'%';
 
   const now=Date.now();
-  if(!armed){ calibrate(kp); setStatus('GET READY',''); return; }
+  if(!armed){ calibrate(kp); trail=[]; setStatus('GET READY',''); return; }
   if(state==='up'){ calibrate(kp);
     if(depth > VALID_TH+0.02){                 // descent crossed into the judged zone
       state='down'; bottom=depth;
@@ -645,9 +628,9 @@ let rep={};
 function symDiff(){ return (live.symL!=null&&live.symR!=null) ? Math.abs(live.symL-live.symR) : null; }
 
 function paintChips(){
-  setChip('kneeA', live.knee, v=>v<=DEEP_KNEE?'good':(v<=125?'':'hot'));
-  setChip('hipA',  live.hip,  v=>v<=100?'good':'');
-  setChip('trunkA',live.lean, v=>v<=LEAN_OK?'good':(v<=55?'':'hot'));
+  const el=$('angLine'); if(!el) return;
+  const n=v=>v==null?'—':Math.round(v)+'°';
+  el.textContent='K '+n(live.knee)+' · H '+n(live.hip)+' · T '+n(live.lean);
 }
 function setChip(id,val,cls){
   const el=$(id); if(!el) return;
@@ -706,21 +689,15 @@ function paintRepPanel(){
 function paintDepth(r){
   const box=$('depBox'), v=$('depV'), sub=$('depS');
   if(!box) return;
-  if(!r){ box.className='dep'; v.textContent='—'; sub.textContent='Waiting for a rep'; return; }
+  if(!r){ box.className='pan pnl2'; v.textContent='—'; sub.textContent='Waiting for a rep'; return; }
   const good=r.cls==='valid';
-  box.className='dep '+(good?'good':(r.cls==='grey'?'':'bad'));
+  box.className='pan pnl2 '+(good?'good':(r.cls==='grey'?'':'bad'));
   v.textContent = good?'GOOD':(r.cls==='grey'?'BORDERLINE':'HIGH');
   sub.textContent = good?'Below parallel':(r.cls==='grey'?'On the line':'Above parallel');
 }
 /* the five checks are exactly the five things this tool can honestly measure */
-function paintForm(r){
-  if(!r){ ['fc-depth','fc-knee','fc-torso','fc-path','fc-sym'].forEach(id=>setCheck(id,null)); return; }
-  setCheck('fc-depth', r.cls==='valid');
-  setCheck('fc-knee',  r.kneeMin!=null ? r.kneeMin<=DEEP_KNEE+10 : null);
-  setCheck('fc-torso', r.leanMax!=null ? r.leanMax<=LEAN_OK      : null);
-  setCheck('fc-path',  r.drift!=null   ? r.drift<=0.9            : null);
-  setCheck('fc-sym',   r.sym!=null     ? r.sym<=SYM_OK           : null);
-}
+function paintForm(){}   // the five checks are reported on the result screen now
+
 
 let flashT=null;
 function flash(cls){
@@ -925,6 +902,44 @@ function cues(m){
   return out.slice(0,5);
 }
 
+
+/* ---- said plainly ---------------------------------------------------------
+   Most athletes will never read a joint angle. These lines say the same thing
+   in the words a coach would use on the floor. ------------------------------ */
+function plainLines(m, done){
+  const out=[];
+  if(done){
+    const missed=done-m.valid;
+    out.push(m.valid+' of '+done+' reps were deep enough'+(missed>0?' — '+missed+' would be a no-rep on race day':''));
+  }
+  if(m.knee!=null) out.push(m.knee<=DEEP_KNEE ? 'You sat properly deep and held it'
+                                              : 'You stopped a little high — sit further down between your heels');
+  if(m.lean!=null) out.push(m.lean<=LEAN_OK ? 'Your chest stayed tall through the squat'
+                                            : 'Your chest tipped forward — keep the ball high and ribs stacked');
+  if(m.speed!=null) out.push('The ball left your hands at '+m.speed.toFixed(1)+' m/s'
+                             +(m.throwH!=null?', reaching about '+m.throwH.toFixed(1)+' m':''));
+  if(m.ecc!=null&&m.con!=null) out.push('You took '+m.ecc.toFixed(1)+'s down and '+m.con.toFixed(1)+'s to stand up');
+  return out.slice(0,4);
+}
+/* one thing to work on — not five, or nothing changes */
+function fixFirst(m, done){
+  if(!done) return {t:'Get your whole body in frame', m:'Prop the phone at hip height, 2-3 m away, side on, and try again.'};
+  const validRatio=m.valid/Math.max(1,done);
+  if(validRatio<0.8) return {t:'Depth is costing you reps',
+    m:'Only '+Math.round(validRatio*100)+'% went low enough. In a race those are no-reps. Slow down and touch depth every single time.'};
+  if(m.lean!=null && m.lean>LEAN_OK+15) return {t:'Keep your chest up',
+    m:'You are folding to '+Math.round(m.lean)+'&deg; from upright. Elbows high, ball on the chest - a forward torso makes every throw heavier.'};
+  if(m.knee!=null && m.knee>DEEP_KNEE+20) return {t:'Sit deeper',
+    m:'Your knee only closed to '+Math.round(m.knee)+'&deg;. Aim under '+DEEP_KNEE+'&deg; - that is a full squat, not a dip.'};
+  if(m.cons<60) return {t:'Hold your depth as you tire',
+    m:'Your depth drifted across the set ('+m.cons+'% consistency). The last reps are where races are lost.'};
+  if(m.sym!=null && m.sym>SYM_OK) return {t:'Even out left and right',
+    m:'Your knees differ by '+Math.round(m.sym)+'&deg;. Film front-on to confirm, then load both sides evenly.'};
+  if(m.speed!=null && m.speed<3.4) return {t:'Finish the throw with your legs',
+    m:'The ball is leaving at '+m.speed.toFixed(1)+' m/s. Drive up and release at the top instead of pressing with your arms.'};
+  return {t:'Keep this exact set', m:'Depth, torso and tempo are all where they should be. Repeat it heavier or faster.'};
+}
+
 function fmtDeg(v){ return v==null?'—':Math.round(v)+'°'; }
 function fmtSec(v){ return v==null?'—':v.toFixed(2)+'s'; }
 function bioRow(name, meta, value, unit, cls, meterPct){
@@ -980,6 +995,10 @@ function finish(){
     (repData.length? repData.map(r=>'<i class="'+(r.cls==='valid'?'':r.cls==='grey'?'grey':'bad')+'" style="height:'+Math.max(8,r.score)+'%"></i>').join('')
                    : '<i style="height:8%"></i>')+'</div>';
   $('chartEnd').textContent='Rep '+(repData.length||'—');
+  $('plainRows').innerHTML = plainLines(m,reps).map(l=>`<div class="plain"><span class="d"></span><span>${l}</span></div>`).join('')
+     || '<div class="plain"><span class="d"></span><span>No reps were counted — check the framing and try again.</span></div>';
+  const fx=fixFirst(m,reps);
+  $('fixCard').innerHTML=`<div class="k">Fix this first</div><div class="t">${fx.t}</div><div class="m">${fx.m}</div>`;
   $('cues').innerHTML = cues(m).map(c=>'<div class="cue '+c.cls+'"><span class="d"></span><span>'+c.t+'</span></div>').join('');
   window._result=m;
 }
