@@ -1078,7 +1078,7 @@ function inbodySheet(m, cfg, secs, done){
       </table></div>` : '';
 
   return `<div class="sheet">${head}${summary}${depth}${joints}${thr}${tempo}${history}
-    <div class="sfoot">Measured on device from ${done||0} rep${done===1?'':'s'} · target height for a ${cfg.w} kg ball is ${tgtH.toFixed(2)} m · hips below knee per HYROX rulebook 8.8.6</div></div>`;
+    <div class="sfoot">Measured on device from ${done||0} rep${done===1?'':'s'} · ${MODEL==='blazepose'?'33-point pose (MediaPipe BlazePose)':'17-point pose (MoveNet fallback)'} · target height for a ${cfg.w} kg ball is ${tgtH.toFixed(2)} m · hips below knee per HYROX rulebook 8.8.6</div></div>`;
 }
 
 function fmtDeg(v){ return v==null?'—':Math.round(v)+'°'; }
