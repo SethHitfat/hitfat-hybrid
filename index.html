@@ -4568,20 +4568,23 @@ function renderPrograms(){
   const sec=(t,inner,sub)=>!inner?'':`<div class="exsec"><div class="eh"><h3>${t}</h3>${sub?`<span class="all" style="cursor:default;color:var(--dim)">${sub}</span>`:''}</div>${inner}</div>`;
   let h='';
   const owned=CATALOG_ORDER.filter(id=>ownsProgram(id)&&CATALOG[id].access!=='free');
-  if(owned.length) h+=sec('Your Programs', owned.map(id=>programCard(id,true)).join(''));
   // featured: the cheapest door the buyer has not walked through yet
-  const featId=['first-timer','race-12','run-better'].find(x=>!ownsProgram(x))||'first-timer';
+  const featId=['first-timer','race-12','run-better'].find(x=>!ownsProgram(x))||null;   // nothing left to sell → no hero
+  if(featId){
   const f=CATALOG[featId], fst=programState(featId);
   h+=`<div class="plan wide" style="background-image:url('${f.img}');height:224px;margin-bottom:18px;" onclick="openProgramDetail('${featId}','store')">
     <div class="ov"></div>
     <div class="pi"><div class="tx">
-      <div class="k">${featId==='first-timer'?'Start here':'Featured'}</div>
+      <div class="k">${featId===POPULAR_ID?'Most popular':(featId==='first-timer'?'Start here':'Featured')}</div>
       <div class="t" style="font-size:20px;">${f.title}</div>
-      <div class="d">${f.goal} · ${f.weeks} weeks · ${f.weeks*f.days} sessions</div>
+      <div class="d">${f.goal}</div>
+      <div class="d" style="color:#8f8f8f;margin-top:1px;">${f.weeks} weeks · ${f.weeks*f.days} sessions</div>
     </div>
     <button class="join" onclick="event.stopPropagation();${fst==='PAID'?`joinProgram('${featId}')`:`openProgramContent('${featId}')`}">${fst==='PAID'?'Join — '+fmtPrice(f.price):'Open'}</button></div></div>`;
-  h+=sec('Race Preparation', CATALOG_ORDER.filter(id=>CATALOG[id].tag==='Race Prep'&&id!==featId&&CATALOG[id].access!=='free').map(id=>programCard(id,true)).join(''));
-  h+=sec('Build Specific Strengths', CATALOG_ORDER.filter(id=>CATALOG[id].access==='paid'&&CATALOG[id].tag!=='Race Prep'&&id!==featId).map(id=>programCard(id,true)).join(''));
+  }
+  if(owned.length) h+=sec('Your Programs', owned.map(id=>programCard(id,true)).join(''));
+  h+=sec('Race Preparation', CATALOG_ORDER.filter(id=>CATALOG[id].tag==='Race Prep'&&id!==featId&&!ownsProgram(id)&&CATALOG[id].access!=='free').map(id=>programCard(id,true)).join(''));
+  h+=sec('Build Specific Strengths', CATALOG_ORDER.filter(id=>CATALOG[id].access==='paid'&&CATALOG[id].tag!=='Race Prep'&&id!==featId&&!ownsProgram(id)).map(id=>programCard(id,true)).join(''));
   h+=sec('Free Programs', CATALOG_ORDER.filter(id=>CATALOG[id].access==='free').map(id=>programCard(id,true)).join(''));
   h+=`<div class="exsec"><div class="eh"><h3>More Free Training</h3></div>
     <div class="catcard" onclick="switchTab('programs')" style="margin-bottom:12px;"><div class="body"><div class="ttl">Workout Library</div><div class="cnt">Free sessions by category</div></div><div class="arr">›</div></div>
