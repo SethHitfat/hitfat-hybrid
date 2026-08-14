@@ -93,6 +93,31 @@
   .gauge i{position:absolute;left:0;right:0;bottom:0;background:var(--hyrox);border-radius:99px;transition:height .05s;}
   .gauge .line{position:absolute;left:-6px;right:-6px;height:2px;background:var(--ok);}
 
+
+  /* ---- analysis panels (sports-broadcast style) ---- */
+  .pan{background:rgba(8,8,8,.62);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.10);
+       border-radius:14px;padding:10px 12px;pointer-events:none;}
+  .pan .lb{font-family:'Oswald';font-size:9px;letter-spacing:1.8px;color:var(--hyrox);font-weight:700;
+           text-transform:uppercase;margin-bottom:6px;}
+  .hudL{display:flex;flex-direction:column;gap:8px;align-items:flex-start;max-width:56%;}
+  .hudR{display:flex;flex-direction:column;gap:8px;align-items:stretch;min-width:118px;}
+  .repwrap .n{display:flex;align-items:baseline;gap:5px;}
+  .repwrap .n b{font-family:'Oswald';font-size:44px;font-weight:700;line-height:.9;color:#fff;}
+  .repwrap .n span{font-family:'Oswald';font-size:16px;color:var(--dim);}
+  .repbar{height:4px;border-radius:99px;background:rgba(255,255,255,.16);overflow:hidden;margin-top:7px;}
+  .repbar i{display:block;height:100%;width:0;background:var(--hyrox);border-radius:99px;transition:width .25s;}
+  .dep{display:flex;align-items:center;gap:8px;}
+  .dep .v{font-family:'Oswald';font-size:17px;font-weight:700;color:var(--grey);}
+  .dep.good .v{color:var(--ok);} .dep.bad .v{color:var(--bad);}
+  .dep .s{font-size:10.5px;color:var(--dim);margin-top:1px;}
+  .fchk{display:flex;flex-direction:column;gap:5px;}
+  .fchk .r{display:flex;align-items:center;justify-content:space-between;gap:14px;font-size:11px;color:#d0d0d0;}
+  .fchk .r i{width:15px;height:15px;border-radius:50%;display:grid;place-items:center;font-size:9px;font-style:normal;
+             background:rgba(255,255,255,.12);color:var(--dim);flex:none;}
+  .fchk .r.on i{background:var(--ok);color:#062;} .fchk .r.off i{background:var(--bad);color:#400;}
+  .met{display:flex;align-items:baseline;justify-content:space-between;gap:8px;}
+  .met b{font-family:'Oswald';font-size:22px;font-weight:700;color:#fff;line-height:1;}
+  .met s{text-decoration:none;font-size:10px;color:var(--dim);}
   /* result */
   #result{display:none;}
   #result.on{display:block;}
@@ -203,13 +228,42 @@
       <div class="loading" id="loading"><div class="box"><div class="spin"></div><div class="s">Loading AI model…</div></div></div>
       <div class="hud">
         <div class="top">
-          <div class="repbox"><b id="repN">0</b><small>Reps</small></div>
-          <div class="mini">
-            <div class="mchip"><small>Knee</small><b class="deg" id="kneeA">—</b></div>
-            <div class="mchip"><small>Hip</small><b class="deg" id="hipA">—</b></div>
-            <div class="mchip"><small>Trunk</small><b class="deg" id="trunkA">—</b></div>
-            <div class="mchip"><small>Speed</small><b id="speedA">—</b></div>
-            <div class="mchip"><small>Valid</small><b id="validN">0</b></div>
+          <div class="hudL">
+            <div class="pan repwrap" style="min-width:150px;">
+              <div class="lb">Reps</div>
+              <div class="n"><b id="repN">0</b><span id="repTgt">/ 100</span></div>
+              <div class="repbar"><i id="repFill"></i></div>
+            </div>
+            <div class="pan" style="min-width:150px;">
+              <div class="lb">Depth</div>
+              <div class="dep" id="depBox"><span class="v" id="depV">—</span></div>
+              <div class="s" id="depS">Waiting for a rep</div>
+            </div>
+            <div class="pan fchk" id="formChk" style="min-width:170px;">
+              <div class="lb">Form check</div>
+              <div class="r" id="fc-depth"><span>Squat depth</span><i>✓</i></div>
+              <div class="r" id="fc-knee"><span>Knee angle</span><i>✓</i></div>
+              <div class="r" id="fc-torso"><span>Torso upright</span><i>✓</i></div>
+              <div class="r" id="fc-path"><span>Ball path</span><i>✓</i></div>
+              <div class="r" id="fc-sym"><span>Left–right</span><i>✓</i></div>
+            </div>
+          </div>
+          <div class="hudR">
+            <div class="pan">
+              <div class="lb">Ball speed</div>
+              <div class="met"><b id="speedA">—</b><s>m/s</s></div>
+            </div>
+            <div class="pan">
+              <div class="lb">Peak height</div>
+              <div class="met"><b id="peakA">—</b><s>m</s></div>
+            </div>
+            <div class="pan">
+              <div class="lb">Live angles</div>
+              <div class="met"><s>Knee</s><b class="deg" id="kneeA" style="font-size:16px;">—</b></div>
+              <div class="met"><s>Hip</s><b class="deg" id="hipA" style="font-size:16px;">—</b></div>
+              <div class="met"><s>Trunk</s><b class="deg" id="trunkA" style="font-size:16px;">—</b></div>
+              <div class="met"><s>Valid</s><b id="validN" style="font-size:16px;">0</b></div>
+            </div>
           </div>
         </div>
         <div class="status" id="status">GET READY</div>
@@ -359,6 +413,9 @@ async function start(){
   $('loading').style.display='none';
   resize(); running=true; reps=0;valid=0;grey=0;repData=[];state='up';smoothKP=null;trail=[];
   $('repN').textContent='0';$('validN').textContent='0';
+  pxPerM=null; lastSpeed=null; lastArc=null;
+  paintRepPanel(); paintDepth(null); paintForm(null);
+  setChip('speedA',null,v=>''); setChip('peakA',null,v=>'');
   loop();
 }
 function resize(){ overlay.width=video.videoWidth||overlay.clientWidth; overlay.height=video.videoHeight||overlay.clientHeight; }
@@ -444,7 +501,11 @@ function analyze(kp0){
         kneeMin:Math.round(rep.kneeMin), hipMin:Math.round(rep.hipMin), leanMax:Math.round(rep.leanMax),
         sym:rep.sym!=null?Math.round(rep.sym):null, drift,
         ecc:(rep.tBottom-rep.tStart)/1000, con:(now-rep.tBottom)/1000 });
-      $('repN').textContent=reps; $('validN').textContent=valid;
+      const justDone=repData[repData.length-1];
+      $('validN').textContent=valid;
+      paintRepPanel(); paintDepth(justDone); paintForm(justDone);
+      if(rel){ setChip('peakA', rel.height, v=>''); lastArc={x:rep.wrist[rep.wrist.length-1].x, y:rep.wrist[rep.wrist.length-1].y,
+                                                            v:rel.speed, h:rel.height, t:now}; }
       flash(cls);
     }
   }
@@ -459,8 +520,43 @@ function paintChips(){
 }
 function setChip(id,val,cls){
   const el=$(id); if(!el) return;
-  el.textContent = val==null?'—':(id==='speedA'?val.toFixed(1):Math.round(val));
+  el.textContent = val==null?'—':((id==='speedA'||id==='peakA')?val.toFixed(1):Math.round(val));
   const chip=el.parentNode; chip.className='mchip'+(val==null?'':(cls(val)?' '+cls(val):''));
+}
+
+
+/* ---- panel state ---------------------------------------------------------
+   The form check reports the LAST COMPLETED REP, not the current frame — a list
+   that flickers every frame is unreadable and tells the athlete nothing. ----- */
+const REP_TARGET=100;                      // HYROX Open standard
+let lastArc=null;                          // projected ball flight, drawn for a moment after release
+function setCheck(id,pass){
+  const el=$(id); if(!el) return;
+  el.className='r '+(pass==null?'':(pass?'on':'off'));
+  el.querySelector('i').textContent = pass==null?'·':(pass?'✓':'✕');
+}
+function paintRepPanel(){
+  $('repN').textContent=reps;
+  $('repTgt').textContent='/ '+REP_TARGET;
+  const fill=$('repFill'); if(fill) fill.style.width=Math.min(100,reps/REP_TARGET*100)+'%';
+}
+function paintDepth(r){
+  const box=$('depBox'), v=$('depV'), sub=$('depS');
+  if(!box) return;
+  if(!r){ box.className='dep'; v.textContent='—'; sub.textContent='Waiting for a rep'; return; }
+  const good=r.cls==='valid';
+  box.className='dep '+(good?'good':(r.cls==='grey'?'':'bad'));
+  v.textContent = good?'GOOD':(r.cls==='grey'?'BORDERLINE':'HIGH');
+  sub.textContent = good?'Below parallel':(r.cls==='grey'?'On the line':'Above parallel');
+}
+/* the five checks are exactly the five things this tool can honestly measure */
+function paintForm(r){
+  if(!r){ ['fc-depth','fc-knee','fc-torso','fc-path','fc-sym'].forEach(id=>setCheck(id,null)); return; }
+  setCheck('fc-depth', r.cls==='valid');
+  setCheck('fc-knee',  r.kneeMin!=null ? r.kneeMin<=DEEP_KNEE+10 : null);
+  setCheck('fc-torso', r.leanMax!=null ? r.leanMax<=LEAN_OK      : null);
+  setCheck('fc-path',  r.drift!=null   ? r.drift<=0.9            : null);
+  setCheck('fc-sym',   r.sym!=null     ? r.sym<=SYM_OK           : null);
 }
 
 let flashT=null;
@@ -496,7 +592,7 @@ function drawScene(kp,s){
     ctx.strokeStyle= below?'rgba(46,194,126,.95)':'rgba(255,224,0,.85)';
     ctx.lineWidth=Math.max(2,3*U); ctx.setLineDash([18,12]);
     ctx.beginPath();ctx.moveTo(0,knee.y);ctx.lineTo(W,knee.y);ctx.stroke(); ctx.setLineDash([]);
-    label(ctx, below?'BELOW PARALLEL':'HIP LINE', 14*U, knee.y-10*U, below?'#2ec27e':'#FFE000', U);
+    label(ctx, below?'DEPTH LINE · BELOW':'DEPTH LINE', 14*U, knee.y-10*U, below?'#2ec27e':'#FFE000', U);
   }
   // 3) DEPTH GAP — hip down to the knee line
   if(ok(hip)&&ok(knee)){
@@ -519,7 +615,11 @@ function drawScene(kp,s){
     const r=Math.min(Math.hypot(sh.x-hip.x,sh.y-hip.y), Math.hypot(knee.x-hip.x,knee.y-hip.y))*0.34;
     arc(ctx, hip, sh, knee, r, 'rgba(255,255,255,.85)', U, Math.round(live.hip)+'°');
   }
-  // 6) SKELETON — thin technical lines, joints as rings
+  // 6) BALL FLIGHT + METRE SCALE — the sports-analysis layer
+  const floorY=(ok(ank)?ank.y:H*0.95);
+  drawArc(ctx,W,H,U,floorY);
+  drawRuler(ctx,W,H,U,floorY);
+  // 7) SKELETON — thin technical lines, joints as rings
   ctx.save(); ctx.shadowColor='rgba(0,0,0,.55)'; ctx.shadowBlur=14*U;
   ctx.strokeStyle='rgba(255,255,255,.85)'; ctx.lineWidth=Math.max(2,5*U); ctx.lineCap='round'; ctx.lineJoin='round';
   SKELETON.forEach(pr=>{ const a=kp[pr[0]],b=kp[pr[1]]; if(ok(a)&&ok(b)){ ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke(); }});
@@ -532,6 +632,49 @@ function drawScene(kp,s){
     ctx.lineWidth=Math.max(2,3.4*U); ctx.strokeStyle= isKnee?'#2ec27e': isHip?'#FFE000':'rgba(255,255,255,.9)'; ctx.stroke();
   }
 }
+
+/* ---- projected ball flight -------------------------------------------------
+   We cannot see the ball, but once we know the release point and speed the flight
+   is just projectile motion — so the arc drawn on screen is derived, not decorative. */
+function drawArc(ctx,W,H,U,ankleY){
+  if(!lastArc || !pxPerM) return;
+  const age=(Date.now()-lastArc.t)/1000;
+  if(age>2.2){ lastArc=null; return; }
+  const fade=Math.max(0,1-age/2.2);
+  const rise=(lastArc.h*pxPerM)-(ankleY-lastArc.y);   // pixels the ball still climbs
+  if(rise<=0) return;
+  ctx.save();
+  ctx.setLineDash([10,9]); ctx.lineWidth=Math.max(2,3*U);
+  ctx.strokeStyle='rgba(255,224,0,'+(0.35+fade*0.5).toFixed(2)+')';
+  ctx.beginPath();
+  for(let i=0;i<=24;i++){
+    const t=i/24;                                     // parabola from release to apex
+    const x=lastArc.x+(W*0.16)*t;
+    const y=lastArc.y-rise*(2*t-t*t);
+    i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+  }
+  ctx.stroke(); ctx.setLineDash([]);
+  const tx=lastArc.x+W*0.16, ty=lastArc.y-rise;
+  ctx.beginPath(); ctx.arc(tx,ty,Math.max(7,11*U),0,7);
+  ctx.fillStyle='rgba(46,194,126,'+(0.25+fade*0.45).toFixed(2)+')'; ctx.fill();
+  ctx.lineWidth=Math.max(2,3*U); ctx.strokeStyle='rgba(255,224,0,'+(0.5+fade*0.5).toFixed(2)+')'; ctx.stroke();
+  label(ctx, lastArc.h.toFixed(1)+' m', tx, ty-24*U, '#FFE000', U, true);
+  ctx.restore();
+}
+/* a metre scale up the right edge — only drawn once the body has given us a scale */
+function drawRuler(ctx,W,H,U,ankleY){
+  if(!pxPerM) return;
+  const x=W-18*U;
+  ctx.save(); ctx.strokeStyle='rgba(255,255,255,.28)'; ctx.lineWidth=Math.max(1,1.6*U);
+  for(let m=0; m<=4; m+=0.25){
+    const y=ankleY-m*pxPerM; if(y<H*0.04||y>H) continue;
+    const major=Math.abs(m-Math.round(m))<0.01;
+    ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-(major?18*U:9*U),y); ctx.stroke();
+    if(major&&m>0) label(ctx, m+' m', x-46*U, y, 'rgba(255,255,255,.75)', U, true);
+  }
+  ctx.restore();
+}
+
 /* angle arc between b→a and b→c, with the degree label on the bisector */
 function arc(c2,b,a,c,r,color,U,txt){
   const a1=Math.atan2(a.y-b.y,a.x-b.x), a2=Math.atan2(c.y-b.y,c.x-b.x);
