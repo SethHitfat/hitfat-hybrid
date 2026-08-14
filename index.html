@@ -4600,8 +4600,8 @@ function renderPrograms(){
     <div class="hdots" id="store-dots">${heroIds.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('')}</div>`;
   }
   if(owned.length) h+=sec('Your Programs', owned.map(id=>programCard(id,true)).join(''));
-  h+=sec('Race Preparation', CATALOG_ORDER.filter(id=>CATALOG[id].tag==='Race Prep'&&heroIds.indexOf(id)<0&&!ownsProgram(id)&&CATALOG[id].access!=='free').map(id=>programCard(id,true)).join(''));
-  h+=sec('Build Specific Strengths', CATALOG_ORDER.filter(id=>CATALOG[id].access==='paid'&&CATALOG[id].tag!=='Race Prep'&&heroIds.indexOf(id)<0&&!ownsProgram(id)).map(id=>programCard(id,true)).join(''));
+  h+=sec('Race Preparation', CATALOG_ORDER.filter(id=>CATALOG[id].tag==='Race Prep'&&!ownsProgram(id)&&CATALOG[id].access!=='free').map(id=>programCard(id,true)).join(''));
+  h+=sec('Build Specific Strengths', CATALOG_ORDER.filter(id=>CATALOG[id].access==='paid'&&CATALOG[id].tag!=='Race Prep'&&!ownsProgram(id)).map(id=>programCard(id,true)).join(''));
   h+=sec('Free Programs', CATALOG_ORDER.filter(id=>CATALOG[id].access==='free').map(id=>programCard(id,true)).join(''));
   h+=`<div class="exsec"><div class="eh"><h3>More Free Training</h3></div>
     <div class="catcard" onclick="switchTab('programs')" style="margin-bottom:12px;"><div class="body"><div class="ttl">Workout Library</div><div class="cnt">Free sessions by category</div></div><div class="arr">›</div></div>
