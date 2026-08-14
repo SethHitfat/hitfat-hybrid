@@ -223,6 +223,8 @@
   .a4bar input{flex:1;min-width:0;background:#1c1c1c;border:1px solid #333;color:#fff;border-radius:10px;padding:11px 12px;font-size:14px;}
   .a4bar button{background:var(--hyrox);color:var(--ink);border:none;border-radius:10px;padding:11px 14px;font-weight:800;font-size:13px;cursor:pointer;}
   .a4bar button.x{background:#2a2a2a;color:#fff;}
+  .a4bar button.p{background:#2a2a2a;color:#fff;}
+  .a4note{padding:8px 12px;font-size:12px;color:#444;background:#f4f4f4;text-align:center;}
   .page{width:210mm;min-height:297mm;margin:12px auto;background:#fff;color:#111;padding:12mm 11mm;
         font-family:'Inter',system-ui,sans-serif;box-shadow:0 6px 30px rgba(0,0,0,.25);}
   .phead{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:7px;}
@@ -452,9 +454,11 @@
   <div class="a4bar noprint">
     <input id="a4name" placeholder="Athlete name" oninput="localStorage.setItem('hf_wb_name',this.value)"
            onchange="saveReportName(this.value)">
-    <button onclick="window.print()">Save as PDF</button>
+    <button onclick="saveReportImage()">Save image</button>
+    <button class="p" onclick="printReport()">Print</button>
     <button class="x" onclick="closeReport()">Close</button>
   </div>
+  <div id="a4note" class="a4note noprint"></div>
   <div id="a4body"></div>
 </div>
 
@@ -1195,7 +1199,7 @@ function buildA4(m, cfg, secs, done){
   const validPct=done?Math.round(m.valid/done*100):null;
   const tgtH=wallTargetM(cfg.w);
   const fx=fixFirst(m,done);
-  const hist=wbHistory(cfg.w,cfg.t).slice(-8);
+  const hist=wbHistory(cfg.w,cfg.t).slice(-5);
   const name=athleteName()||'—';
 
   return `<div class="page">
@@ -1263,12 +1267,248 @@ function buildA4(m, cfg, secs, done){
     </div>
   </div>`;
 }
+
+/* ============================================================
+   A4 AS A SINGLE IMAGE
+   Printing depends on the browser's dialogue, its margins and its scaling — which
+   is how one page became two. Drawing the sheet ourselves at A4 proportions gives
+   one file that looks identical everywhere, fits by construction, and can be posted.
+   Canvas is 1654 x 2339 = A4 at 200 dpi.
+   ============================================================ */
+const A4W=1654, A4H=2339, A4M=96;
+function a4Canvas(m, cfg, secs, done){
+  const c=document.createElement('canvas'); c.width=A4W; c.height=A4H;
+  const x=c.getContext('2d');
+  const INK='#111', MUT='#7a7a7a', LINE='#dcdcdc', OK='#137a43', WARN='#b8860b', Y='#FFE000';
+  x.fillStyle='#fff'; x.fillRect(0,0,A4W,A4H);
+
+  const S=2;                       // 200dpi page: screen sizes must be doubled
+  const T=(t,px,py,size,weight,color,align,font)=>{
+    x.font=(weight||400)+' '+(size*S)+'px '+(font||"Inter, system-ui, sans-serif");
+    x.fillStyle=color||INK; x.textAlign=align||'left'; x.textBaseline='alphabetic';
+    x.fillText(t,px,py); return px+x.measureText(t).width;
+  };
+  const line=(x1,y1,x2,y2,col,w)=>{ x.strokeStyle=col||LINE; x.lineWidth=w||1; x.beginPath(); x.moveTo(x1,y1); x.lineTo(x2,y2); x.stroke(); };
+  const box=(bx,by,bw,bh,col)=>{ x.strokeStyle=col||LINE; x.lineWidth=1; x.strokeRect(bx+.5,by+.5,bw,bh); };
+  const wrap=(t,px,py,maxW,size,lh,color)=>{
+    x.font='400 '+(size*S)+'px Inter, system-ui, sans-serif'; x.fillStyle=color||'#444'; x.textAlign='left';
+    const words=String(t).split(' '); let ln='', yy=py;
+    words.forEach(w=>{ const test=ln?ln+' '+w:w;
+      if(x.measureText(test).width>maxW && ln){ x.fillText(ln,px,yy); yy+=lh; ln=w; } else ln=test; });
+    if(ln) x.fillText(ln,px,yy);
+    return yy+lh;
+  };
+
+  /* ---- header ---- */
+  let y=A4M+34*S;
+  T('HITFAT',A4M,y,34,800,INK);
+  const wBrand=x.measureText('HITFAT ').width;
+  x.fillStyle=Y; x.fillRect(A4M+wBrand+6,y-27*S,x.measureText('BIOMECHANICS').width+16,38*S);
+  T('BIOMECHANICS',A4M+wBrand+14,y,34,800,INK);
+  T('Wall Ball Analysis Report',A4M,y+26*S,16,600,MUT);
+  T('hybrid.hitfat.io',A4W-A4M,y-10*S,16,800,INK,'right');
+  T('Measured on device — no video leaves the phone',A4W-A4M,y+16*S,12.5,400,MUT,'right');
+  y+=44*S; line(A4M,y,A4W-A4M,y,INK,3); y+=10*S;
+
+  /* ---- id bar ---- */
+  const idH=64*S, cols=[['Name',athleteName()||'—'],['Height',Math.round(athleteHeightM()*100)+' cm'],
+                      ['Ball',cfg.w+' kg'],['Target',cfg.t+' reps'],['Set time',secs?fmtClock(secs):'—']];
+  const cw=(A4W-A4M*2)/cols.length;
+  box(A4M,y,A4W-A4M*2,idH,'#cfcfcf');
+  cols.forEach((cl,i)=>{
+    const cx=A4M+cw*i;
+    if(i) line(cx,y+8,cx,y+idH-8,'#e6e6e6');
+    T(cl[0].toUpperCase(),cx+14,y+24*S,10.5,700,MUT);
+    T(String(cl[1]),cx+14,y+50*S,19,700,INK,'left','Oswald, Inter, sans-serif');
+  });
+  y+=idH+24*S;
+
+  /* ---- columns ---- */
+  const LX=A4M, LW=(A4W-A4M*2)*0.60, RX=A4M+LW+26, RW=(A4W-A4M*2)-LW-26;
+  let ly=y, ry=y;
+
+  const section=(title,px,py,pw)=>{ T(title.toUpperCase(),px,py+14*S,11.5,800,INK); line(px,py+22*S,px+pw,py+22*S,'#ececec'); return py+34*S; };
+  const row=(label,val,unit,min,max,gLo,gHi,dp,px,py,pw)=>{
+    T(label,px,py,13,400,'#333');
+    if(val==null){
+      T('not measured',px+pw,py,11.5,400,'#a5a5a5','right');
+      x.fillStyle='#efefef'; x.fillRect(px+pw*0.52,py+10*S,pw*0.48,7*S); return py+32*S;
+    }
+    const inb=val>=gLo&&val<=gHi;
+    T(Number(val).toFixed(dp||0)+(unit||''),px+pw,py,16,700,inb?OK:WARN,'right','Oswald, Inter, sans-serif');
+    const tx=px+pw*0.52, tw=pw*0.48, ty=py+12*S, th=8*S;
+    x.fillStyle='#ededed'; x.fillRect(tx,ty,tw,th);
+    const pc=v=>Math.max(0,Math.min(1,(v-min)/((max-min)||1)));
+    x.fillStyle='#bfe6cf'; x.fillRect(tx+tw*pc(gLo),ty,Math.max(3,tw*(pc(gHi)-pc(gLo))),th);
+    x.beginPath(); x.arc(tx+tw*pc(val),ty+th/2,7*S,0,7); x.fillStyle=inb?OK:WARN; x.fill();
+    T(min+'–'+max+(unit||''),tx,ty+26*S,10,400,'#9a9a9a');
+    T('target '+(gLo===min?'≤'+gHi:(gHi===max?'≥'+gLo:gLo+'–'+gHi)),tx+tw,ty+26*S,10,400,'#9a9a9a','right');
+    return py+37*S;
+  };
+
+  const validPct=done?Math.round(m.valid/done*100):null, tgtH=wallTargetM(cfg.w);
+  ly=section('Set analysis',LX,ly,LW);
+  ly=row('Reps completed',done||0,'',0,cfg.t,cfg.t,cfg.t,0,LX,ly,LW);
+  ly=row('Valid reps',m.valid||0,'',0,done||cfg.t,Math.ceil((done||cfg.t)*0.9),done||cfg.t,0,LX,ly,LW);
+  ly=row('Work rate',(secs&&done)?done/(secs/60):null,' rpm',0,30,10,30,1,LX,ly,LW);
+  ly+=9*S;
+  ly=section('Depth analysis',LX,ly,LW);
+  ly=row('Depth score',m.depthScore,'',0,100,70,100,0,LX,ly,LW);
+  ly=row('Reps at full depth',validPct,'%',0,100,90,100,0,LX,ly,LW);
+  ly=row('Consistency across set',m.cons,'%',0,100,75,100,0,LX,ly,LW);
+  ly+=10;
+  ly=section('Joint analysis',LX,ly,LW);
+  ly=row('Knee angle at bottom',m.knee,'°',60,140,60,DEEP_KNEE,0,LX,ly,LW);
+  ly=row('Hip angle at bottom',m.hipA,'°',50,140,50,100,0,LX,ly,LW);
+  ly=row('Trunk lean from upright',m.lean,'°',0,70,0,LEAN_OK,0,LX,ly,LW);
+  ly=row('Ankle flexion at bottom',m.ankle,'°',50,130,50,95,0,LX,ly,LW);
+  ly=row('Left–right difference',m.sym,'°',0,30,0,SYM_OK,0,LX,ly,LW);
+  ly+=10;
+  ly=section('Throw analysis',LX,ly,LW);
+  ly=row('Ball speed at release',m.speed,' m/s',1,8,4,8,1,LX,ly,LW);
+  ly=row('Throw height',m.throwH,' m',1,4,tgtH,4,2,LX,ly,LW);
+  ly=row('Ball path drift',m.drift==null?null:m.drift*100,'%',0,200,0,90,0,LX,ly,LW);
+  ly+=10;
+  ly=section('Tempo',LX,ly,LW);
+  ly=row('Down (eccentric)',m.ecc,' s',0,2.5,0.4,1.2,2,LX,ly,LW);
+  ly=row('Tempo — up (concentric)',m.con,' s',0,2.5,0.3,1,2,LX,ly,LW);
+
+  /* ---- right column ---- */
+  box(RX,ry,RW,128*S,'#d8d8d8');
+  T(String(m.depthScore||0),RX+RW/2,ry+86*S,66,700,INK,'center','Oswald, Inter, sans-serif');
+  T('DEPTH SCORE / 100',RX+RW/2,ry+105*S,11,700,MUT,'center');
+  T(grade(m.depthScore||0),RX+RW/2,ry+122*S,14,700,INK,'center');
+  ry+=142*S;
+
+  const fx=fixFirst(m,done);
+  x.fillStyle='#fffbe8'; x.fillRect(RX,ry,RW,4);
+  const fixTop=ry;
+  let fy=ry+30*S;
+  T('FIX THIS FIRST',RX+16,fy,11,800,'#8a6d00'); fy+=28*S;
+  fy=wrap(fx.t,RX+16,fy,RW-32,17,23*S,INK)+4;
+  fy=wrap(fx.m,RX+16,fy,RW-32,12.5,19*S,'#444')+14*S;
+  x.fillStyle='rgba(255,251,232,.9)'; x.globalCompositeOperation='destination-over';
+  x.fillRect(RX,fixTop,RW,fy-fixTop); x.globalCompositeOperation='source-over';
+  box(RX,fixTop,RW,fy-fixTop,'#e8cf6a');
+  ry=fy+24*S;
+
+  ry=section('What that means',RX,ry,RW);
+  plainLines(m,done).forEach(l=>{
+    x.fillStyle=Y; x.beginPath(); x.arc(RX+7,ry-5*S,4*S,0,7); x.fill();
+    ry=wrap(l,RX+22*S,ry,RW-26*S,12.5,19*S,'#333')+8;
+  });
+  ry+=10*S;
+
+  const hist=wbHistory(cfg.w,cfg.t).slice(-8);
+  if(hist.length){
+    ry=section('History · '+cfg.w+' kg × '+cfg.t,RX,ry,RW);
+    ['DATE','TIME','VALID','SCORE'].forEach((h,i)=>T(h,RX+[0,0.36,0.62,0.86][i]*RW,ry,10,700,MUT));
+    ry+=10*S;
+    hist.forEach(hh=>{
+      line(RX,ry,RX+RW,ry,'#eee'); ry+=22*S;
+      const dd=new Date(hh.d);
+      T(dd.getDate()+'.'+(dd.getMonth()+1),RX,ry,12,400,'#333');
+      T(fmtClock(hh.secs),RX+0.36*RW,ry,14,700,INK,'left','Oswald, Inter, sans-serif');
+      T(hh.valid==null?'—':hh.valid+'/'+hh.t,RX+0.62*RW,ry,12,400,'#333');
+      T(hh.score==null?'—':String(hh.score),RX+0.86*RW,ry,12,400,'#333');
+      ry+=8*S;
+    });
+  }
+
+
+  /* ---- rep-by-rep depth, the way InBody plots segments ---- */
+  ly+=10*S;
+  if(ly < A4H-A4M-72*S-110*S) ly=section('Depth of every rep',LX,ly,LW);
+  (function(){
+    const rd=(typeof repData!=='undefined'&&repData.length)?repData:[];
+    const RULE=A4H-A4M-72*S;                    // the footnote rule — nothing may cross it
+    const room=RULE-ly-46*S;
+    if(room<50){ ly=RULE; return; }                  // no space left: drop the chart rather than overlap it
+    const h=Math.min(104*S, room), base=ly+h;
+    x.strokeStyle='#ececec'; x.lineWidth=1;
+    [0,25,50,75,100].forEach(v=>{ const yy=base-h*(v/100);
+      line(LX,yy,LX+LW,yy,'#f0f0f0'); T(v+'',LX-10,yy+4*S,9,400,'#b0b0b0','right'); });
+    if(!rd.length){ T('No reps recorded',LX+LW/2,base-h/2,13,400,'#a5a5a5','center'); ly=base+30*S; return; }
+    const bw=Math.min(38*S, LW/rd.length-4), gap=(LW-bw*rd.length)/Math.max(1,rd.length-1);
+    rd.forEach((r,i)=>{
+      const bh=Math.max(4,h*(Math.max(0,Math.min(100,r.score))/100));
+      x.fillStyle = r.cls==='valid'?'#137a43':(r.cls==='grey'?'#b0b0b0':'#c0392b');
+      x.fillRect(LX+i*(bw+gap), base-bh, bw, bh);
+      if(rd.length<=20) T(String(i+1),LX+i*(bw+gap)+bw/2,base+18*S,9,600,'#9a9a9a','center');
+    });
+    T('green = valid depth · grey = borderline · red = above parallel',LX,base+38*S,10,400,'#9a9a9a');
+    ly=base+40*S;
+  })();
+
+  /* ---- set-time trend across days ---- */
+  ry+=8*S;
+  if(ry < A4H-A4M-72*S-90*S) ry=section('Set time across sessions',RX,ry,RW);
+  (function(){
+    const RULE=A4H-A4M-72*S;
+    const room=RULE-ry-30*S;
+    if(room<50){ ry=RULE; return; }
+    const hh=Math.min(84*S,room), hist2=wbHistory(cfg.w,cfg.t).slice(-8), base=ry+hh;
+    if(hist2.length<2){ T('Log more sets to see a trend',RX,ry+30*S,12,400,'#a5a5a5'); ry=base+20*S; return; }
+    const v=hist2.map(z=>z.secs), lo=Math.min.apply(null,v), hi=Math.max.apply(null,v), pad=(hi-lo)*0.2||4;
+    const mn=lo-pad, mx=hi+pad;
+    const px=i=>RX+(i/(hist2.length-1))*RW, py=val=>base-((val-mn)/((mx-mn)||1))*hh;
+    x.strokeStyle='#e2e2e2'; line(RX,base,RX+RW,base,'#e2e2e2');
+    x.strokeStyle='#111'; x.lineWidth=3; x.beginPath();
+    v.forEach((val,i)=>{ i?x.lineTo(px(i),py(val)):x.moveTo(px(i),py(val)); }); x.stroke();
+    v.forEach((val,i)=>{ x.beginPath(); x.arc(px(i),py(val),val===lo?7*S:5*S,0,7);
+      x.fillStyle=val===lo?'#137a43':'#111'; x.fill(); });
+    T(fmtClock(hi),RX,py(hi)-12*S,10,600,'#9a9a9a');
+    T(fmtClock(lo)+' best',RX+RW,py(lo)+20*S,10,700,'#137a43','right');
+    ry=base+18*S;
+  })();
+
+  /* ---- footer ---- */
+  const fyy=A4H-A4M-72*S;
+  line(A4M,fyy,A4W-A4M,fyy,'#ddd');
+  wrap('Pose measured on device with '+(MODEL==='blazepose'?'33-point MediaPipe BlazePose':'17-point MoveNet')
+      +' · scale derived from '+Math.round(athleteHeightM()*100)+' cm standing height · target height for a '+cfg.w
+      +' kg ball is '+tgtH.toFixed(2)+' m · depth judged hips-below-knee per HYROX rulebook 8.8.6 · training aid, not a medical assessment.',
+      A4M,fyy+22*S,A4W-A4M*2,10.5,15*S,'#8a8a8a');
+  return c;
+}
+async function saveReportImage(){
+  const note=$('a4note'); if(note) note.textContent='Drawing your report…';
+  try{ if(document.fonts&&document.fonts.ready) await document.fonts.ready; }catch(e){}
+  const cfg=wbCfg(), m=window._result||summarise(repData), set=window._wbSet||{};
+  const c=a4Canvas(m,cfg,set.secs||0,reps||(m.reps||0));
+  c.toBlob(async blob=>{
+    const stamp=new Date().toISOString().slice(0,10);
+    const file=new File([blob],'hitfat-wallball-'+stamp+'.png',{type:'image/png'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file], title:'HITFAT Wall Ball Report'});
+           if(note) note.textContent='Report shared.'; return; }catch(e){}
+    }
+    const url=URL.createObjectURL(blob); const a=document.createElement('a');
+    a.href=url; a.download=file.name; a.click(); URL.revokeObjectURL(url);
+    if(note) note.textContent='Saved as an image — one full A4 page.';
+  },'image/png');
+}
+
 function openReport(){
   const cfg=wbCfg(), m=window._result||summarise(repData), set=window._wbSet||{};
   $('a4body').innerHTML=buildA4(m, cfg, set.secs||0, reps||(m.reps||0));
   $('a4').classList.add('show');
   const n=$('a4name'); if(n) n.value=athleteName();
 }
+
+/* One sheet, always. The page is measured and scaled to the printable height before
+   the dialogue opens, because a report that breaks across two pages is not a report. */
+function printReport(){
+  const pg=document.querySelector('#a4 .page'); if(!pg){ window.print(); return; }
+  pg.style.transform=''; pg.style.width='210mm';
+  const mmPx=(()=>{ const d=document.createElement('div'); d.style.cssText='width:100mm;position:absolute;visibility:hidden';
+    document.body.appendChild(d); const w=d.getBoundingClientRect().width/100; d.remove(); return w; })();
+  const h=pg.getBoundingClientRect().height, limit=297*mmPx;
+  const k=Math.min(1, (limit-2)/h);
+  if(k<1){ pg.style.transformOrigin='top center'; pg.style.transform='scale('+k.toFixed(4)+')'; }
+  setTimeout(()=>{ window.print(); setTimeout(()=>{ pg.style.transform=''; }, 800); }, 60);
+}
+
 function closeReport(){ $('a4').classList.remove('show'); }
 function saveReportName(v){ localStorage.setItem('hf_wb_name', v||''); openReport(); }
 
