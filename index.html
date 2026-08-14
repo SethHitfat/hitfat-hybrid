@@ -4467,7 +4467,7 @@ function badgeCls(st){ return st==='OWNED'?'owned':st==='FREE'?'free':st==='SOON
 function metaLead(id,st){
   if(st==='PAID') return '<b class="pz">'+fmtPrice(CATALOG[id].price)+'</b> · ';
   if(st==='OWNED') return '<b class="oz">✓ Owned</b> · ';
-  if(st==='SOON') return '<b class="sz">COMING SOON</b> · ';
+  if(st==='SOON') return '<b class="sz">SOON</b> · ';
   if(st==='FREE') return '<b class="pz">Free</b> · ';
   return '';
 }
