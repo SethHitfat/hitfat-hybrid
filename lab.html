@@ -9,6 +9,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Biomechanics">
 <meta name="theme-color" content="#000000">
+<meta property="og:title" content="HITFAT Biomechanics — Wall Ball">
+<meta property="og:description" content="Free AI wall ball analysis. Depth, joint angles, ball speed and your set time — on your phone, nothing uploaded.">
+<meta property="og:image" content="https://hybrid.hitfat.io/img-wallball-ai.jpg">
+<meta property="og:url" content="https://hybrid.hitfat.io/lab">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="HITFAT Biomechanics — Wall Ball">
+<meta name="twitter:description" content="Free AI wall ball analysis — depth, joint angles, ball speed, set time.">
+<meta name="twitter:image" content="https://hybrid.hitfat.io/img-wallball-ai.jpg">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
   :root{ --bg:#000; --surface:#0e0e0e; --surface2:#161616; --line:#232323; --txt:#fff; --dim:#9a9a9a; --dim2:#6a6a6a;
@@ -91,6 +100,8 @@
   .wmark{position:absolute;left:16px;bottom:calc(14px + env(safe-area-inset-bottom,0px));font-weight:800;
          font-size:12.5px;letter-spacing:.4px;color:rgba(255,255,255,.55);pointer-events:none;}
   .wmark span{color:var(--hyrox);}
+  .wmark i{display:block;font-style:normal;font-weight:600;font-size:10.5px;letter-spacing:1.2px;
+           color:rgba(255,255,255,.42);margin-top:2px;}
   .controls .btn{flex:1;padding:15px;}
   .gauge{position:absolute;right:14px;top:50%;transform:translateY(-50%);width:14px;height:40%;background:rgba(0,0,0,.5);
          border:1px solid rgba(255,255,255,.15);border-radius:99px;overflow:hidden;pointer-events:none;}
@@ -98,6 +109,10 @@
   .gauge .line{position:absolute;left:-6px;right:-6px;height:2px;background:var(--ok);}
 
 
+  .cdown{position:absolute;inset:0;display:grid;place-items:center;z-index:6;background:rgba(0,0,0,.45);}
+  .cdown b{font-family:'Oswald';font-size:120px;font-weight:700;color:var(--hyrox);line-height:1;
+           text-shadow:0 8px 40px rgba(0,0,0,.6);}
+  .cdown small{display:block;text-align:center;font-size:13px;color:#dcdcdc;margin-top:10px;letter-spacing:.4px;}
   .chiprow{display:flex;gap:8px;flex-wrap:wrap;}
   .wchip{flex:1 1 auto;min-width:58px;background:var(--surface2);border:1px solid var(--line);color:#dcdcdc;
          border-radius:12px;padding:11px 8px;font-family:'Oswald';font-size:15px;font-weight:700;cursor:pointer;}
@@ -226,6 +241,11 @@
         <span style="color:var(--dim);font-size:13px;">cm</span>
       </div>
       <button class="btn" id="startBtn" onclick="start()">▶ Start Camera</button>
+      <div class="card" style="border-color:rgba(255,224,0,.22);background:rgba(255,224,0,.05);">
+        <div class="kick">Filming it?</div>
+        <div class="step" style="margin:0;"><div class="n">●</div><div class="t">Start your phone's <b>screen recording</b> first, then tap start.
+        You get a 3-second countdown to prop the phone and step in — the analysis overlay is recorded with you.</div></div>
+      </div>
       <div class="note">Runs on your device. Nothing is uploaded. Camera access is required.</div>
       <div class="err" id="introErr"></div>
     </div>
@@ -237,6 +257,7 @@
       <video id="video" playsinline muted></video>
       <canvas id="overlay"></canvas>
       <div class="gauge"><span class="line" id="gline"></span><i id="gfill"></i></div>
+      <div class="cdown" id="cdown" style="display:none;"><div><b id="cdn">3</b><small id="cdt">Get in frame</small></div></div>
       <div class="loading" id="loading"><div class="box"><div class="spin"></div><div class="s">Loading AI model…</div></div></div>
       <div class="hud">
         <div class="top">
@@ -286,7 +307,7 @@
           </div>
         </div>
         <div class="status" id="status">GET READY</div>
-        <div class="wmark">HITFAT <span>BIOMECHANICS</span></div>
+        <div class="wmark">HITFAT <span>BIOMECHANICS</span><i>hybrid.hitfat.io</i></div>
         <div class="controls" id="ctrls">
           <button class="btn sec" onclick="flipCam()">⟲ Flip</button>
           <button class="btn" onclick="finish()">Finish ✓</button>
@@ -514,13 +535,14 @@ async function start(){
     return;
   }
   $('loading').style.display='none';
-  resize(); running=true; reps=0;valid=0;grey=0;repData=[];state='up';smoothKP=null;trail=[];
+  resize(); running=true; armed=false; reps=0;valid=0;grey=0;repData=[];state='up';smoothKP=null;trail=[];
   const cfg=wbCfg(); REP_TARGET=cfg.t; setTs=null; endTs=null;
   $('repN').textContent='0';$('validN').textContent='0';
   pxPerM=null; lastSpeed=null; lastArc=null;
   paintRepPanel(); paintDepth(null); paintForm(null);
   setChip('speedA',null,v=>''); setChip('peakA',null,v=>'');
   armControlFade();
+  countdownIn();
   loop();
 }
 function resize(){ overlay.width=video.videoWidth||overlay.clientWidth; overlay.height=video.videoHeight||overlay.clientHeight; }
@@ -579,6 +601,7 @@ function analyze(kp0){
   $('gline').style.bottom=((VALID_TH+0.4)/0.8*100)+'%';
 
   const now=Date.now();
+  if(!armed){ calibrate(kp); setStatus('GET READY',''); return; }
   if(state==='up'){ calibrate(kp);
     if(depth > VALID_TH+0.02){                 // descent crossed into the judged zone
       state='down'; bottom=depth;
@@ -633,6 +656,27 @@ function setChip(id,val,cls){
 }
 
 
+
+
+/* Reps do not count until the countdown clears, so an athlete can prop the phone,
+   start a screen recording and walk into shot without burning reps. */
+let armed=false;
+function countdownIn(done){
+  armed=false;
+  const box=$('cdown'), n=$('cdn'), tx=$('cdt');
+  if(!box){ armed=true; done&&done(); return; }
+  box.style.display='grid';
+  let i=3;
+  n.textContent=i; tx.textContent='Get in frame';
+  beep('grey');
+  const iv=setInterval(()=>{
+    i--;
+    if(i>0){ n.textContent=i; beep('grey'); return; }
+    clearInterval(iv);
+    n.textContent='GO'; tx.textContent='Clock starts on your first rep'; beep('valid');
+    setTimeout(()=>{ box.style.display='none'; armed=true; done&&done(); }, 650);
+  }, 1000);
+}
 
 /* the clock starts on the first rep, not on the camera — warm-up time is not the set */
 let setTs=null, endTs=null;
@@ -988,7 +1032,9 @@ async function shareResult(){
   canvas.toBlob(async (blob)=>{
     const file=new File([blob],'hitfat-biomechanics.png',{type:'image/png'});
     if(navigator.canShare && navigator.canShare({files:[file]})){
-      try{ await navigator.share({files:[file], title:'HITFAT Biomechanics', text:'My wall ball biomechanics on HITFAT Biomechanics 💪 hybrid.hitfat.io'}); return; }catch(e){}
+      try{ await navigator.share({files:[file], title:'HITFAT Biomechanics', text:(function(){ const w=window._wbSet||{};
+        return (w.secs? (w.t+' wall balls at '+w.w+'kg in '+fmtClock(w.secs)+' ') : 'My wall ball analysis ')
+          +'— measured by AI on my phone. Try it free: hybrid.hitfat.io/lab'; })()}); return; }catch(e){}
     }
     const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='hitfat-biomechanics.png'; a.click(); URL.revokeObjectURL(url);
     $('shareNote').textContent='Image saved — share it to your story or feed 📲';
