@@ -1440,11 +1440,11 @@ const CATALOG = {
      goal:'Race-specific prep for HYROX Kuala Lumpur', tag:'Race Prep', access:'paid', price:199, plan:'PRO_PROGRAM', img:IMG.complete, event:'kl',
      summary:'Everything to arrive in KL ready: countdown, race pacing, station strategy, simulations & the 12-week build.' },
   // ---- CORE PAID (COMING SOON — no dummy content until real workouts are ready) ----
-  'hybrid-beginner':{ id:'hybrid-beginner',title:'Hybrid Beginner',   coach:'seth', owner:'HITFAT', revShare:0, weeks:8, days:4, level:'Beginner',     goal:'Your first structured hybrid build', tag:'Hybrid',   access:'soon', price:59, plan:null, img:IMG.found,   summary:'A beginner-friendly build into hybrid training and your first race.' },
-  'build-engine':   { id:'build-engine',   title:'Build Your Engine', coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:4, level:'Intermediate', goal:'Improve your aerobic engine',        tag:'Engine',   access:'soon', price:59, plan:null, img:IMG.engine,  summary:'Improve your aerobic engine systematically for hybrid racing.' },
-  'hybrid-strength':{ id:'hybrid-strength',title:'Hybrid Strength',   coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:3, level:'Intermediate', goal:'Strength for hybrid power',          tag:'Strength', access:'soon', price:59, plan:null, img:IMG.power,   summary:'Structured strength — squats, carries, sled — to power every station.' },
+  'hybrid-beginner':{ id:'hybrid-beginner',title:'Hybrid Beginner',   coach:'seth', owner:'HITFAT', revShare:0, weeks:8, days:4, level:'Beginner',     goal:'Your first structured hybrid build', tag:'Hybrid',   access:'paid', price:59, plan:null, img:IMG.found,   summary:'A beginner-friendly build into hybrid training and your first race.' },
+  'build-engine':   { id:'build-engine',   title:'Build Your Engine', coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:4, level:'Intermediate', goal:'Improve your aerobic engine',        tag:'Engine',   access:'paid', price:59, plan:null, img:IMG.engine,  summary:'Improve your aerobic engine systematically for hybrid racing.' },
+  'hybrid-strength':{ id:'hybrid-strength',title:'Hybrid Strength',   coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:3, level:'Intermediate', goal:'Strength for hybrid power',          tag:'Strength', access:'paid', price:59, plan:null, img:IMG.power,   summary:'Structured strength — squats, carries, sled — to power every station.' },
   'run-better':     { id:'run-better',     title:'Run Better for HYROX', coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:4, level:'Intermediate', goal:'Improve compromised running',     tag:'Running',  access:'paid', price:59, plan:null, img:IMG.found,   summary:'Improve your compromised running through structured progression.' },
-  'station-builder':{ id:'station-builder',title:'Station Builder',   coach:'seth', owner:'HITFAT', revShare:0, weeks:4, days:3, level:'Intermediate', goal:'Bring up weak HYROX stations',       tag:'Strength', access:'soon', price:59, plan:null, img:IMG.complete,summary:'Focused progression to bring up your weakest HYROX stations.' },
+  'station-builder':{ id:'station-builder',title:'Station Builder',   coach:'seth', owner:'HITFAT', revShare:0, weeks:4, days:3, level:'Intermediate', goal:'Bring up weak HYROX stations',       tag:'Strength', access:'paid', price:59, plan:null, img:IMG.complete,summary:'Focused progression to bring up your weakest HYROX stations.' },
 };
 const CATALOG_ORDER = ['first-timer','race-12','road-kl','race-8','hybrid-starter','foundation-starter','foundation-13','hybrid-beginner','build-engine','hybrid-strength','run-better','station-builder'];
 function coachPrograms(coachId){ return CATALOG_ORDER.filter(function(id){ return CATALOG[id].coach===coachId; }); }
@@ -2858,6 +2858,7 @@ function openCategory(i){
 
 /* ============ SKRIN 3: BUTIRAN ============ */
 function backToList(){
+  if(window.fromLib){ const _lp=window.fromLib; window.fromLib=null; openLibProgram(_lp); return; }
   if(window.fromFT){ window.fromFT=false; openFirstTimer(); return; }
   if(window.fromQuick){ window.fromQuick=false; switchTab(window.quickBack||'explore'); return; }
   if(window.fromPlan){ window.fromPlan=false; switchTab('pro'); return; }
@@ -4599,6 +4600,10 @@ function programPhases(id){
   else if(id==='foundation-13') ph=[['1','Base','Foundation'],['2','Pace','Threshold'],['3','Power','Accelerate'],['4','Prime','Taper']];
   else if(id==='foundation-starter') ph=[['1','Base','Weeks 1–4 · free taster']];
   else if(id==='run-better') ph=[['1','Base & pacing','Weeks 1–2'],['2','Threshold','Week 3'],['3','Deload & test','Week 4'],['4','Race pace','Week 5'],['5','Sharpen & simulate','Week 6']];
+  else if(id==='hybrid-beginner') ph=[['1','Move well','Weeks 1–2'],['2','Build the base','Weeks 3–4'],['3','Add the stations','Weeks 5–6'],['4','Put it together','Week 7'],['5','First simulation','Week 8']];
+  else if(id==='build-engine') ph=[['1','Aerobic base','Weeks 1–2'],['2','Threshold','Weeks 3–4'],['3','Capacity','Week 5'],['4','Race engine','Week 6']];
+  else if(id==='hybrid-strength') ph=[['1','Foundation','Weeks 1–2'],['2','Load','Weeks 3–4'],['3','Power','Week 5'],['4','Strength on tired legs','Week 6']];
+  else if(id==='station-builder') ph=[['1','Wall balls & burpees','Week 1'],['2','Sleds','Week 2'],['3','Carries & lunges','Week 3'],['4','Machines & transitions','Week 4']];
   else ph=null;
   if(!ph) return '';
   return `<div class="sechead" style="margin:20px 0 12px;">Program Phases</div><div class="phaselist2">${ph.map(x=>`<div class="ph2"><div class="n">${x[0]}</div><div class="i"><div class="t">${x[1]}</div><div class="m">${x[2]}</div></div></div>`).join('')}</div>`;
@@ -4632,6 +4637,7 @@ function openProgramContent(id){
   if(id==='hybrid-starter'){ switchTab('pro'); try{ renderMyPlan(); }catch(e){} return; }
   if(id==='first-timer'){ openFirstTimer(); return; }
   if(id==='run-better'){ openRunBetter(); return; }
+  if(LIB_PROGRAMS[id]){ openLibProgram(id); return; }
   nfToast((CATALOG[id]?CATALOG[id].title:'This program')+' — full content finalising, coming soon.');
 }
 /* ---- HYROX First Timer (RM19) — real 4-week plan built from the library ---- */
@@ -4863,6 +4869,113 @@ function toggleRB(key,w,d){ const s=rbSession(w,d); if(HF.isDone(key)) HF.undone
 function openRBSession(w,d){
   const s=rbSession(w,d); if(!s) return;
   openWorkoutObject(s, 'Run Better · Week '+w, rbKey(w,d), 'store');
+}
+
+/* ============================================================
+   ████  LIBRARY-BUILT PROGRAMS  ████
+   Four paid programs assembled from content that already exists, so every
+   door in the store opens. A day is a pointer, not a copy:
+     ['c',cat,idx]  → CATEGORIES workout (video session)
+     ['t',station,idx] → TARGETS station session
+     ['q',idx]      → Quick Workout
+   One renderer serves all of them; the week/day maps below are the product.
+   ============================================================ */
+const LIB_PROGRAMS={
+ 'hybrid-beginner':{ k:'hb', hero:'8-WEEK HYBRID BUILD',
+   blurb:'Your first structured hybrid block. Two conditioning days, one engine day and one easy day each week — the load climbs slowly and never skips a step.',
+   weeks:[
+    {phase:'Move well',      days:[['c',0,0],['q',1],['t','engine',0],['q',0]]},
+    {phase:'Move well',      days:[['c',0,1],['q',2],['t','row',0],['q',13]]},
+    {phase:'Build the base', days:[['c',0,7],['q',5],['t','ski',0],['q',0]]},
+    {phase:'Build the base', days:[['c',0,6],['q',10],['t','engine',1],['q',13]]},
+    {phase:'Add the stations',days:[['c',0,9],['t','wallball',2],['c',3,1],['q',1]]},
+    {phase:'Add the stations',days:[['c',0,10],['t','sledpush',0],['c',3,3],['q',0]]},
+    {phase:'Put it together',days:[['c',0,2],['t','run',0],['c',1,4],['q',13]]},
+    {phase:'First simulation',days:[['c',0,3],['t','burpee',0],['c',2,8],['q',0]]}
+   ]},
+ 'build-engine':{ k:'be', hero:'6-WEEK ENGINE BLOCK',
+   blurb:'Aerobic capacity, built the boring way that works: threshold work, machine intervals, compromised running and one long steady session every week.',
+   weeks:[
+    {phase:'Aerobic base',   days:[['c',3,1],['t','engine',1],['q',3],['t','row',1]]},
+    {phase:'Aerobic base',   days:[['c',3,3],['t','ski',1],['q',7],['t','run',2]]},
+    {phase:'Threshold',      days:[['c',3,0],['t','engine',0],['q',4],['t','row',0]]},
+    {phase:'Threshold',      days:[['c',3,2],['t','ski',0],['q',12],['t','run',1]]},
+    {phase:'Capacity',       days:[['c',0,5],['t','engine',2],['q',6],['t','row',2]]},
+    {phase:'Race engine',    days:[['c',2,7],['t','run',0],['q',3],['c',2,8]]}
+   ]},
+ 'hybrid-strength':{ k:'hs', hero:'6-WEEK STRENGTH BLOCK',
+   blurb:'Three days a week of the strength that shows up on the floor — squat and lunge patterns, heavy carries and sled work, always finished under fatigue.',
+   weeks:[
+    {phase:'Foundation',     days:[['c',1,1],['q',5],['t','farmers',0]]},
+    {phase:'Foundation',     days:[['c',1,4],['q',9],['t','lunge',0]]},
+    {phase:'Load',           days:[['c',1,2],['q',11],['t','sledpush',0]]},
+    {phase:'Load',           days:[['c',1,5],['t','grip',0],['t','sledpull',0]]},
+    {phase:'Power',          days:[['c',1,0],['t','farmers',1],['t','sledpush',2]]},
+    {phase:'Strength on tired legs',days:[['c',1,7],['t','lunge',1],['t','sledpull',2]]}
+   ]},
+ 'station-builder':{ k:'sb', hero:'4-WEEK STATION BLOCK',
+   blurb:'Four weeks on the eight stations that decide your finish time. Each week takes two stations apart, then puts them back together under fatigue.',
+   weeks:[
+    {phase:'Wall balls & burpees',days:[['t','wallball',0],['t','burpee',0],['t','wallball',1]]},
+    {phase:'Sleds',          days:[['t','sledpush',0],['t','sledpull',0],['t','sledpush',1]]},
+    {phase:'Carries & lunges',days:[['t','farmers',0],['t','lunge',0],['t','grip',1]]},
+    {phase:'Machines & transitions',days:[['t','ski',0],['t','row',1],['c',2,5]]}
+   ]}
+};
+
+/* one accessor for the three content sources */
+function libItem(ref){
+  if(!ref) return null;
+  if(ref[0]==='c'){ const c=CATEGORIES[ref[1]], w=c&&c.workouts[ref[2]]; return w?{title:w.title, meta:'RPE '+w.rpe+' · '+totalMins(w)+' min · ▶ video'}:null; }
+  if(ref[0]==='t'){ const t=TARGETS[ref[1]], w=t&&t.workouts[ref[2]]; return w?{title:w.title, meta:t.name+' · '+w.focus+' · '+w.mins+' min'}:null; }
+  if(ref[0]==='q'){ const w=QUICK_WORKOUTS[ref[1]]; return w?{title:w.title, meta:w.tag+' · RPE '+w.rpe+' · '+totalMins(w)+' min'}:null; }
+  return null;
+}
+function libKey(id,w,d){ return LIB_PROGRAMS[id].k+'-w'+w+'-d'+d; }
+function openLibProgram(id){
+  const P=LIB_PROGRAMS[id]; if(!P) return;
+  if(window.klTicker){ clearInterval(window.klTicker); window.klTicker=null; }
+  hidePanels();
+  $('progdetail').style.display='block'; $('tabs').style.display='flex'; curTab='progdetail'; pdBackTab='store';
+  renderLibProgram(id); $('screen').scrollTop=0;
+}
+function renderLibProgram(id){
+  const P=LIB_PROGRAMS[id]; if(!P) return;
+  let openWk=null;
+  for(let i=0;i<P.weeks.length;i++){ for(let d=1;d<=P.weeks[i].days.length;d++){ if(!HF.isDone(libKey(id,i+1,d))){ openWk=i+1; break; } } if(openWk) break; }
+  if(openWk===null) openWk=P.weeks.length;
+  const weeks=P.weeks.map((wk,wi)=>{
+    const w=wi+1; let wdone=0;
+    const rows=wk.days.map((ref,di)=>{
+      const d=di+1, it=libItem(ref); if(!it) return '';
+      const key=libKey(id,w,d), on=HF.isDone(key);
+      if(on) wdone++;
+      return `<div class="klses" onclick="openLibSession('${id}',${w},${d})"><div class="kday">D${d}</div>
+        <div class="kbody"><div class="kt">${it.title}</div><div class="km">${it.meta}</div></div>
+        <div class="ktick ${on?'on':''}" onclick="event.stopPropagation();toggleLib('${id}',${w},${d});">✓</div></div>`;
+    }).join('');
+    return `<div class="klwk ${w===openWk?'open':''}"><div class="klwkh" onclick="this.parentNode.classList.toggle('open')">
+      <span class="wn">WEEK ${w}</span><span class="wp">${wk.phase}</span><span class="wd">${wdone}/${wk.days.length}</span><span class="wc">›</span></div>
+      <div class="klbody">${rows}</div></div>`;
+  }).join('');
+  $('pgd-body').innerHTML=`<div class="hgroup"><div class="k">${CATALOG[id].title} · OWNED</div><h2>${P.hero}</h2><p>${P.blurb}</p></div>${weeks}`;
+}
+function toggleLib(id,w,d){
+  const key=libKey(id,w,d), it=libItem(LIB_PROGRAMS[id].weeks[w-1].days[d-1]);
+  if(HF.isDone(key)) HF.undone(key); else HF.markDone(key,{name:it?it.title:'Session'});
+  renderLibProgram(id);
+}
+function openLibSession(id,w,d){
+  const ref=LIB_PROGRAMS[id].weeks[w-1].days[d-1]; if(!ref) return;
+  const key=libKey(id,w,d);
+  window.fromLib=id; window.fromFT=false; window.fromPlan=false; window.fromHome=false; window.fromKL=false;
+  if(ref[0]==='c'){ window.pendingKey=key; openDetail(ref[1],ref[2]); return; }
+  if(ref[0]==='q'){ openWorkoutObject(QUICK_WORKOUTS[ref[1]], CATALOG[id].title, key, 'store'); return; }
+  if(ref[0]==='t'){                                   // target sessions are read-and-do, so tick from the list
+    switchTab('target'); openTargetWorkout(ref[1],ref[2]);
+    window.fromLib=id; window.libTickKey=key;
+    nfToast('Tap ✓ in the program list when this session is done.');
+  }
 }
 
 /* ---- Join / payment (Bayarcash — server-created payment intent, verified callback) ---- */
