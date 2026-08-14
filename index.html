@@ -694,6 +694,8 @@
   .frow .tx .m .pz,.pcard .info .m .pz{color:var(--hyrox);font-weight:700;}
   .frow .tx .m .oz,.pcard .info .m .oz{color:#2ec27e;font-weight:600;}
   .frow .tx .m .sz,.pcard .info .m .sz{color:#ff6b6b;font-weight:700;letter-spacing:.6px;}
+  .frow .tx .g{font-size:12.5px;color:var(--dim2);margin-top:3px;line-height:1.35;}
+  .frow .tx .g .pop{color:var(--hyrox);font-weight:700;}
   .frow .chev{flex:none;color:#5a5a5a;font-size:17px;line-height:1;margin-left:2px;}
   .pcard .info .m{font-size:11px;color:var(--dim);font-weight:600;margin-top:6px;letter-spacing:.2px;}
   .pcard .info .by{font-size:11px;color:var(--dim2);margin-top:5px;}
@@ -4475,6 +4477,7 @@ function shareChallenge(){
 
 /* ---- cards ---- */
 function badgeCls(st){ return st==='OWNED'?'owned':st==='FREE'?'free':st==='SOON'?'soon':st==='COMPLETED'?'done':'paid'; }
+const POPULAR_ID='race-12';       // exactly one anchor in the whole store
 /* the badge sells the program: show the price until it is bought, then OWNED */
 /* what the metadata line leads with: the price, or the state that replaces it */
 function metaLead(id,st){
@@ -4495,16 +4498,16 @@ function badgeLabel(id,st){
 function programCard(id,full){
   const p=CATALOG[id]; if(!p) return ''; const st=programState(id);
   if(full){   // vertical lists → Apple Fitness+ style row (thumb left, text right, chevron)
-    const meta=[p.weeks+' wk', p.days+' days/wk', p.level].join(' · ');
-    const sub=metaLead(id,st)+meta;
+    const meta=metaLead(id,st)+p.weeks+' weeks · '+(p.weeks*p.days)+' sessions';
+    const goal=(id===POPULAR_ID?'<b class="pop">Most popular</b> · ':'')+(p.goal||'');
     return `<div class="frow" onclick="openProgramDetail('${id}')">
       <div class="th" style="background-image:url('${p.img}')"></div>
-      <div class="tx"><div class="t">${p.title}</div><div class="m">${sub}</div></div>
+      <div class="tx"><div class="t">${p.title}</div><div class="m">${meta}</div><div class="g">${goal}</div></div>
       <div class="chev">›</div></div>`;
   }
   return `<div class="pcard" onclick="openProgramDetail('${id}')">
     <div class="top" style="background-image:url('${p.img}')"></div>
-    <div class="info"><div class="t">${p.title}</div><div class="m">${metaLead(id,st)}${p.weeks} wk · ${p.days} days/wk</div></div></div>`;
+    <div class="info"><div class="t">${p.title}</div><div class="m">${metaLead(id,st)}${p.weeks} wk · ${p.weeks*p.days} sessions</div></div></div>`;
 }
 function quickCard(i){ const q=QUICK_WORKOUTS[i]; return `<div class="qwcard" onclick="openQuickWorkout(${i})"><span class="badge free">Free</span><div class="t">${q.title}</div><div class="m">${q.tag} · ${totalMins(q)} min · RPE ${q.rpe}</div></div>`; }
 function coachCard(id){ const c=COACHES[id]; const n=coachPrograms(id).length; const ini=c.name.replace('Coach ','')[0];
@@ -4566,9 +4569,19 @@ function renderPrograms(){
   let h='';
   const owned=CATALOG_ORDER.filter(id=>ownsProgram(id)&&CATALOG[id].access!=='free');
   if(owned.length) h+=sec('Your Programs', owned.map(id=>programCard(id,true)).join(''));
-  h+=sec('Start Here', programCard('first-timer',true), 'Entry · RM19');
-  h+=sec('Race Preparation', CATALOG_ORDER.filter(id=>CATALOG[id].tag==='Race Prep'&&id!=='first-timer'&&CATALOG[id].access!=='free').map(id=>programCard(id,true)).join(''));
-  h+=sec('Build Specific Strengths', CATALOG_ORDER.filter(id=>CATALOG[id].access==='paid'&&CATALOG[id].tag!=='Race Prep'&&id!=='first-timer').map(id=>programCard(id,true)).join(''));
+  // featured: the cheapest door the buyer has not walked through yet
+  const featId=['first-timer','race-12','run-better'].find(x=>!ownsProgram(x))||'first-timer';
+  const f=CATALOG[featId], fst=programState(featId);
+  h+=`<div class="plan wide" style="background-image:url('${f.img}');height:224px;margin-bottom:18px;" onclick="openProgramDetail('${featId}','store')">
+    <div class="ov"></div>
+    <div class="pi"><div class="tx">
+      <div class="k">${featId==='first-timer'?'Start here':'Featured'}</div>
+      <div class="t" style="font-size:20px;">${f.title}</div>
+      <div class="d">${f.goal} · ${f.weeks} weeks · ${f.weeks*f.days} sessions</div>
+    </div>
+    <button class="join" onclick="event.stopPropagation();${fst==='PAID'?`joinProgram('${featId}')`:`openProgramContent('${featId}')`}">${fst==='PAID'?'Join — '+fmtPrice(f.price):'Open'}</button></div></div>`;
+  h+=sec('Race Preparation', CATALOG_ORDER.filter(id=>CATALOG[id].tag==='Race Prep'&&id!==featId&&CATALOG[id].access!=='free').map(id=>programCard(id,true)).join(''));
+  h+=sec('Build Specific Strengths', CATALOG_ORDER.filter(id=>CATALOG[id].access==='paid'&&CATALOG[id].tag!=='Race Prep'&&id!==featId).map(id=>programCard(id,true)).join(''));
   h+=sec('Free Programs', CATALOG_ORDER.filter(id=>CATALOG[id].access==='free').map(id=>programCard(id,true)).join(''));
   h+=`<div class="exsec"><div class="eh"><h3>More Free Training</h3></div>
     <div class="catcard" onclick="switchTab('programs')" style="margin-bottom:12px;"><div class="body"><div class="ttl">Workout Library</div><div class="cnt">Free sessions by category</div></div><div class="arr">›</div></div>
