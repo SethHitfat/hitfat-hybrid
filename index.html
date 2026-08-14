@@ -959,21 +959,29 @@
       <!-- SKRIN PROGRESS -->
       <div id="progress" style="display:none;">
         <div class="hgroup"><div class="k">Your Training</div><h2>PROGRESS</h2><p>Your Hybrid Score, streak and history — all saved to your account.</p></div>
+        <!-- grouped by the question an athlete is asking, not the order the features were built:
+             where am I -> what have I done -> what am I capable of -> race day -> log something -> notes -->
         <div id="prog-score"></div>
+
         <div id="prog-stats"></div>
         <div id="prog-load"></div>
         <div id="prog-trend"></div>
+        <div class="sechead">Training Calendar</div>
+        <div id="prog-recent"></div>
+
         <div id="prog-pb"></div>
-        <div id="prog-predict"></div>
-        <div id="prog-pace"></div>
-        <div id="prog-sim"></div>
         <div class="sechead">Benchmark History</div>
         <div id="prog-bench"></div>
+
+        <div id="prog-predict"></div>
+        <div id="prog-pace"></div>
+
+        <div id="prog-sim"></div>
+        <div id="prog-wb"></div>
+
         <div class="sechead">Personal Notes</div>
         <textarea class="noteinput" id="prog-note-input" placeholder="Jot down how training is going, niggles to watch, goals for the week…"></textarea>
         <button class="ghostbtn" style="margin-top:10px;" onclick="saveGeneralNote()">Save Note</button>
-        <div class="sechead">Training Calendar</div>
-        <div id="prog-recent"></div>
       </div>
       <!-- SKRIN PROFILE -->
       <div id="profile" style="display:none;">
@@ -3285,6 +3293,15 @@ function scoreRadarHTML_polygon(){
 /* ---- Training Load (acute:chronic ratio) + Weekly Volume trend (Zepp-inspired) ---- */
 function hfWeekStart(d){ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-((x.getDay()+6)%7)); return x; }   // Monday
 function sessionLoad(s){ const mins=s.mins||45; const it=s.rpe?(s.rpe/10):(s.hr?Math.max(0.4,Math.min(1.05,s.hr/180)):0.6); return Math.round(mins*it); }
+/* A zero streak beside "100% this week" reads as a bug. If the streak has lapsed,
+   show how long it has been instead — that is the number worth acting on. */
+function daysSinceLast(){
+  const ds=Object.values(HF.data.sessions).map(s=>s&&s.date?new Date(s.date):null).filter(d=>d&&!isNaN(d));
+  if(!ds.length) return null;
+  const last=new Date(Math.max.apply(null,ds.map(d=>d.getTime()))); last.setHours(0,0,0,0);
+  const today=new Date(); today.setHours(0,0,0,0);
+  return Math.max(0, Math.round((today-last)/86400000));
+}
 function weeklyAgg(weeks){
   const thisMon=hfWeekStart(new Date()); const arr=[];
   for(let i=weeks-1;i>=0;i--){ const ws=new Date(thisMon); ws.setDate(thisMon.getDate()-i*7); arr.push({ws:ws, mins:0, load:0, count:0}); }
@@ -3296,9 +3313,14 @@ function weeklyAgg(weeks){
 function renderLoad(){
   const el=$('prog-load'); if(!el) return;
   const wk=weeklyAgg(5), acute=wk[4].load, chronic=(wk.slice(0,4).reduce((a,b)=>a+b.load,0)/4)||0;
+  const weeksWithData=wk.slice(0,4).filter(b=>b.load>0).length;
   const ratio= chronic>0 ? acute/chronic : (acute>0?1:0);
   let status,color,tip;
   if(!acute && !chronic){ status='—'; color='#666'; tip='Log or sync a few sessions to see your training load.'; }
+  // ACWR compares this week with a 4-week baseline. On two weeks of history that
+  // baseline is meaningless and every athlete gets flagged as an injury risk.
+  else if(weeksWithData<3){ status='Building'; color='#3a86ff';
+    tip='Baseline needs about 4 weeks of history — '+weeksWithData+' so far. The ratio appears once there is enough to compare against.'; }
   else if(chronic===0){ status='Building'; color='#3a86ff'; tip='Building your baseline — keep training consistently.'; }
   else if(ratio<0.8){ status='Detraining'; color='#3a86ff'; tip='Load is dropping — add a session to hold fitness.'; }
   else if(ratio<=1.3){ status='Optimal'; color='#2ec27e'; tip='Sweet spot — train as planned ✓'; }
@@ -3307,14 +3329,17 @@ function renderLoad(){
   el.innerHTML=`<div class="sechead">Training Load <span style="font-size:11px;color:#8a8a8a;font-weight:600;">7-day</span></div>
     <div class="dstat">
       <div class="c"><b>${acute}</b><small>This Week</small></div>
-      <div class="c"><b style="color:${color};">${ratio?ratio.toFixed(2):'—'}</b><small>Load Ratio</small></div>
+      <div class="c"><b style="color:${color};">${(status==='Building'||!ratio)?'—':ratio.toFixed(2)}</b><small>Load Ratio</small></div>
       <div class="c"><b style="color:${color};font-size:16px;line-height:1.5;">${status}</b><small>Status</small></div>
     </div>
     <div class="infonote" style="margin-top:6px;">${tip}</div>`;
 }
 function renderTrend(){
   const el=$('prog-trend'); if(!el) return;
-  const wk=weeklyAgg(8), max=Math.max(1,...wk.map(b=>b.mins));
+  let wk=weeklyAgg(8);
+  const first=wk.findIndex(b=>b.mins>0);                 // drop the empty weeks from before training started
+  if(first>0) wk=wk.slice(Math.min(first, Math.max(0,wk.length-4)));
+  const max=Math.max(1,...wk.map(b=>b.mins));
   const bars=wk.map((b,i)=>{ const h=Math.round(b.mins/max*100), now=(i===wk.length-1), lbl=b.ws.getDate()+'/'+(b.ws.getMonth()+1);
     return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
       <div style="font-size:9px;color:#8a8a8a;height:11px;">${b.mins||''}</div>
@@ -3527,7 +3552,7 @@ function renderProgress(){
   $('prog-stats').innerHTML=`<div class="sechead">Activity</div><div class="dstat">
       <div class="c"><b>${HF.totalDone()}</b><small>Total Sessions</small></div>
       <div class="c"><b>${wk.pct}%</b><small>This Week</small></div>
-      <div class="c"><b>${HF.streak()}</b><small>Day Streak</small></div>
+      <div class="c"><b>${(HF.streak()||daysSinceLast()==null)?HF.streak():daysSinceLast()}</b><small>${(HF.streak()||daysSinceLast()==null)?'Day Streak':'Days Since'}</small></div>
     </div>
     <div class="trkbar" style="margin-top:6px;"><i style="width:${wk.pct}%"></i></div>
     <div class="trkmeta"><b>${wk.done}</b> / ${wk.target} planned sessions this week</div>`;
