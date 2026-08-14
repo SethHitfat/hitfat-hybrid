@@ -1408,16 +1408,21 @@ const PROGRAMS={
     blurb:'The full build — most prep time, lowest weekly rate. Extended base all the way to the line.',
     img:IMG.sledpushRace, status:'live', levels:['PRO','OPEN','Beginner'], data:RACE_16,
     opens:'2026-06-01T00:00:00+08:00', closes:'2026-08-22T23:59:00+08:00' },
-  'race-12':{ id:'race-12', title:'12-Week Sharpen', weeks:12, days:5, tag:'Race Prep',
+  'race-12':{ id:'race-12', title:'12-Week Race Ready', weeks:12, days:5, tag:'Race Prep',
     blurb:'Lock in pace, power and every station — Base, Pace, Accelerate, Prime, Race.',
     img:IMG.sledpullRace, status:'live', levels:['PRO','OPEN','Beginner'], data:PRO_PROGRAM,
     opens:'2026-08-22T00:00:00+08:00', closes:'2026-09-19T23:59:00+08:00' },
-  'race-8':{ id:'race-8', title:'8-Week Final Push', weeks:8, days:5, tag:'Race Prep',
+  'race-8':{ id:'race-8', title:'8-Week Race Prep', weeks:8, days:5, tag:'Race Prep',
     blurb:'A complete, race-ready block. Nothing wasted before race day.',
     img:IMG.skiergRace, status:'live', levels:['PRO','OPEN','Beginner'], data:RACE_8,
     opens:'2026-09-19T00:00:00+08:00', closes:'2026-10-17T23:59:00+08:00' },
 };
+/* ids that exist only in the legacy PROGRAMS object and are not sold in CATALOG —
+   showing them invites a tap on something nobody can buy or own */
+const LEGACY_HIDDEN=['race-16'];
 const PROGRAM_ORDER=['race-16','race-12','race-8'];
+/* what the legacy catalogue is allowed to show: only what the store actually sells */
+function catalogOrder(){ return PROGRAM_ORDER.filter(function(id){ return LEGACY_HIDDEN.indexOf(id)<0; }); }
 /* Availability by date (season ladder). Edit opens/closes above per tier.
    Before opens = LOCKED ("Opens ..."), within window = LIVE, after closes = CLOSED.
    ownsProgram() will later bypass this for athletes who already bought (Supabase). */
@@ -2463,7 +2468,13 @@ function toggleMyPlan(key,c,w){
   renderMyPlan();
 }
 function openPlanSession(c,w,key){ window.fromPlan=true; window.fromHome=false; window.fromKL=false; window.pendingKey=key; openDetail(c,w); }
-function backToCatalog(){ showCatalog(); }
+function backToCatalog(){
+  if(window.fromCatalogProgram){                       // arrived here from a purchased program
+    const id=window.fromCatalogProgram; window.fromCatalogProgram=null;
+    openProgramDetail(id,'store'); return;
+  }
+  showCatalog();
+}
 function nfToast(msg){
   let t=$('nftoast');
   if(!t){ t=document.createElement('div'); t.id='nftoast'; t.className='nftoast'; document.body.appendChild(t); }
@@ -2478,13 +2489,13 @@ function shortLevel(d){
 function renderCatalog(){
   var today=new Date();
   // hero = current live tier (the active season offer); else soonest upcoming; else featured
-  var live=PROGRAM_ORDER.map(function(id){return PROGRAMS[id];}).filter(function(p){return progAvail(p,today)==='live';});
+  var live=catalogOrder().map(function(id){return PROGRAMS[id];}).filter(function(p){return progAvail(p,today)==='live';});
   var feat;
   if(live.length){ feat=live[0]; }
   else {
-    var locked=PROGRAM_ORDER.map(function(id){return PROGRAMS[id];}).filter(function(p){return progAvail(p,today)==='locked';})
+    var locked=catalogOrder().map(function(id){return PROGRAMS[id];}).filter(function(p){return progAvail(p,today)==='locked';})
       .sort(function(a,b){return new Date(a.opens).getTime()-new Date(b.opens).getTime();});
-    feat = locked.length ? locked[0] : (PROGRAMS[PROGRAM_ORDER.find(function(id){return PROGRAMS[id].featured;})]||PROGRAMS[PROGRAM_ORDER[0]]);
+    feat = locked.length ? locked[0] : (PROGRAMS[catalogOrder().find(function(id){return PROGRAMS[id].featured;})]||PROGRAMS[catalogOrder()[0]]);
   }
   var featState=progAvail(feat,today);
   var heroCta = featState==='live'
@@ -4836,9 +4847,9 @@ function openProgramDetail(id,backTab){ const p=CATALOG[id]; if(!p) return; pdBa
 }
 function closeProgramDetail(){ switchTab(pdBackTab||'explore'); }
 function openProgramContent(id){
-  if(id==='race-12'){ switchTab('pro'); openProgram('race-12'); return; }
-  if(id==='race-8'){ switchTab('pro'); openProgram('race-8'); return; }
-  if(id==='road-kl'){ switchTab('pro'); openEvent(); return; }
+  if(id==='race-12'){ window.fromCatalogProgram='race-12'; switchTab('pro'); openProgram('race-12'); return; }
+  if(id==='race-8'){ window.fromCatalogProgram='race-8'; switchTab('pro'); openProgram('race-8'); return; }
+  if(id==='road-kl'){ window.fromCatalogProgram='road-kl'; switchTab('pro'); openEvent(); return; }
   if(id==='foundation-starter'||id==='foundation-13'){ switchTab('plans'); return; }
   if(id==='hybrid-starter'){ switchTab('pro'); try{ renderMyPlan(); }catch(e){} return; }
   if(id==='first-timer'){ openFirstTimer(); return; }
