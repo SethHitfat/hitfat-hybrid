@@ -3791,7 +3791,7 @@ function profileIdentityHTML(cloud){
     </div>
     <div class="dstat" style="margin-top:14px;">
       <div class="c"><b>${hybridScore()}</b><small>Hybrid Score</small></div>
-      <div class="c"><b>${HF.streak()}</b><small>Day Streak</small></div>
+      <div class="c"><b>${(HF.streak()||daysSinceLast()==null)?HF.streak():daysSinceLast()}</b><small>${(HF.streak()||daysSinceLast()==null)?'Day Streak':'Days Since'}</small></div>
       <div class="c"><b>${HF.totalDone()}</b><small>Sessions</small></div>
     </div></div>`;
 }
@@ -3817,7 +3817,11 @@ function renderProfile(){
   // My Programs — owned/paid + the free plan you're following
   const mine=[];
   CATALOG_ORDER.forEach(id=>{ if(ownsProgram(id)&&CATALOG[id].access!=='free') mine.push(id); });
-  mine.push(race?'road-kl':'hybrid-starter'); // current track plan (free-to-follow)
+  // the track plan, but only if it is genuinely theirs — listing an unbought RM199
+  // program under "My Programs" claims something that is not true
+  const trackPlan = race ? 'road-kl' : 'hybrid-starter';
+  if(ownsProgram(trackPlan) || CATALOG[trackPlan].access==='free') mine.push(trackPlan);
+  else mine.push(race?'hybrid-starter':'foundation-starter');   // the free plan they can actually follow
   const seen={}; const list=mine.filter(id=>{ if(seen[id])return false; seen[id]=1; return true; });
   $('pf-programs').innerHTML=list.map(id=>{ const c=CATALOG[id]; const st=programState(id);
     return `<div class="pfrow" style="cursor:pointer;" onclick="${ownsProgram(id)?`openProgramContent('${id}')`:`switchTab('store');openProgramDetail('${id}','profile')`}">
@@ -3834,8 +3838,7 @@ function renderProfile(){
     <div class="pfrow"><span class="l">Level</span><span class="v">${p.level||'—'}</span></div>
     <div class="pfrow"><span class="l">Training days</span><span class="v">${p.days?p.days+' days/week':'—'}</span></div>
     <div class="pfrow"><span class="l">Equipment</span><span class="v">${p.equip||'—'}</span></div>
-    <div class="pfrow"><span class="l">Current week</span><span class="v">Week ${currentWeek()}</span></div>
-    <div class="pfrow"><span class="l">Sessions done</span><span class="v">${HF.totalDone()}</span></div>`;
+    <div class="pfrow"><span class="l">Current week</span><span class="v">Week ${currentWeek()}</span></div>`;
 }
 function confirmReset(){
   $('modal-sheet').innerHTML=`<h3>Reset Progress?</h3>
