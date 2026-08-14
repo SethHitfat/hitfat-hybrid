@@ -1191,6 +1191,13 @@ const IMG={
   sledpull:"img-sled-pull.jpg",          // rope sled pull, race floor
   sledklcc:"img-sled-klcc.jpg",          // sled push, KLCC skyline
   skierg:"img-skierg.jpg",               // ski erg, race floor
+  skiergRace:"img-skierg-race.jpg",  skiergClub:"img-skierg-club.jpg",
+  sledpushRace:"img-sledpush-race.jpg", sledpushGym:"img-sledpush-gym.jpg",
+  sledpullRace:"img-sledpull-race.jpg", sledpullClub:"img-sledpull-club.jpg",
+  rowRace:"img-row-race.jpg",        wallball:"img-wallball.jpg",
+  runTrack:"img-run-track.jpg",      runPark:"img-run-park.jpg",
+  treadmill:"img-run-treadmill.jpg", sprintTurf:"img-sprint-turf.jpg",
+  broadjump:"img-broadjump.jpg",
   found:"https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=700&q=70",
   power:"https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=700&q=70",
   complete:"https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=700&q=70",
@@ -1383,11 +1390,11 @@ const PROGRAMS={
     opens:'2026-06-01T00:00:00+08:00', closes:'2026-08-22T23:59:00+08:00' },
   'race-12':{ id:'race-12', title:'12-Week Sharpen', weeks:12, days:5, tag:'Race Prep',
     blurb:'Lock in pace, power and every station — Base, Pace, Accelerate, Prime, Race.',
-    img:IMG.complete, status:'live', levels:['PRO','OPEN','Beginner'], data:PRO_PROGRAM,
+    img:IMG.sledpullRace, status:'live', levels:['PRO','OPEN','Beginner'], data:PRO_PROGRAM,
     opens:'2026-08-22T00:00:00+08:00', closes:'2026-09-19T23:59:00+08:00' },
   'race-8':{ id:'race-8', title:'8-Week Final Push', weeks:8, days:5, tag:'Race Prep',
     blurb:'A complete, race-ready block. Nothing wasted before race day.',
-    img:IMG.power, status:'live', levels:['PRO','OPEN','Beginner'], data:RACE_8,
+    img:IMG.skiergRace, status:'live', levels:['PRO','OPEN','Beginner'], data:RACE_8,
     opens:'2026-09-19T00:00:00+08:00', closes:'2026-10-17T23:59:00+08:00' },
 };
 const PROGRAM_ORDER=['race-16','race-12','race-8'];
@@ -1420,7 +1427,7 @@ const COACH_ORDER = ['seth'];
 const CATALOG = {
   // ---- FREE (generous free tier) ----
   'hybrid-starter': { id:'hybrid-starter', title:'Hybrid Starter Plan', coach:'seth', owner:'HITFAT', revShare:0, weeks:9,  days:4, level:'Beginner–Intermediate',
-     goal:'Build strength, endurance & hybrid fitness', tag:'Hybrid', access:'free', price:0, plan:'HYBRID_PLAN', img:IMG.engine,
+     goal:'Build strength, endurance & hybrid fitness', tag:'Hybrid', access:'free', price:0, plan:'HYBRID_PLAN', img:IMG.runPark,
      summary:'Your free foundation — build a hybrid engine toward the HITFAT Hybrid Simulation. No race ticket needed.' },
   'foundation-starter': { id:'foundation-starter', title:'Foundation Starter', coach:'seth', owner:'HITFAT', revShare:0, weeks:4, days:3, level:'All levels',
      goal:'Base phase — build your foundation', tag:'Hybrid', access:'free', price:0, plan:'TRAINING_PLAN', img:IMG.sledpull,
@@ -1441,14 +1448,14 @@ const CATALOG = {
      goal:'Lock in pace, power & every station', tag:'Race Prep', access:'paid', price:149, plan:'PRO_PROGRAM', img:IMG.complete,
      summary:'Base → Pace → Accelerate → Prime → Race. Full preparation for race day.' },
   'road-kl': { id:'road-kl', title:'Road to HYROX KL', coach:'seth', owner:'HITFAT', revShare:0, weeks:12, days:5, level:'PRO / OPEN / Beginner',
-     goal:'Race-specific prep for HYROX Kuala Lumpur', tag:'Race Prep', access:'paid', price:199, plan:'PRO_PROGRAM', img:IMG.complete, event:'kl',
+     goal:'Race-specific prep for HYROX Kuala Lumpur', tag:'Race Prep', access:'paid', price:199, plan:'PRO_PROGRAM', img:IMG.sledpullClub, event:'kl',
      summary:'Everything to arrive in KL ready: countdown, race pacing, station strategy, simulations & the 12-week build.' },
   // ---- CORE PAID (COMING SOON — no dummy content until real workouts are ready) ----
-  'hybrid-beginner':{ id:'hybrid-beginner',title:'Hybrid Beginner',   coach:'seth', owner:'HITFAT', revShare:0, weeks:8, days:4, level:'Beginner',     goal:'Your first structured hybrid build', tag:'Hybrid',   access:'paid', price:59, plan:null, img:IMG.found,   summary:'A beginner-friendly build into hybrid training and your first race.' },
-  'build-engine':   { id:'build-engine',   title:'Build Your Engine', coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:4, level:'Intermediate', goal:'Improve your aerobic engine',        tag:'Engine',   access:'paid', price:59, plan:null, img:IMG.engine,  summary:'Improve your aerobic engine systematically for hybrid racing.' },
-  'hybrid-strength':{ id:'hybrid-strength',title:'Hybrid Strength',   coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:3, level:'Intermediate', goal:'Strength for hybrid power',          tag:'Strength', access:'paid', price:59, plan:null, img:IMG.power,   summary:'Structured strength — squats, carries, sled — to power every station.' },
-  'run-better':     { id:'run-better',     title:'Run Better for HYROX', coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:4, level:'Intermediate', goal:'Improve compromised running',     tag:'Running',  access:'paid', price:59, plan:null, img:IMG.found,   summary:'Improve your compromised running through structured progression.' },
-  'station-builder':{ id:'station-builder',title:'Station Builder',   coach:'seth', owner:'HITFAT', revShare:0, weeks:4, days:3, level:'Intermediate', goal:'Bring up weak HYROX stations',       tag:'Strength', access:'paid', price:59, plan:null, img:IMG.complete,summary:'Focused progression to bring up your weakest HYROX stations.' },
+  'hybrid-beginner':{ id:'hybrid-beginner',title:'Hybrid Beginner',   coach:'seth', owner:'HITFAT', revShare:0, weeks:8, days:4, level:'Beginner',     goal:'Your first structured hybrid build', tag:'Hybrid',   access:'paid', price:59, plan:null, img:IMG.sprintTurf,   summary:'A beginner-friendly build into hybrid training and your first race.' },
+  'build-engine':   { id:'build-engine',   title:'Build Your Engine', coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:4, level:'Intermediate', goal:'Improve your aerobic engine',        tag:'Engine',   access:'paid', price:59, plan:null, img:IMG.rowRace,  summary:'Improve your aerobic engine systematically for hybrid racing.' },
+  'hybrid-strength':{ id:'hybrid-strength',title:'Hybrid Strength',   coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:3, level:'Intermediate', goal:'Strength for hybrid power',          tag:'Strength', access:'paid', price:59, plan:null, img:IMG.sledpushGym,   summary:'Structured strength — squats, carries, sled — to power every station.' },
+  'run-better':     { id:'run-better',     title:'Run Better for HYROX', coach:'seth', owner:'HITFAT', revShare:0, weeks:6, days:4, level:'Intermediate', goal:'Improve compromised running',     tag:'Running',  access:'paid', price:59, plan:null, img:IMG.runTrack,   summary:'Improve your compromised running through structured progression.' },
+  'station-builder':{ id:'station-builder',title:'Station Builder',   coach:'seth', owner:'HITFAT', revShare:0, weeks:4, days:3, level:'Intermediate', goal:'Bring up weak HYROX stations',       tag:'Strength', access:'paid', price:59, plan:null, img:IMG.wallball,summary:'Focused progression to bring up your weakest HYROX stations.' },
 };
 const CATALOG_ORDER = ['first-timer','race-12','road-kl','race-8','hybrid-starter','foundation-starter','foundation-13','hybrid-beginner','build-engine','hybrid-strength','run-better','station-builder'];
 function coachPrograms(coachId){ return CATALOG_ORDER.filter(function(id){ return CATALOG[id].coach===coachId; }); }
@@ -1631,7 +1638,7 @@ const TRAINING_PLAN={
 
 const CATEGORIES=[
   {
-    name:"Foundation", img:IMG.found,
+    name:"Foundation", img:IMG.skiergClub,
     desc:"HYROX Performance Foundational. Base, technique & endurance. 15 varied circuit/interval sessions.",
     workouts:[
       // ===== HYROX FOUNDATIONAL #2 =====
@@ -1906,7 +1913,7 @@ const CATEGORIES=[
     ]
   },
   {
-    name:"Power", img:IMG.power,
+    name:"Power", img:IMG.sledpushRace,
     desc:"HYROX Performance Power. Strength & explosive power. Multi-block: strength sections, partner work, AMRAP triplets.",
     workouts:[
       // ===== POWER #197 =====
@@ -2080,7 +2087,7 @@ const CATEGORIES=[
     ]
   },
   {
-    name:"Complete", img:IMG.complete,
+    name:"Complete", img:IMG.broadjump,
     desc:"Full race-style sessions. Stations + runs back to back, simulating official HYROX format.",
     workouts:[
       S("Complete · Full Sim #1",9,["SkiErg","Sled","Rower","Wall Ball","Sandbag"],"Full 8-station + run simulation — official Open weights.",
@@ -2106,7 +2113,7 @@ const CATEGORIES=[
     ]
   },
   {
-    name:"Engine", img:IMG.engine,
+    name:"Engine", img:IMG.treadmill,
     desc:"HITFAT HYROX Engine. Engine, stamina, compromised running, lower body endurance, grip & power endurance.",
     workouts:[
       // ===== HITFAT HYROX ENGINE #1 =====
