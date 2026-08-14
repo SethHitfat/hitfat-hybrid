@@ -215,6 +215,66 @@
   .htab td{padding:7px 0;border-top:1px solid rgba(255,255,255,.06);color:#cfcfcf;}
   .htab td b{font-family:'Oswald';font-size:14px;color:#fff;}
   .sfoot{padding:11px 14px;font-size:10.5px;color:var(--dim2);line-height:1.5;background:#0e0e0e;}
+
+  /* ---- A4 report: white paper, because this one gets kept and printed ---- */
+  #a4{display:none;}
+  #a4.show{display:block;position:fixed;inset:0;z-index:99999;background:#e9e9e9;overflow:auto;-webkit-overflow-scrolling:touch;}
+  .a4bar{position:sticky;top:0;z-index:2;display:flex;gap:8px;padding:10px;background:#111;border-bottom:1px solid #000;}
+  .a4bar input{flex:1;min-width:0;background:#1c1c1c;border:1px solid #333;color:#fff;border-radius:10px;padding:11px 12px;font-size:14px;}
+  .a4bar button{background:var(--hyrox);color:var(--ink);border:none;border-radius:10px;padding:11px 14px;font-weight:800;font-size:13px;cursor:pointer;}
+  .a4bar button.x{background:#2a2a2a;color:#fff;}
+  .page{width:210mm;min-height:297mm;margin:12px auto;background:#fff;color:#111;padding:12mm 11mm;
+        font-family:'Inter',system-ui,sans-serif;box-shadow:0 6px 30px rgba(0,0,0,.25);}
+  .phead{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:7px;}
+  .pbrand{font-size:19px;font-weight:800;letter-spacing:-.2px;}
+  .pbrand b{color:#111;background:var(--hyrox);padding:0 6px;border-radius:3px;}
+  .pbrand span{display:block;font-size:11px;font-weight:600;color:#555;margin-top:3px;letter-spacing:.4px;}
+  .pmeta{text-align:right;font-size:10.5px;font-weight:700;color:#111;}
+  .pmeta span{font-weight:400;color:#666;font-size:9.5px;}
+  .pid{width:100%;border-collapse:collapse;margin:9px 0 11px;border:1px solid #cfcfcf;}
+  .pid td{border-right:1px solid #e2e2e2;padding:6px 9px;}
+  .pid td:last-child{border-right:none;}
+  .pid small{display:block;font-size:8.5px;letter-spacing:.8px;color:#777;text-transform:uppercase;}
+  .pid b{font-size:12.5px;}
+  .pgrid{display:grid;grid-template-columns:1.5fr 1fr;gap:10px;}
+  .psec{border:1px solid #d8d8d8;border-radius:4px;padding:8px 9px;margin-bottom:9px;break-inside:avoid;}
+  .pst{font-size:9.5px;letter-spacing:1.4px;font-weight:800;text-transform:uppercase;color:#111;
+       border-bottom:1px solid #eee;padding-bottom:5px;margin-bottom:7px;}
+  .ptab{width:100%;border-collapse:collapse;font-size:11px;}
+  .ptab td{padding:4px 0;vertical-align:middle;}
+  .pl{width:37%;color:#333;}
+  .pv{width:17%;font-family:'Oswald';font-size:14px;font-weight:700;white-space:nowrap;}
+  .pv u{text-decoration:none;font-size:9px;color:#777;margin-left:1px;}
+  .pv.in{color:#137a43;} .pv.out{color:#a8760a;} .pv.na{font-family:'Inter';font-size:9.5px;color:#999;font-weight:400;}
+  .pt{width:46%;}
+  .ptrk{position:relative;display:block;height:6px;background:#ededed;border-radius:99px;}
+  .pband{position:absolute;top:0;bottom:0;background:#bfe6cf;border-radius:99px;}
+  .pmk{position:absolute;top:50%;width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:#111;}
+  .pmk.in{background:#137a43;} .pmk.out{background:#c8890c;}
+  .pmiss{position:absolute;inset:0;border-radius:99px;background:repeating-linear-gradient(90deg,#e2e2e2 0 4px,transparent 4px 8px);}
+  .prng{display:block;font-size:8px;color:#8a8a8a;margin-top:3px;}
+  .pscore{border:1px solid #d8d8d8;border-radius:4px;padding:12px 8px;text-align:center;margin-bottom:9px;}
+  .pscore .v{font-family:'Oswald';font-size:56px;font-weight:700;line-height:.9;color:#111;}
+  .pscore .l{font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:#777;margin-top:4px;}
+  .pscore .g{font-size:12px;font-weight:700;margin-top:6px;}
+  .pfix{border:1px solid #e8cf6a;background:#fffbe8;border-radius:4px;padding:9px;margin-bottom:9px;break-inside:avoid;}
+  .pfix .k{font-size:8.5px;letter-spacing:1.4px;font-weight:800;text-transform:uppercase;color:#8a6d00;}
+  .pfix .t{font-size:13px;font-weight:800;margin:3px 0 3px;}
+  .pfix .m{font-size:10.5px;color:#444;line-height:1.45;}
+  .plist{margin:0;padding-left:15px;} .plist li{font-size:10.5px;color:#333;line-height:1.5;margin-bottom:4px;}
+  .phist{width:100%;border-collapse:collapse;font-size:10.5px;}
+  .phist th{text-align:left;font-size:8.5px;letter-spacing:.8px;text-transform:uppercase;color:#888;padding-bottom:4px;}
+  .phist td{padding:4px 0;border-top:1px solid #eee;color:#333;}
+  .phist td b{font-family:'Oswald';font-size:12.5px;}
+  .pfoot{margin-top:9px;border-top:1px solid #ddd;padding-top:7px;font-size:8.5px;color:#777;line-height:1.5;}
+  @page{size:A4;margin:0;}
+  @media print{
+    html,body{background:#fff!important;height:auto!important;overflow:visible!important;}
+    .app,.a4bar{display:none!important;}
+    #a4{display:block!important;position:static!important;background:#fff!important;overflow:visible!important;}
+    .page{margin:0!important;box-shadow:none!important;width:auto!important;min-height:auto!important;}
+  }
+  @media (max-width:820px){ .page{width:auto;padding:14px;box-shadow:none;margin:0;} .pgrid{grid-template-columns:1fr;} }
   /* biomechanics report */
   .bio{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:6px 16px;margin-bottom:12px;}
   .brow{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid rgba(255,255,255,.06);}
@@ -377,6 +437,7 @@
       </details>
 
       <div class="actions">
+        <button class="btn" onclick="openReport()">📄 A4 report — save as PDF</button>
         <button class="btn" onclick="shareResult()">Share Result</button>
         <button class="btn sec" onclick="restart()">Try Again</button>
         <button class="btn sec" onclick="location.href='/'">Save to my HITFAT account →</button>
@@ -385,6 +446,16 @@
       <div class="note" id="shareNote"></div>
     </div>
   </div>
+</div>
+
+<div id="a4">
+  <div class="a4bar noprint">
+    <input id="a4name" placeholder="Athlete name" oninput="localStorage.setItem('hf_wb_name',this.value)"
+           onchange="saveReportName(this.value)">
+    <button onclick="window.print()">Save as PDF</button>
+    <button class="x" onclick="closeReport()">Close</button>
+  </div>
+  <div id="a4body"></div>
 </div>
 
 <!-- On-device pose detection: TensorFlow.js + MoveNet (loaded only on this page) -->
@@ -1081,6 +1152,126 @@ function inbodySheet(m, cfg, secs, done){
     <div class="sfoot">Measured on device from ${done||0} rep${done===1?'':'s'} · ${MODEL==='blazepose'?'33-point pose (MediaPipe BlazePose)':'17-point pose (MoveNet fallback)'} · target height for a ${cfg.w} kg ball is ${tgtH.toFixed(2)} m · hips below knee per HYROX rulebook 8.8.6</div></div>`;
 }
 
+
+/* ============================================================
+   A4 REPORT — the printable read-out
+   Built as a real A4 page and handed to the browser's own print pipeline, which
+   is what gives "Save as PDF" on both iPhone and desktop without any library.
+   Printed on white: an athlete keeps this, a coach files it, ink matters.
+   ============================================================ */
+function athleteName(){
+  const own=localStorage.getItem('hf_wb_name');
+  if(own && own.trim()) return own.trim();
+  try{                                              // the app saved a name on this device — reuse it
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      if(k && k.indexOf('hitfat_hybrid_v1')===0){
+        const d=JSON.parse(localStorage.getItem(k)||'{}');
+        const n=d && d.prefs && d.prefs.name;
+        if(n && String(n).trim()) return String(n).trim();
+      }
+    }
+  }catch(e){}
+  return '';
+}
+function pScale(label, val, unit, min, max, gLo, gHi, dp){
+  if(val==null) return `<tr><td class="pl">${label}</td><td class="pv na">not measured</td>
+    <td class="pt"><span class="ptrk"><i class="pmiss"></i></span></td></tr>`;
+  const span=(max-min)||1, pc=v=>Math.max(0,Math.min(100,((v-min)/span)*100));
+  const inb=val>=gLo&&val<=gHi;
+  return `<tr><td class="pl">${label}</td>
+    <td class="pv ${inb?'in':'out'}">${Number(val).toFixed(dp||0)}<u>${unit||''}</u></td>
+    <td class="pt"><span class="ptrk">
+      <i class="pband" style="left:${pc(gLo)}%;width:${Math.max(2,pc(gHi)-pc(gLo))}%"></i>
+      <i class="pmk ${inb?'in':'out'}" style="left:${pc(val)}%"></i>
+    </span><span class="prng">${min}–${max}${unit||''} · target ${gLo===min?'≤'+gHi:(gHi===max?'≥'+gLo:gLo+'–'+gHi)}</span></td></tr>`;
+}
+function pSection(title, rows){ return `<div class="psec"><div class="pst">${title}</div><table class="ptab">${rows}</table></div>`; }
+function buildA4(m, cfg, secs, done){
+  const d=new Date();
+  const date=d.getDate()+'.'+(d.getMonth()+1)+'.'+d.getFullYear();
+  const time=(d.getHours()<10?'0':'')+d.getHours()+':'+(d.getMinutes()<10?'0':'')+d.getMinutes();
+  const hcm=Math.round(athleteHeightM()*100);
+  const validPct=done?Math.round(m.valid/done*100):null;
+  const tgtH=wallTargetM(cfg.w);
+  const fx=fixFirst(m,done);
+  const hist=wbHistory(cfg.w,cfg.t).slice(-8);
+  const name=athleteName()||'—';
+
+  return `<div class="page">
+    <div class="phead">
+      <div class="pbrand">HITFAT <b>BIOMECHANICS</b><span>Wall Ball Analysis Report</span></div>
+      <div class="pmeta">hybrid.hitfat.io<br><span>Measured on device · no video leaves the phone</span></div>
+    </div>
+
+    <table class="pid"><tr>
+      <td><small>Name</small><b>${name}</b></td>
+      <td><small>Height</small><b>${hcm} cm</b></td>
+      <td><small>Ball</small><b>${cfg.w} kg</b></td>
+      <td><small>Target</small><b>${cfg.t} reps</b></td>
+      <td><small>Date / Time</small><b>${date} ${time}</b></td>
+    </tr></table>
+
+    <div class="pgrid">
+      <div>
+        ${pSection('Set analysis',
+          `<tr><td class="pl">Set time</td><td class="pv in">${secs?fmtClock(secs):'—'}</td><td class="pt"><span class="prng">${done||0} reps completed</span></td></tr>
+           <tr><td class="pl">Valid reps</td><td class="pv ${validPct>=90?'in':'out'}">${m.valid||0}<u>/${done||0}</u></td><td class="pt"><span class="prng">HYROX depth — hips below knee</span></td></tr>
+           <tr><td class="pl">Work rate</td><td class="pv in">${(secs&&done)?(done/(secs/60)).toFixed(1):'—'}<u> rpm</u></td><td class="pt"><span class="prng">reps per minute</span></td></tr>`)}
+        ${pSection('Depth analysis',
+          pScale('Depth score', m.depthScore, '', 0, 100, 70, 100)+
+          pScale('Reps at full depth', validPct, '%', 0, 100, 90, 100)+
+          pScale('Consistency across set', m.cons, '%', 0, 100, 75, 100))}
+        ${pSection('Joint analysis',
+          pScale('Knee angle at bottom', m.knee, '°', 60, 140, 60, DEEP_KNEE)+
+          pScale('Hip angle at bottom', m.hipA, '°', 50, 140, 50, 100)+
+          pScale('Trunk lean from upright', m.lean, '°', 0, 70, 0, LEAN_OK)+
+          pScale('Ankle flexion at bottom', m.ankle, '°', 50, 130, 50, 95)+
+          pScale('Left–right difference', m.sym, '°', 0, 30, 0, SYM_OK))}
+        ${pSection('Throw analysis',
+          pScale('Ball speed at release', m.speed, ' m/s', 1, 8, 4, 8, 1)+
+          pScale('Throw height', m.throwH, ' m', 1, 4, tgtH, 4, 2)+
+          pScale('Ball path drift', m.drift==null?null:m.drift*100, '%', 0, 200, 0, 90))}
+        ${pSection('Tempo',
+          pScale('Down (eccentric)', m.ecc, ' s', 0, 2.5, 0.4, 1.2, 2)+
+          pScale('Up (concentric)', m.con, ' s', 0, 2.5, 0.3, 1.0, 2))}
+      </div>
+
+      <div>
+        <div class="pscore">
+          <div class="v">${m.depthScore||0}</div>
+          <div class="l">Depth Score / 100</div>
+          <div class="g">${grade(m.depthScore||0)}</div>
+        </div>
+        <div class="pfix"><div class="k">Fix this first</div><div class="t">${fx.t}</div><div class="m">${fx.m}</div></div>
+        <div class="psec"><div class="pst">What that means</div>
+          <ul class="plist">${plainLines(m,done).map(l=>'<li>'+l+'</li>').join('')||'<li>No reps were recorded.</li>'}</ul>
+        </div>
+        ${hist.length?`<div class="psec"><div class="pst">History · ${cfg.w} kg × ${cfg.t}</div>
+          <table class="phist"><tr><th>Date</th><th>Time</th><th>Valid</th><th>Score</th></tr>
+          ${hist.map(x=>{const dd=new Date(x.d);
+            return `<tr><td>${dd.getDate()}.${dd.getMonth()+1}</td><td><b>${fmtClock(x.secs)}</b></td>
+              <td>${x.valid==null?'—':x.valid+'/'+x.t}</td><td>${x.score==null?'—':x.score}</td></tr>`;}).join('')}
+          </table></div>`:''}
+      </div>
+    </div>
+
+    <div class="pfoot">
+      Pose measured on device with ${MODEL==='blazepose'?'33-point MediaPipe BlazePose':'17-point MoveNet'} ·
+      scale derived from ${hcm} cm standing height · target height for a ${cfg.w} kg ball is ${tgtH.toFixed(2)} m ·
+      depth judged hips-below-knee per HYROX rulebook 8.8.6 · this report is a training aid, not a medical assessment.
+    </div>
+  </div>`;
+}
+function openReport(){
+  const cfg=wbCfg(), m=window._result||summarise(repData), set=window._wbSet||{};
+  $('a4body').innerHTML=buildA4(m, cfg, set.secs||0, reps||(m.reps||0));
+  $('a4').classList.add('show');
+  const n=$('a4name'); if(n) n.value=athleteName();
+}
+function closeReport(){ $('a4').classList.remove('show'); }
+function saveReportName(v){ localStorage.setItem('hf_wb_name', v||''); openReport(); }
+
 function fmtDeg(v){ return v==null?'—':Math.round(v)+'°'; }
 function fmtSec(v){ return v==null?'—':v.toFixed(2)+'s'; }
 function bioRow(name, meta, value, unit, cls, meterPct){
@@ -1229,6 +1420,7 @@ function demoResult(){
   $('shareNote').textContent='Sample set — nothing was recorded or saved.';
   window._result=m; window._wbSet={secs:47,w:cfg.w,t:cfg.t,best:52};
   const det=document.querySelector('.det'); if(det) det.open=true;
+  if(location.search.indexOf('a4=1')>-1) setTimeout(openReport,120);
 }
 try{ if(location.search.indexOf('demo=1')>-1) setTimeout(demoResult,60); }catch(e){}
 
