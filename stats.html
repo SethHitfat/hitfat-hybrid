@@ -96,6 +96,40 @@ function render(d, email){
   const t=d.totals;
   let h='';
 
+  // ---- money first: it is the number that actually matters ----
+  const s=d.sales||{}, c=d.customers||{};
+  h+='<div class="sechead">Sales</div>'
+   + '<div class="tiles">'
+   + tile('RM '+fmt(s.revenue_total),'Revenue (all time)')
+   + tile(s.orders_total,'Paid orders')
+   + tile('RM '+fmt(s.revenue_window),'Revenue (last '+d.days+' days)')
+   + tile('RM '+fmt(s.avg_order),'Average order')
+   + '</div>';
+
+  if(s.pending){
+    h+='<div class="card" style="margin-top:11px;">'
+     + '<b>'+s.pending+'</b> unpaid checkout'+(s.pending===1?'':'s')
+     + (s.stale_pending? ' — <b style="color:#FF9500">'+s.stale_pending+' older than a day</b>. Those are either buyers who walked away, or a Bayarcash callback that never landed; open the order in Bayarcash to tell which.' : ' still in progress.')
+     + '</div>';
+  }
+
+  h+=table('Revenue by program', s.by_program, ['Program','Orders','Revenue'],
+        r=>[esc(r.id), r.orders, 'RM '+fmt(r.revenue)]);
+  h+=table('Recent orders', s.recent, ['When','Program','Amount','Status'],
+        r=>[esc(r.when||'—'), esc(r.program), 'RM '+fmt(r.amount),
+            '<span style="color:'+(r.status==='paid'?'#2ec27e':'#9a9a9a')+'">'+esc(r.status)+'</span>']);
+
+  h+='<div class="sechead">Customers</div>'
+   + '<div class="tiles">'
+   + tile(c.total,'Signed up') + tile(c.paying,'Have paid')
+   + tile((c.total?Math.round((c.paying/c.total)*100):0)+'%','Convert to paid')
+   + tile('RM '+fmt(c.paying? (s.revenue_total/c.paying):0),'Revenue per paying customer')
+   + '</div>';
+  h+=table('', c.list, ['Customer','Joined','Last seen','Orders','Spent'],
+        r=>[esc(r.email)+(r.programs&&r.programs.length?'<div style="color:#6a6a6a;font-size:11.5px;margin-top:2px;">'+esc(r.programs.join(', '))+'</div>':''),
+            esc(r.joined||'—'), esc(r.last_seen||'—'), r.orders, r.spent?'RM '+fmt(r.spent):'—']);
+
+  h+='<div class="sechead">Traffic</div>';
   h+='<div class="tiles">'
    + tile(t.sessions,'Sessions') + tile(t.signed_in_users,'Signed-in users')
    + tile(t.signin_attempts,'Sign-in attempts') + tile(t.blocked_checkouts,'Checkouts blocked by sign-in')
@@ -131,14 +165,19 @@ function render(d, email){
 
   h+='<div class="foot">Generated '+esc(d.generated_at.replace('T',' ').slice(0,16))+' UTC.'
    + (d.truncated?' <b>Window truncated at 50,000 events</b> — narrow the range for exact numbers.':'')
-   + '<br>Counts are by browser session, so one person returning tomorrow counts twice. Nobody but an admin can read this data — the events table itself is write-only from the browser.</div>';
+   + '<br>Revenue comes from the payments table — only rows the Bayarcash callback verified as paid are counted, so nothing here is inflated by abandoned checkouts. Traffic counts are by browser session, so one person returning tomorrow counts twice.'
+   + '<br>This page shows customer email addresses. Nobody but an admin can load it, and the events table is write-only from the browser.</div>';
 
   $('out').innerHTML=h;
 }
 
-function tile(n,l){ return '<div class="tile"><div class="n">'+Number(n||0).toLocaleString()+'</div><div class="l">'+l+'</div></div>'; }
+function fmt(n){ return Number(n||0).toLocaleString('en-MY',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function tile(n,l){
+  const v = typeof n==='number' ? Number(n||0).toLocaleString() : (n==null?'0':String(n));
+  return '<div class="tile"><div class="n">'+v+'</div><div class="l">'+l+'</div></div>';
+}
 function table(title,rows,heads,fn){
-  let h='<div class="sechead">'+title+'</div><div class="card">';
+  let h=(title?'<div class="sechead">'+title+'</div>':'<div style="height:11px"></div>')+'<div class="card">';
   if(!rows||!rows.length) h+='<div class="empty">Nothing recorded yet.</div>';
   else h+='<table><tr>'+heads.map((x,i)=>'<th'+(i?' class="n"':'')+'>'+x+'</th>').join('')+'</tr>'
         + rows.slice(0,25).map(r=>'<tr>'+fn(r).map((c,i)=>'<td'+(i?' class="n"':'')+'>'+c+'</td>').join('')+'</tr>').join('')

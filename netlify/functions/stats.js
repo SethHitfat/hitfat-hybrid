@@ -110,8 +110,80 @@ exports.handler = async (event) => {
     refs[k] = (refs[k] || 0) + 1;
   });
 
+  // ---- money + customers ----
+  // Revenue comes from `payments`, never from events: an event only says someone
+  // opened a checkout, while a payments row is written by pay-create and only
+  // flipped to 'paid' by the verified Bayarcash callback.
+  let pays = [], users = [], udata = [];
+  try { pays  = await pageAll(SB_URL + '/rest/v1/payments?select=*&order=id.desc', h); } catch (e) {}
+  try { udata = await pageAll(SB_URL + '/rest/v1/user_data?select=user_id,updated_at', h); } catch (e) {}
+  try {
+    for (let p = 1; p <= 10; p++) {
+      const r = await fetch(SB_URL + '/auth/v1/admin/users?page=' + p + '&per_page=200', { headers: h });
+      if (!r.ok) break;
+      const b = await r.json();
+      const batch = Array.isArray(b) ? b : (b.users || []);
+      users = users.concat(batch);
+      if (batch.length < 200) break;
+    }
+  } catch (e) {}
+
+  const num = (v) => Number(v || 0) || 0;
+  const when = (p) => p.paid_at || p.created_at || p.inserted_at || null;
+  const paid = pays.filter(p => p.status === 'paid');
+  const pending = pays.filter(p => p.status !== 'paid');
+  const inWindow = (p) => { const w = when(p); return w && w >= since; };
+  // a pending row older than a day means the buyer left, or a callback never landed
+  const dayAgo = new Date(Date.now() - 864e5).toISOString();
+  const stale = pending.filter(p => { const w = when(p); return !w || w < dayAgo; });
+
+  const byProg = {};
+  paid.forEach(p => {
+    const id = p.program_id || '(unknown)';
+    (byProg[id] = byProg[id] || { id, orders: 0, revenue: 0 });
+    byProg[id].orders++; byProg[id].revenue += num(p.amount);
+  });
+
+  const lastSync = {};
+  udata.forEach(u => { if (u.user_id) lastSync[u.user_id] = u.updated_at; });
+
+  const spend = {};
+  paid.forEach(p => {
+    if (!p.user_id) return;
+    (spend[p.user_id] = spend[p.user_id] || { orders: 0, total: 0, programs: [] });
+    spend[p.user_id].orders++; spend[p.user_id].total += num(p.amount);
+    if (p.program_id && spend[p.user_id].programs.indexOf(p.program_id) === -1) spend[p.user_id].programs.push(p.program_id);
+  });
+
+  const customers = users.map(u => {
+    const s = spend[u.id] || { orders: 0, total: 0, programs: [] };
+    return {
+      email: u.email || '(no email)',
+      joined: (u.created_at || '').slice(0, 10),
+      last_seen: (u.last_sign_in_at || lastSync[u.id] || '').slice(0, 10),
+      orders: s.orders, spent: s.total, programs: s.programs
+    };
+  }).sort((a, b) => b.spent - a.spent || (a.joined < b.joined ? 1 : -1));
+
+  const sum = (arr) => arr.reduce((t, p) => t + num(p.amount), 0);
+
   return json(200, {
     ok: true, days, generated_at: new Date().toISOString(),
+    sales: {
+      revenue_total: sum(paid),
+      orders_total: paid.length,
+      revenue_window: sum(paid.filter(inWindow)),
+      orders_window: paid.filter(inWindow).length,
+      avg_order: paid.length ? sum(paid) / paid.length : 0,
+      pending: pending.length,
+      stale_pending: stale.length,
+      by_program: Object.values(byProg).sort((a, b) => b.revenue - a.revenue),
+      recent: pays.slice(0, 20).map(p => ({
+        order: p.order_number || '', program: p.program_id || '', amount: num(p.amount),
+        status: p.status || '', when: (when(p) || '').replace('T', ' ').slice(0, 16)
+      }))
+    },
+    customers: { total: users.length, paying: Object.keys(spend).length, list: customers.slice(0, 100) },
     truncated: rows.length >= PAGE * MAX_PAGES,
     totals: {
       events: rows.length,
@@ -128,3 +200,18 @@ exports.handler = async (event) => {
 };
 
 function json(statusCode, body) { return { statusCode, headers: CORS, body: JSON.stringify(body) }; }
+
+// PostgREST caps a single response, so walk the pages. Used for payments/user_data,
+// where selecting * keeps this working even if a column is later added or renamed.
+async function pageAll(baseUrl, headers) {
+  let out = [];
+  for (let p = 0; p < MAX_PAGES; p++) {
+    const url = baseUrl + (baseUrl.indexOf('?') > -1 ? '&' : '?') + 'offset=' + (p * PAGE) + '&limit=' + PAGE;
+    const r = await fetch(url, { headers });
+    if (!r.ok) throw new Error(await r.text());
+    const batch = await r.json();
+    out = out.concat(batch);
+    if (batch.length < PAGE) break;
+  }
+  return out;
+}
