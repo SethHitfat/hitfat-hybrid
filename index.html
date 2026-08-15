@@ -1511,6 +1511,8 @@ function programState(id){ // FREE | OWNED | PAID | SOON | COMPLETED  (+ IN PROG
 }
 function grantProgram(id, price){ // called after a confirmed purchase (payment integration later)
   if(!CATALOG[id]) return;
+  // the end of the funnel: only reached once a payment is verified server-side
+  track('program_unlocked',{id, price:(price!=null?price:CATALOG[id].price)});
   HF.data.owned[id]=Object.assign({date:new Date().toISOString()}, HF.data.owned[id]||{});
   HF.data.purchases.push({id:id, title:CATALOG[id].title, price:(price!=null?price:CATALOG[id].price), date:new Date().toISOString()});
   HF.save();
@@ -2337,6 +2339,7 @@ function showCategories(){ $('list').style.display='none'; $('detail').style.dis
 const PANELS=['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail','store','tsess','tmhome'];
 function hidePanels(){ PANELS.forEach(id=>{ const e=$(id); if(e) e.style.display='none'; }); }
 function switchTab(tab){
+  track('tab',{tab});
   curTab=tab;
   $('tabs').style.display='flex'; // always restore the bottom nav when landing on a main tab
   // hide every screen
@@ -3184,6 +3187,33 @@ const SUPA_KEY = 'sb_publishable_6tKH033Hb74EV7QlKBCFFA_5K_Lsxgv'; // publishabl
 const SUPA_READY = !!(/^https:\/\/[^\/\s]+\.[^\/\s]+/.test(SUPA_URL) && SUPA_KEY && SUPA_KEY.indexOf('YOUR-')!==0 && window.supabase);
 let sb = null;
 if(SUPA_READY){ try{ sb = window.supabase.createClient(SUPA_URL, SUPA_KEY); }catch(e){ console.error('Supabase init failed', e); } }
+
+/* ============================================================
+   ANALYTICS — first-party events straight into Supabase.
+   No third-party script, so no cookie banner and nothing to sign up for.
+   The `events` table is INSERT-only from the client (see the RLS policy in
+   the setup SQL): the app can write an event but can never read them back,
+   which is why anonymous visitors can be counted without exposing anything.
+   Every call is fire-and-forget — analytics must never break a workout.
+   To switch this off, flip ANALYTICS_ON to false.
+   ============================================================ */
+const ANALYTICS_ON = true;
+const _sid = (()=>{ try{
+  let s=sessionStorage.getItem('hf_sid');
+  if(!s){ s=Math.random().toString(36).slice(2)+Date.now().toString(36); sessionStorage.setItem('hf_sid',s); }
+  return s;
+}catch(e){ return 'nostorage'; } })();
+function track(name, props){
+  if(!ANALYTICS_ON || !sb) return;
+  try{
+    const r = sb.from('events').insert({
+      name, props: props||{}, session_id:_sid,
+      user_id: (typeof HF!=='undefined' && HF.userId) || null,
+      path: location.pathname, ref: document.referrer || null
+    });
+    if(r && r.then) r.then(null, ()=>{});   // swallow — a dropped event is not worth a console error
+  }catch(e){}
+}
 
 /* --- Store --- */
 const HF = {
@@ -4071,6 +4101,7 @@ function signInGoogle(){ signInOAuth('google'); }
 function signInOAuth(provider){
   if(!sb){ authMsg('Login not configured yet (add your Supabase keys).', 'err'); return; }
   authMsg('Redirecting to '+provider.charAt(0).toUpperCase()+provider.slice(1)+'…');
+  track('signin_start',{provider});
   sb.auth.signInWithOAuth({ provider:provider, options:{ redirectTo: redirectURL() } })
     .then(r=>{ if(r&&r.error) authMsg(r.error.message,'err'); });
 }
@@ -4162,6 +4193,7 @@ async function signOut(){
 let _appStarted=false;
 function startApp(){
   hideSplash();
+  track('app_open',{track:HF.data.track||null, onboarded:!!HF.data.onboarded});
   // render the app shell; called once we have a session (or in local mode)
   try{
     renderCategories();
@@ -4423,7 +4455,7 @@ function openWorkoutObject(w,label,key,backTab){
   $('d-acc').innerHTML=blocksAccHTML(w.blocks);
   $('screen').scrollTop=0;
 }
-function openQuickWorkout(i){ const q=QUICK_WORKOUTS[i]; if(q) openWorkoutObject(q,'Quick Workout · '+q.tag,'quick-'+i,'explore'); }
+function openQuickWorkout(i){ const q=QUICK_WORKOUTS[i]; if(!q) return; track('quick_workout',{title:q.title, tag:q.tag}); openWorkoutObject(q,'Quick Workout · '+q.tag,'quick-'+i,'explore'); }
 
 /* ---- Free daily/weekly rotation (traffic hook) — deterministic by date, no storage ----
    dayOfYear() is the same for every user on a given date, so the WOD is shared and
@@ -4892,7 +4924,7 @@ function programPhases(id){
   if(!ph) return '';
   return `<div class="sechead" style="margin:20px 0 12px;">Program Phases</div><div class="phaselist2">${ph.map(x=>`<div class="ph2"><div class="n">${x[0]}</div><div class="i"><div class="t">${x[1]}</div><div class="m">${x[2]}</div></div></div>`).join('')}</div>`;
 }
-function openProgramDetail(id,backTab){ const p=CATALOG[id]; if(!p) return; pdBackTab=backTab||(curTab==='progdetail'?pdBackTab:curTab)||'explore';
+function openProgramDetail(id,backTab){ const p=CATALOG[id]; if(!p) return; track('program_view',{id, access:p.access}); pdBackTab=backTab||(curTab==='progdetail'?pdBackTab:curTab)||'explore';
   hidePanels();
   $('progdetail').style.display='block'; $('tabs').style.display='flex'; curTab='progdetail';
   const st=programState(id), owned=ownsProgram(id), soon=p.access==='soon', paySoon=paymentsSoon(id);
@@ -5340,7 +5372,8 @@ function setChannel(c){
 async function payProgram(id){
   const p=CATALOG[id]; if(!p) return;
   if(!PAYMENTS_LIVE){ closeModal(); nfToast(p.title+' — opening soon.'); return; }
-  if(!HF.userId){ closeModal(); nfToast('Please sign in first so we can unlock your program.'); return; }
+  if(!HF.userId){ track('checkout_blocked_signin',{id}); closeModal(); nfToast('Please sign in first so we can unlock your program.'); return; }
+  track('checkout_start',{id, price:p.price||null, channel:payChannel});
   closeModal(); nfToast('Opening secure payment…');
   try{
     const r=await fetch('/.netlify/functions/pay-create',{ method:'POST', headers:{'Content-Type':'application/json'},
