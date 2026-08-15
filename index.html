@@ -246,6 +246,8 @@
   /* quiet navigation row (same language as the Home cards — no yellow spine, sentence case) */
   .catcard{position:relative;border-radius:16px;overflow:hidden;cursor:pointer;background:var(--surface);height:auto;border:1px solid var(--line);margin-bottom:10px;transition:transform .12s;padding:15px 16px;display:flex;align-items:center;}
   .catcard:active{transform:scale(.985);}
+  .catcard .ci{flex:none;width:40px;height:40px;border-radius:12px;background:rgba(255,224,0,.08);border:1px solid rgba(255,224,0,.16);display:flex;align-items:center;justify-content:center;color:var(--hitfat);margin-right:13px;z-index:2;}
+  .catcard .ci svg{width:21px;height:21px;display:block;}
   .catcard .body{position:relative;z-index:2;flex:1;min-width:0;}
   .catcard .ttl{font-family:'Inter',system-ui,sans-serif;font-weight:700;font-size:16.5px;letter-spacing:-.2px;text-transform:none;line-height:1.2;color:#fff;}
   .catcard .cnt{color:var(--dim);font-size:13px;font-weight:500;margin-top:3px;letter-spacing:0;text-transform:none;}
@@ -419,7 +421,8 @@
   .tcard:active{transform:scale(.97);}
   .tcard::before{content:"";position:absolute;top:-25%;right:-30%;width:115%;height:75%;background:radial-gradient(circle,rgba(255,224,0,.1),transparent 66%);pointer-events:none;z-index:1;}
   .tcard .edge{display:none;}
-  .tcard .gx{font-size:62px;top:8px;right:8px;letter-spacing:-1px;}
+  .tcard .ticon2{position:absolute;top:14px;left:15px;z-index:2;width:30px;height:30px;color:var(--hitfat);opacity:.9;}
+  .tcard .ticon2 svg{width:100%;height:100%;display:block;}
   .tcard .tn{position:relative;z-index:2;font-family:'Inter',system-ui,sans-serif;font-size:16px;font-weight:700;letter-spacing:-.2px;line-height:1.2;text-transform:none;color:#fff;}
   .tcard .tf{position:relative;z-index:2;font-size:11.5px;color:#bdbdbd;font-weight:500;letter-spacing:0;text-transform:none;margin-top:5px;line-height:1.3;}
   .tcard .tc{position:relative;z-index:2;font-size:11px;color:var(--dim2);font-weight:500;margin-top:5px;letter-spacing:0;}
@@ -710,12 +713,14 @@
   .pcard .info .by{font-size:11px;color:var(--dim2);margin-top:5px;}
   .pcard .info .price{position:absolute;bottom:13px;right:14px;font-family:'Oswald';font-weight:700;font-size:15px;color:var(--hyrox);}
   .pcard.full .info .price{position:static;float:right;margin-top:-2px;}
-  /* quick workout small card */
-  .qwcard{position:relative;flex:0 0 auto;width:170px;border-radius:14px;overflow:hidden;cursor:pointer;border:1px solid var(--line);background:linear-gradient(155deg,#181818 0%,#0e0e0e 100%);padding:14px 14px 13px;transition:transform .12s;}
+  /* quick workout portrait artwork card */
+  .qwcard{position:relative;flex:0 0 auto;width:158px;aspect-ratio:2/3;border-radius:16px;overflow:hidden;cursor:pointer;border:1px solid var(--line);background:#141414 center/cover no-repeat;padding:0;transition:transform .12s;}
   .qwcard:active{transform:scale(.97);}
-  .qwcard .badge{position:static;display:inline-block;margin-bottom:10px;}
-  .qwcard .t{font-family:'Oswald';font-size:15px;font-weight:700;letter-spacing:.3px;text-transform:uppercase;color:#fff;line-height:1.1;}
-  .qwcard .m{font-size:11px;color:var(--dim);font-weight:600;margin-top:6px;}
+  .qwcard .ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.06) 28%,rgba(0,0,0,.5) 60%,rgba(0,0,0,.92));}
+  .qwcard .badge{position:absolute;top:10px;left:10px;z-index:3;font-family:'Inter',system-ui,sans-serif;font-size:9.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;padding:4px 8px;border-radius:99px;}
+  .qwcard .qi{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:12px 12px 13px;}
+  .qwcard .t{font-family:'Inter',system-ui,sans-serif;font-size:14.5px;font-weight:700;letter-spacing:-.2px;text-transform:none;color:#fff;line-height:1.2;}
+  .qwcard .m{font-size:11px;color:#bdbdbd;font-weight:500;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   /* coaches */
   .coachcard{position:relative;display:flex;align-items:center;gap:14px;background:linear-gradient(155deg,#1a1a1a 0%,#0e0e0e 100%);border:1px solid var(--line);border-radius:16px;padding:15px;margin-bottom:12px;cursor:pointer;transition:transform .12s;}
   .coachcard:active{transform:scale(.985);}
@@ -835,6 +840,7 @@
       <div id="categories" style="display:none;">
         <div class="hgroup"><div class="k">Workout Library</div><h2>WORKOUT LIBRARY</h2><p>Extra sessions by category, plus focused Target Sessions to bring up a weak station or quality.</p></div>
         <div class="catcard" onclick="switchTab('target')" style="margin-bottom:16px;">
+          <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.4"/><circle cx="12" cy="12" r="3.4"/><path d="M12 1.6v4M12 18.4v4M1.6 12h4M18.4 12h4"/></svg></div>
           <div class="body"><div class="ttl">Target Sessions</div><div class="cnt">Fix a weak station or quality</div></div>
           <div class="arr">›</div>
         </div>
@@ -842,6 +848,7 @@
         <div id="catlist"></div>
         <div class="sechead">Other Programs</div>
         <div class="catcard" onclick="switchTab('plans')" style="height:100px;">
+          <div class="ci"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.8" width="18" height="16.2" rx="2.4"/><path d="M3 9.6h18"/><path d="M8 2.6v4M16 2.6v4"/></svg></div>
           <div class="body"><div class="ttl" style="font-size:22px;">13-Week Plan</div><div class="cnt">Phase-based · additional program</div></div>
           <div class="arr">›</div>
         </div>
@@ -2664,11 +2671,31 @@ function showTargetGrid(){
   renderTargets();
   $('screen').scrollTop=0;
 }
+/* Line icons, one per TARGET key (plus two for the Explore entry rows).
+   24x24, stroke-only and currentColor, so they inherit size and colour from CSS
+   and stay legible at ~26px where a filled glyph would turn to mush. */
+const ICONS={
+  wallball:'<rect x="7.8" y="2.4" width="8.4" height="7" rx="1.3"/><circle cx="12" cy="17.8" r="3.8"/><path d="M12 13.6v-2.9m0 0-1.5 1.5M12 10.7l1.5 1.5"/>',
+  sledpush:'<path d="M3 15.8h12"/><path d="M5.8 15.8V6.6M12.2 15.8V6.6"/><path d="M3 19.4h13.4"/><path d="M17.6 11h4m-2-2 2 2-2 2"/>',
+  sledpull:'<rect x="2.4" y="11.4" width="8.2" height="6.6" rx="1.4"/><path d="M10.6 14.7c2.4 0 2.4-2.7 4.8-2.7s2.4 2.7 4.8 2.7"/><path d="M20.2 14.7h1.4"/>',
+  farmers:'<rect x="2.6" y="12" width="5.2" height="8" rx="1.3"/><rect x="16.2" y="12" width="5.2" height="8" rx="1.3"/><path d="M5.2 12V5.6M18.8 12V5.6"/><path d="M3.4 5.6h3.6M17 5.6h3.6"/>',
+  lunge:'<rect x="2.4" y="9" width="19.2" height="7.4" rx="3.7"/><path d="M8.4 9v7.4M15.6 9v7.4"/><path d="M10 9V7.2h4V9"/>',
+  ski:'<path d="M12 2.8v4.8"/><path d="M5.6 7.6h12.8"/><path d="M8.4 7.6v9.8M15.6 7.6v9.8"/><path d="M6.6 17.8h3.6M13.8 17.8h3.6"/>',
+  row:'<circle cx="6.4" cy="12" r="4.4"/><path d="M6.4 7.6v8.8M2 12h8.8"/><path d="M10.8 12h6.4"/><path d="M17.2 8.6v6.8"/>',
+  burpee:'<path d="M2.8 18c3.7-9.6 14.7-9.6 18.4 0"/><circle cx="2.8" cy="18" r="1.6"/><circle cx="21.2" cy="18" r="1.6"/>',
+  run:'<circle cx="13.4" cy="4" r="2.2"/><path d="M13.9 6.8 9.6 10.9l3.2 3.1-1.6 6.6"/><path d="M9.6 10.9 4.9 9.7"/><path d="M12.8 14 17.6 15.7"/>',
+  grip:'<path d="M8.2 13.4V6.6a1.6 1.6 0 0 1 3.2 0v4.2V5.4a1.6 1.6 0 0 1 3.2 0v5.4V6.8a1.6 1.6 0 0 1 3.2 0v6.4c0 4-2.7 7-6.4 7-2.1 0-3.6-.9-4.7-2.5l-2.3-3.3a1.7 1.7 0 0 1 2.6-2.1z"/>',
+  engine:'<path d="M2.4 12h4.2l2.6-6.6 4.2 13.2 2.6-6.6h6"/>',
+  target:'<circle cx="12" cy="12" r="8.4"/><circle cx="12" cy="12" r="3.4"/><path d="M12 1.6v4M12 18.4v4M1.6 12h4M18.4 12h4"/>',
+  library:'<rect x="3" y="4" width="7.6" height="7.6" rx="1.6"/><rect x="13.4" y="4" width="7.6" height="7.6" rx="1.6"/><rect x="3" y="14.4" width="7.6" height="5.6" rx="1.6"/><rect x="13.4" y="14.4" width="7.6" height="5.6" rx="1.6"/>',
+  plan:'<rect x="3" y="4.8" width="18" height="16.2" rx="2.4"/><path d="M3 9.6h18"/><path d="M8 2.6v4M16 2.6v4"/>'
+};
+const icon=n=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONS[n]||ICONS.engine}</svg>`;
 function renderTargets(){
   $('tgrid').innerHTML=TARGET_ORDER.map(k=>{
     const t=TARGETS[k];
     return `<div class="tcard" onclick="openTarget('${k}')">
-      <div class="gx">${t.icon}</div><div class="edge"></div>
+      <div class="ticon2">${icon(k)}</div><div class="edge"></div>
       <div class="tn">${t.name}</div>
       <div class="tf">${t.tag}</div>
       <div class="tc">${t.workouts.length} workouts</div>
@@ -4683,7 +4710,12 @@ function programCard(id,full){
     <div class="top" style="background-image:url('${p.img}')"></div>
     <div class="info"><div class="t">${p.title}</div><div class="m">${metaLead(id,st)}${p.weeks} wk · ${p.weeks*p.days} sessions</div></div></div>`;
 }
-function quickCard(i){ const q=QUICK_WORKOUTS[i]; return `<div class="qwcard" onclick="openQuickWorkout(${i})"><span class="badge free">Free</span><div class="t">${q.title}</div><div class="m">${q.tag} · ${totalMins(q)} min · RPE ${q.rpe}</div></div>`; }
+/* Artwork per quick-workout TAG, so a new QW inherits a photo automatically.
+   Every tag currently in QUICK_WORKOUTS has its own shot; the fallback only
+   matters if someone adds a tag that isn't listed here. */
+const QW_IMG={Recovery:'qw-recovery.jpg',Core:'qw-core.jpg',Strength:'qw-strength.jpg',Running:'qw-running.jpg',Engine:'qw-engine.jpg','Full Body':'qw-fullbody.jpg',Hybrid:'qw-hybrid.jpg',Conditioning:'qw-conditioning.jpg'};
+const qwImg=q=>QW_IMG[q.tag]||'qw-fullbody.jpg';
+function quickCard(i){ const q=QUICK_WORKOUTS[i]; return `<div class="qwcard" style="background-image:url('${qwImg(q)}')" onclick="openQuickWorkout(${i})"><div class="ov"></div><span class="badge free">Free</span><div class="qi"><div class="t">${q.title}</div><div class="m">${q.tag} · ${totalMins(q)} min</div></div></div>`; }
 function coachCard(id){ const c=COACHES[id]; const n=coachPrograms(id).length; const ini=c.name.replace('Coach ','')[0];
   const np=coachPrograms(id).filter(pid=>CATALOG[pid].access!=='free').length;
   return `<div class="coachcard" onclick="openCoach('${id}')"><div class="coachav">${ini}</div><div class="ci"><div class="n">${c.name}</div><div class="s">${c.specialty}</div><div class="x">${np} program${np!==1?'s':''}${c.athletes&&c.athletes!=='—'?' · '+c.athletes+' athletes':''}</div></div><div class="arr">›</div></div>`; }
@@ -4719,8 +4751,8 @@ function renderExplore(){
     h+=sec('Quick Workouts — FREE', hs(QUICK_WORKOUTS.map((_,i)=>quickCard(i)).join('')), "setFilter('quick')");
 
     h+=`<div class="exsec"><div class="eh"><h3>Fix a weakness</h3></div>
-      <div class="catcard" onclick="switchTab('target')" style="margin-bottom:10px;"><div class="body"><div class="ttl">Target Sessions</div><div class="cnt">Pick a station or quality and drill it</div></div><div class="arr">›</div></div>
-      <div class="catcard" onclick="switchTab('programs')"><div class="body"><div class="ttl">Workout Library</div><div class="cnt">Every free session, by category</div></div><div class="arr">›</div></div></div>`;
+      <div class="catcard" onclick="switchTab('target')" style="margin-bottom:10px;"><div class="ci">${icon('target')}</div><div class="body"><div class="ttl">Target Sessions</div><div class="cnt">Pick a station or quality and drill it</div></div><div class="arr">›</div></div>
+      <div class="catcard" onclick="switchTab('programs')"><div class="ci">${icon('library')}</div><div class="body"><div class="ttl">Workout Library</div><div class="cnt">Every free session, by category</div></div><div class="arr">›</div></div></div>`;
 
     h+=sec('Free Programs', ['hybrid-starter','foundation-starter'].map(id=>programCard(id,true)).join(''));
 
@@ -4743,7 +4775,7 @@ function renderExplore(){
   } else if(exFilter==='weakness'){
     const wk=weakestArea(); const b=scoreBreakdown();
     h+=sec('Your Weakest Area', `<div class="benchcard"><div class="bt">${AREA_LABEL[wk]} — ${b[wk]}/100</div><div class="bm">Train this to raise your Hybrid Score fastest.</div></div>
-      <div class="catcard" onclick="switchTab('target')" style="margin-top:10px;"><div class="body"><div class="ttl">Target Sessions</div><div class="cnt">Focused station & quality work</div></div><div class="arr">›</div></div>`);
+      <div class="catcard" onclick="switchTab('target')" style="margin-top:10px;"><div class="ci">${icon('target')}</div><div class="body"><div class="ttl">Target Sessions</div><div class="cnt">Focused station & quality work</div></div><div class="arr">›</div></div>`);
   } else if(exFilter==='coaches'){
     h+=coachesSoonHTML();
   }
@@ -4785,8 +4817,8 @@ function renderPrograms(){
   h+=sec('Build Specific Strengths', CATALOG_ORDER.filter(id=>CATALOG[id].access==='paid'&&CATALOG[id].tag!=='Race Prep'&&!ownsProgram(id)).map(id=>programCard(id,true)).join(''));
   h+=sec('Free Programs', CATALOG_ORDER.filter(id=>CATALOG[id].access==='free').map(id=>programCard(id,true)).join(''));
   h+=`<div class="exsec"><div class="eh"><h3>More Free Training</h3></div>
-    <div class="catcard" onclick="switchTab('programs')" style="margin-bottom:12px;"><div class="body"><div class="ttl">Workout Library</div><div class="cnt">Free sessions by category</div></div><div class="arr">›</div></div>
-    <div class="catcard" onclick="switchTab('target')"><div class="body"><div class="ttl">Target Sessions</div><div class="cnt">Fix a weak station or quality</div></div><div class="arr">›</div></div></div>`;
+    <div class="catcard" onclick="switchTab('programs')" style="margin-bottom:12px;"><div class="ci">${icon('library')}</div><div class="body"><div class="ttl">Workout Library</div><div class="cnt">Free sessions by category</div></div><div class="arr">›</div></div>
+    <div class="catcard" onclick="switchTab('target')"><div class="ci">${icon('target')}</div><div class="body"><div class="ttl">Target Sessions</div><div class="cnt">Fix a weak station or quality</div></div><div class="arr">›</div></div></div>`;
   $('store-body').innerHTML=h; $('screen').scrollTop=0;
   startHeroRotate(heroIds.length);
 }
