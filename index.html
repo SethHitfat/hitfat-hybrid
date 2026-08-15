@@ -3147,9 +3147,14 @@ function adjust(d){ if(mode!=='time')return; secs=Math.max(5,secs+d); $('p-clk')
       from a file:// path — host it on Netlify/Vercel/GitHub Pages,
       and add http://localhost:PORT for local testing).
    ============================================================ */
-const SUPA_URL = 'https://khuzvhtctjsnrrovjdye.supabase.co'; // Project URL
+const SUPA_URL = 'https://auth.hitfat.io'; // Project URL (custom domain, active since 2026-08-15)
+// Original endpoint, kept for reference / rollback:
+//   const SUPA_URL = 'https://khuzvhtctjsnrrovjdye.supabase.co';
+// The Google OAuth callback for this domain (https://auth.hitfat.io/auth/v1/callback)
+// is registered in Google Cloud Console alongside the original one.
 const SUPA_KEY = 'sb_publishable_6tKH033Hb74EV7QlKBCFFA_5K_Lsxgv'; // publishable (public) key — safe in client
-const SUPA_READY = !!(/^https:\/\/.+\.supabase\.co/.test(SUPA_URL) && SUPA_KEY && SUPA_KEY.indexOf('YOUR-')!==0 && window.supabase);
+// Accepts any https host, so a custom domain works as well as *.supabase.co
+const SUPA_READY = !!(/^https:\/\/[^\/\s]+\.[^\/\s]+/.test(SUPA_URL) && SUPA_KEY && SUPA_KEY.indexOf('YOUR-')!==0 && window.supabase);
 let sb = null;
 if(SUPA_READY){ try{ sb = window.supabase.createClient(SUPA_URL, SUPA_KEY); }catch(e){ console.error('Supabase init failed', e); } }
 
