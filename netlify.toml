@@ -34,6 +34,13 @@
   to = "/lab.html"
   status = 200
 
+# private analytics dashboard — gated by ADMIN_EMAILS inside the stats function,
+# and marked noindex in the page itself
+[[redirects]]
+  from = "/stats"
+  to = "/stats.html"
+  status = 200
+
 # the Google OAuth consent screen requires these to be reachable at clean URLs
 [[redirects]]
   from = "/privacy"
