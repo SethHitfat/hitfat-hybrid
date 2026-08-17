@@ -1938,7 +1938,7 @@ const CATEGORIES=[
           {name:"Zone 1A · Lalanne Plank",vimeo:V.plank,time:90},rest(30),{name:"Zone 1B · RowErg @RPE 7",vimeo:V.row_tech,time:90},rest(30),
           {name:"Zone 2A · Couplet",vimeo:"",time:90,list:["DB Bench Press x8","Pushups x8"]},rest(30),{name:"Zone 2B · Run @RPE 7",vimeo:V.run,time:90},rest(30),
           {name:"Zone 3A · KB Mixed Load Carry",vimeo:"",time:90},rest(30),{name:"Zone 3B · SkiErg @RPE 7",vimeo:V.ski_pace,time:90},rest(30),
-          {name:"Zone 4A · DB Deadlifts",vimeo:"",time:90},rest(30),{name:"Zone 4B · Wallballs",vimeo:V.wallball,time:90},rest(30),
+          {name:"Zone 4A · DB Deadlifts",vimeo:VN.db_deadlift,time:90},rest(30),{name:"Zone 4B · Wallballs",vimeo:V.wallball,time:90},rest(30),
           {name:"Zone 5A · Arms Only Sled Pull",vimeo:V.sled_pull,time:90},rest(30),{name:"Zone 5B · DB Step Ups",vimeo:V.stepup,time:90}
          ]},
         {phase:"Cooldown",mins:5,format:"Mobility",moves:[mv("Plank","plank",40),mv("Dead Bug","deadbug",40)]}
@@ -1951,7 +1951,7 @@ const CATEGORIES=[
          moves:[mv("Bird Dog","birddog",45),mv("Mountain Climber","mtnclimb",45),mv("Squat Pulse","squatpulse",45),mv("Side Lunge","sidelunge",45),mv("Push Up","pushup",45)]},
         {phase:"Main Workout",mins:40,format:"60s Work / 20s Rest × 10 Zones · 3 Circuit",rounds:3,
          moves:[
-          {name:"Zone 1 · DB Thrusters",vimeo:"",time:60},rest(20),
+          {name:"Zone 1 · DB Thrusters",vimeo:VN.squat_ohp,time:60},rest(20),
           {name:"Zone 2 · Run @RPE 9",vimeo:V.run,time:60},rest(20),
           {name:"Zone 3 · KB Mixed Load Carry",vimeo:"",time:60},rest(20),
           {name:"Zone 4 · Speed Skaters",vimeo:V.skater,time:60},rest(20),
@@ -1959,7 +1959,7 @@ const CATEGORIES=[
           {name:"Zone 6 · Arms Only Sled Pull",vimeo:V.sled_pull,time:60},rest(20),
           {name:"Zone 7 · Sandbag Reverse Lunge",vimeo:V.revlunge,time:60},rest(20),
           {name:"Zone 8 · High Side Plank Hip Raises",vimeo:V.sideplank,time:60},rest(20),
-          {name:"Zone 9 · DB Bent Over Rows",vimeo:"",time:60},rest(20),
+          {name:"Zone 9 · DB Bent Over Rows",vimeo:VN.db_backrow,time:60},rest(20),
           {name:"Zone 10 · Cross Body Climbers",vimeo:V.mtnclimb,time:60}
          ]},
         {phase:"Cooldown",mins:5,format:"Mobility",moves:[mv("Plank","plank",40),mv("Dead Bug","deadbug",40)]}
@@ -2028,7 +2028,7 @@ const CATEGORIES=[
          moves:[
           {name:"Zone 1A · DB Clusters",vimeo:"",time:60},rest(10),{name:"Zone 1B · Run @RPE 9",vimeo:V.run,time:60},rest(10),
           {name:"Zone 2A · Underhand Sled Push",vimeo:V.sled_push,time:60},rest(10),{name:"Zone 2B · KB Couplet",vimeo:"",time:60,list:["KB Halo x2","KB Goblet Squats x2"]},rest(10),
-          {name:"Zone 3A · DB Bench Press",vimeo:"",time:60},rest(10),{name:"Zone 3B · Ski Erg Sprint",vimeo:V.ski_sprint,time:60},rest(10),
+          {name:"Zone 3A · DB Bench Press",vimeo:VN.chestpress,time:60},rest(10),{name:"Zone 3B · Ski Erg Sprint",vimeo:V.ski_sprint,time:60},rest(10),
           {name:"Zone 4A · DB Tightrope Deadlifts",vimeo:"",time:60},rest(10),{name:"Zone 4B · Lateral Jump Burpees",vimeo:"",time:60},rest(10),
           {name:"Zone 5A · RowErg",vimeo:V.row_tech,time:60},rest(10),{name:"Zone 5B · Sandbag Zercher Lunge",vimeo:"",time:60}
          ]},
@@ -2085,14 +2085,14 @@ const CATEGORIES=[
          moves:[mv("Bird Dog","birddog",30),mv("Knee Push Up","kneepush",null,6),mv("Glute Bridge","glute",null,8),mv("Walking Lunge","wlunge",null,10)]},
         {phase:"TOTM Strength",mins:11,format:"11 min · 2 Zones · 5 Round each",rounds:5,note:"Complete 5 rounds before switching.",
          moves:[
-          {name:"Zone 1 · DB Deadlifts x8",vimeo:"",time:60},
+          {name:"Zone 1 · DB Deadlifts x8",vimeo:VN.db_deadlift,time:60},
           {name:"Zone 1 · Frogger Pushup (MAX)",vimeo:"",time:30},
-          {name:"Zone 2 · Russian KB Swings x20",vimeo:"",time:60},
+          {name:"Zone 2 · Russian KB Swings x20",vimeo:VN.kb_swing,time:60},
           {name:"Zone 2 · Hollow Body Rock (MAX)",vimeo:"",time:30}
          ]},
         {phase:"Posterior Strength",mins:28,format:"6 min Work / 60s Rest · 4 Round",rounds:4,note:"Zone 1 partner (sled push = timer). Zone 2 AMRAP triplet.",
          moves:[
-          {name:"Zone 1 · Overhand Sled Push 20m",vimeo:"",time:120,partner:"P1: Sled Push  •  P2: KB Hanging Bulgarian Split Squat x20"},
+          {name:"Zone 1 · Overhand Sled Push 20m",vimeo:VN.sledpush,time:120,partner:"P1: Sled Push  •  P2: KB Hanging Bulgarian Split Squat x20"},
           {name:"Zone 2 · AMRAP Triplet",vimeo:"",time:240,list:["Burpee to Plate x5","Barbell Plate Front Raise x5","BB Plate Ground To Overhead x10"]},
           rest(60)
          ]},
@@ -2106,7 +2106,7 @@ const CATEGORIES=[
         {phase:"Core & Leg Power (Partner)",mins:22,format:"09:00 Work / 02:00 Rest · 2 Round",rounds:2,note:"Partner workout.",
          moves:[
           {name:"Zone 1 · Partner",vimeo:"",time:540,partner:"P1: DB Discus x10 + DB Pull Throughs x10  •  P2: SkiErg @RPE 7"},
-          {name:"Zone 2 · Underhand Sled Push 20m",vimeo:"",time:60},
+          {name:"Zone 2 · Underhand Sled Push 20m",vimeo:VN.sledpush,time:60},
           rest(120)
          ]},
         {phase:"TO2M",mins:18,format:"9 Rounds · 2 Zones · 4 Round each",rounds:4,note:"2 min each.",
@@ -2147,8 +2147,8 @@ const CATEGORIES=[
          moves:[{name:"Partner Core Workout",vimeo:"",time:540,partner:"P1: Dual DB OH Walking Lunges 20m  •  P2: Spiderman Climber x20 + Hollow Body Jacks (MAX)"}]},
         {phase:"Zone Intervals",mins:30,format:"2 min Work / 30s Rest · 4 Zones",rounds:3,note:"Rotational. Zone 3 couplet.",
          moves:[
-          {name:"Zone 1 · RowErg @RPE 8",vimeo:"",time:120},rest(30),
-          {name:"Zone 2 · Underhand Sled Push (50% comp, rest 10s)",vimeo:"",time:120},rest(30),
+          {name:"Zone 1 · RowErg @RPE 8",vimeo:VN.rowerg,time:120},rest(30),
+          {name:"Zone 2 · Underhand Sled Push (50% comp, rest 10s)",vimeo:VN.sledpush,time:120},rest(30),
           {name:"Zone 3 · Couplet",vimeo:"",time:120,list:["DB Arnold Press x5","DB Supinated Bicep Curl x5"]},rest(30),
           {name:"Zone 4 · KB Single Leg Deadlift (MAX)",vimeo:"",time:120},rest(30)
          ]},
@@ -2233,7 +2233,7 @@ const CATEGORIES=[
         {phase:"Warm Up",mins:4,format:"AMRAP",moves:[mv("Bird Dog","birddog",30),mv("Knee Push Up","kneepush",null,8),mv("Mountain Climber","mtnclimb",null,8),mv("Walking Lunge","wlunge",null,8)]},
         {phase:"Cluster Sets",mins:12,format:"3 Zones",note:"Complete Zone 1 & 2 before Zone 3.",
          moves:[
-          {name:"Zone 1 · DB Deadlifts x8 (8 Rounds)",vimeo:"",time:60},rest(10),
+          {name:"Zone 1 · DB Deadlifts x8 (8 Rounds)",vimeo:VN.db_deadlift,time:60},rest(10),
           {name:"Zone 2 · DB Reverse Lunges x8 (8 Rounds)",vimeo:"",time:60},rest(10),
           {name:"Zone 3 · Couplet (remaining time)",vimeo:"",time:120,list:["Alt DB Snatches x10","DB 1 Arm Push Press x10"]}
          ]},
@@ -2325,7 +2325,7 @@ const CATEGORIES=[
               {name:"Zone 2 · Couplet",vimeo:"",time:120,list:["Broad Jump x4","Jumping Jack x20"]}, rest(30),
               {name:"Zone 3 · Rowing Pacing @ RPE 8",vimeo:V.row_pace,time:120}, rest(30),
               {name:"Zone 4 · Burpee",vimeo:V.burpee,time:120}, rest(30),
-              {name:"Zone 5 · DB Shoulder Press",vimeo:"",time:120}, rest(30),
+              {name:"Zone 5 · DB Shoulder Press",vimeo:VN.db_shoulderpress,time:120}, rest(30),
               {name:"Zone 6 · Ski Erg Pacing @ RPE 8",vimeo:V.ski_pace,time:120}, rest(30),
               {name:"Zone 7 · Wall Ball",vimeo:V.wallball,time:120}, rest(30),
               {name:"Zone 8 · Plank Shoulder Taps",vimeo:V.shouldertap,time:120}, rest(30)
