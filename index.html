@@ -1208,6 +1208,42 @@ const V = {
 };
 
 /* ============================================================
+   HYROX NIGHT — video library filmed for the HYROX Night sessions.
+   Kept in its own namespace instead of merged into V: this shoot has its own
+   Wall Ball, Burpee, Plank, Sled Pull, Farmer Carry and High Knee clips, and
+   folding them into V would silently replace the older ones everywhere they
+   are already used. Reference these as VN.<key> in HYROX Night sessions.
+   ============================================================ */
+const VN = {
+  // HYROX stations
+  bikeerg:"1218622512", skierg:"1218622524", rowerg:"1218622521",
+  sledpush:"1218622555", sledpull:"1218622518", sledpull_b:"1218622508",   // see note: both were labelled "Sled Pull"
+  wallball:"1218622522", farmer:"1218622548", sandbag_lunge:"1218622523",
+  bbj:"1218622564", boxjump:"1218622530", shuttlerun:"1218622525",
+  // kettlebell
+  kb_swing:"1218622531", kb_uprightrow:"1218622526", kb_sumosquat:"1218622557", kb_squatpulse:"1218622539",
+  // dumbbell — lower
+  db_squat:"1218622543", db_squatpulse:"1218622534", db_deadlift:"1218622547", db_rdl:"1218622566",
+  db_fwdlunge:"1218622550", db_sidelunge:"1218622569", splitlunge:"1218622544",
+  // dumbbell — upper
+  db_shoulderpress:"1218622538", db_alt_shoulderpress:"1218622538",        // see note: same clip given for both
+  db_frontraise:"1218622546", db_backrow:"1218622532", db_hammercurl:"1218622529", bicepcurl:"1218622540",
+  db_clean:"1218622554", db_cleanpress:"1218622567", db_cleanjerkpress:"1218622562",
+  squat_ohp:"1218622542", chestpress:"1218622561", chestfly:"1218622519", backfly:"1218622536",
+  butterfly:"1218622558", tricepext:"1218622570", alt_tricepext:"1218622565",
+  // bodyweight / conditioning
+  burpee:"1218622551", burpeepress:"1218622535", pushup_clap:"1218622549",
+  squatjump:"1218622541", forwardjump:"1218622568", starjump:"1218622533",
+  highknee:"1218622527", mtnclimb:"1218622520", skipping:"1218622553",
+  // core
+  plank:"1218622560", sideplank:"1218622517", plankrow:"1218622545",
+  russiantwist:"1218622528", situppress:"1218622563", cruncherpress:"1218622552",
+  // running drills
+  askip_drill:"1218622513", bskip_drill:"1218622515", bski_drill:"1218622556",  // see note: B-Skip vs B-Ski
+  abc_drill:"1218622559", kicking_drill:"1218622516", buttkick:"1218622514",    // see note: labelled only "Butt"
+};
+
+/* ============================================================
    ████  KATEGORI & WORKOUT  ████
    Setiap kategori: name, img, desc, workouts[]
    Setiap workout: title, rpe, img, equip[], desc, blocks[]
