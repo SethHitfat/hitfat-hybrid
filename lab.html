@@ -691,7 +691,11 @@ async function start(){
   paintRepPanel(); paintDepth(null); paintForm(null);
   setChip('speedA',null,v=>''); setChip('peakA',null,v=>'');
   armControlFade();
-  countdownIn();
+  try{ countdownIn(); }
+  catch(e){ armed=true; fatal('Countdown failed, starting anyway: '+(e.message||e)); }
+  // last-resort unlock: if the countdown never finishes, analysis would sit at
+  // GET READY forever and no rep could ever be counted
+  setTimeout(()=>{ if(running && !armed){ armed=true; } }, 6000);
   loop();
 }
 function resize(){ overlay.width=video.videoWidth||overlay.clientWidth; overlay.height=video.videoHeight||overlay.clientHeight; }
@@ -732,6 +736,25 @@ function pushTrail(p,torso){
 
 /* On-screen readout for debugging a set that will not count, since pose only runs
    on a real phone and there is no console to watch. Off unless the URL says ?diag=1. */
+/* A phone has no console. Without this, any thrown error just stops the app dead
+   with a normal-looking screen — which is exactly how this bug presented. */
+function fatal(msg){
+  let el=document.getElementById('fatalBox');
+  if(!el){
+    el=document.createElement('div'); el.id='fatalBox';
+    el.style.cssText='position:fixed;left:8px;right:8px;top:8px;z-index:100000;background:#B3261E;color:#fff;'
+      +'font:12px/1.45 ui-monospace,Menlo,monospace;padding:9px 11px;border-radius:8px;white-space:pre-wrap;';
+    document.body.appendChild(el);
+  }
+  el.textContent=String(msg).slice(0,300);
+}
+window.addEventListener('error', e=>{
+  fatal('JS error: '+(e.message||'?')+'\n'+((e.filename||'').split('/').pop())+':'+(e.lineno||'?'));
+});
+window.addEventListener('unhandledrejection', e=>{
+  const r=e.reason; fatal('Promise rejected: '+((r && (r.message||r))||'?'));
+});
+
 const DIAG = location.search.indexOf('diag=1') > -1;
 let diagEl=null, lastDepth=null, lastRaw=null, frames=0;
 function diag(){
