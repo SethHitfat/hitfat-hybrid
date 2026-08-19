@@ -650,20 +650,34 @@ async function initDetector(){
     catch(e2){ throw new Error('No graphics backend available for pose ('+(e2.message||e2)+')'); }
   }
   BACKEND = (tf.getBackend && tf.getBackend()) || '—';
-  try{
+
+  /* MoveNet is the default because it is the only engine proven to detect on a real
+     phone here. BlazePose was switched in on 14 Aug, but the tool had already been
+     dead since earlier that day (a write to a removed HUD element killed start()),
+     so BlazePose never actually ran in the field — its first real outing left the
+     app stuck on MOVE INTO FRAME. It stays available as ?engine=blazepose for
+     testing, and must earn the default back by working on a phone. */
+  const wantBlaze = location.search.indexOf('engine=blazepose') > -1;
+
+  async function moveNet(){
+    detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet,
+      { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING });
+    K=KP_MOVE; SKEL=SK_MOVE; MODEL='movenet';
+  }
+  async function blazePose(){
     detector = await poseDetection.createDetector(poseDetection.SupportedModels.BlazePose,
       { runtime:'tfjs', modelType:'full' });
     K=KP_BLAZE; SKEL=SK_BLAZE; MODEL='blazepose';
-  }catch(e){
-    MODEL_ERR='BlazePose: '+(e && (e.message||e));
-    console.warn('BlazePose unavailable, falling back to MoveNet', e);
-    try{
-      detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet,
-        { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING });
-      K=KP_MOVE; SKEL=SK_MOVE; MODEL='movenet';
-    }catch(e2){
-      throw new Error('Pose model could not load. '+MODEL_ERR+' · MoveNet: '+(e2 && (e2.message||e2)));
-    }
+  }
+
+  const first = wantBlaze ? blazePose : moveNet;
+  const second = wantBlaze ? moveNet : blazePose;
+  try{ await first(); }
+  catch(e){
+    MODEL_ERR='primary: '+(e && (e.message||e));
+    console.warn('primary pose engine unavailable, falling back', e);
+    try{ await second(); }
+    catch(e2){ throw new Error('Pose model could not load. '+MODEL_ERR+' · fallback: '+(e2 && (e2.message||e2))); }
   }
 }
 async function start(){
