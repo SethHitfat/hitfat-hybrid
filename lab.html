@@ -686,10 +686,12 @@ async function start(){
   $('loading').style.display='none';
   resize(); running=true; armed=false; trail=[]; reps=0;valid=0;grey=0;repData=[];state='up';standD=null;smoothKP=null;trail=[];
   const cfg=wbCfg(); REP_TARGET=cfg.t; setTs=null; endTs=null;
-  $('repN').textContent='0';$('validN').textContent='0';
   pxPerM=null; lastSpeed=null; lastArc=null;
-  paintRepPanel(); paintDepth(null); paintForm(null);
-  setChip('speedA',null,v=>''); setChip('peakA',null,v=>'');
+  try{
+    $('repN').textContent='0';
+    paintRepPanel(); paintDepth(null); paintForm(null);
+    setChip('speedA',null,v=>''); setChip('peakA',null,v=>'');
+  }catch(e){ fatal('HUD reset failed (pose still running): '+(e.message||e)); }
   armControlFade();
   try{ countdownIn(); }
   catch(e){ armed=true; fatal('Countdown failed, starting anyway: '+(e.message||e)); }
@@ -856,7 +858,6 @@ function analyze(kp0){
         ecc:(rep.tBottom-rep.tStart)/1000, con:(now-rep.tBottom)/1000 });
       if(setTs==null) setTs=now;                       // first rep starts the clock
       const justDone=repData[repData.length-1];
-      $('validN').textContent=valid;
       paintRepPanel(); paintDepth(justDone); paintForm(justDone);
       if(rel){ setChip('peakA', rel.height, v=>''); lastArc={x:rep.wrist[rep.wrist.length-1].x, y:rep.wrist[rep.wrist.length-1].y,
                                                             v:rel.speed, h:rel.height, t:now}; }
