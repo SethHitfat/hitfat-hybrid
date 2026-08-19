@@ -635,17 +635,30 @@ function leanFromVertical(hip,sh){              // 0° = perfectly upright torso
 }
 function mid(a,b){ return {x:(a.x+b.x)/2, y:(a.y+b.y)/2, score:Math.min(a.score,b.score)}; }
 
+let BACKEND='—', MODEL_ERR='';
 async function initDetector(){
-  await tf.setBackend('webgl'); await tf.ready();
+  // WebGL is not a given: some in-app browsers and low-power modes refuse it, and
+  // a failure here used to surface as a camera error, which sent debugging the wrong way.
+  try{ await tf.setBackend('webgl'); await tf.ready(); }
+  catch(e){
+    try{ await tf.setBackend('cpu'); await tf.ready(); }
+    catch(e2){ throw new Error('No graphics backend available for pose ('+(e2.message||e2)+')'); }
+  }
+  BACKEND = (tf.getBackend && tf.getBackend()) || '—';
   try{
     detector = await poseDetection.createDetector(poseDetection.SupportedModels.BlazePose,
       { runtime:'tfjs', modelType:'full' });
     K=KP_BLAZE; SKEL=SK_BLAZE; MODEL='blazepose';
   }catch(e){
+    MODEL_ERR='BlazePose: '+(e && (e.message||e));
     console.warn('BlazePose unavailable, falling back to MoveNet', e);
-    detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet,
-      { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING });
-    K=KP_MOVE; SKEL=SK_MOVE; MODEL='movenet';
+    try{
+      detector = await poseDetection.createDetector(poseDetection.SupportedModels.MoveNet,
+        { modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING });
+      K=KP_MOVE; SKEL=SK_MOVE; MODEL='movenet';
+    }catch(e2){
+      throw new Error('Pose model could not load. '+MODEL_ERR+' · MoveNet: '+(e2 && (e2.message||e2)));
+    }
   }
 }
 async function start(){
@@ -654,7 +667,16 @@ async function start(){
   try{
     stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:facing, width:{ideal:1280}, height:{ideal:720} }, audio:false });
     video.srcObject=stream; video.classList.toggle('rear', facing==='environment'); overlay.classList.toggle('rear', facing==='environment'); await video.play();
-    if(!detector) await initDetector();
+    video.addEventListener('loadedmetadata', resize);   // iOS reports 0x0 until metadata lands
+    if(!detector){
+      try{ await initDetector(); }
+      catch(me){                                        // a model failure is not a camera failure
+        $('live').classList.remove('on'); $('intro').style.display='block';
+        $('startBtn').disabled=false; $('startBtn').textContent='▶ Start Camera';
+        $('introErr').textContent = (me && me.message) || 'Pose model could not load.';
+        return;
+      }
+    }
   }catch(e){
     $('live').classList.remove('on'); $('intro').style.display='block';
     $('startBtn').disabled=false; $('startBtn').textContent='▶ Start Camera';
@@ -676,7 +698,14 @@ function resize(){ overlay.width=video.videoWidth||overlay.clientWidth; overlay.
 async function loop(){
   if(!running) return;
   let poses=[];
-  try{ poses = await detector.estimatePoses(video, {maxPoses:1, flipHorizontal:false}); }catch(e){}
+  try{ poses = await detector.estimatePoses(video, {maxPoses:1, flipHorizontal:false}); poseErrN=0; }
+  catch(e){
+    POSE_ERR = (e && (e.message||e))+'';
+    // one dropped frame is normal; a run of them means pose is genuinely broken,
+    // and silence there is what made this impossible to diagnose on a phone.
+    if(++poseErrN===30) setStatus('POSE FAILED','go');
+  }
+  lastPoses = poses.length;
   ctx.clearRect(0,0,overlay.width,overlay.height);
   paintClock();
   if(poses[0]){ analyze(poses[0].keypoints); }
@@ -693,7 +722,7 @@ function smooth(kp){
 
 
 /* ball path — the wrist midpoint traces where the ball travels */
-let trail=[];
+let trail=[], poseErrN=0, POSE_ERR='', lastPoses=0;
 function pushTrail(p,torso){
   if(!p || p.score<MINSCORE) return;
   trail.push({x:p.x,y:p.y,t:Date.now(),torso});
@@ -714,7 +743,11 @@ function diag(depth, rawDepth){
   }
   const f=(v)=> v==null ? '—' : (typeof v==='number' ? v.toFixed(2) : v);
   diagEl.textContent =
-    'state '+state+'   reps '+reps+'  ok '+valid+'\n'
+    'model '+MODEL+'  backend '+BACKEND+'  det '+(detector?'yes':'NO')+'\n'
+   +'video '+(video.videoWidth||0)+'x'+(video.videoHeight||0)+'  canvas '+overlay.width+'x'+overlay.height+'  poses '+lastPoses+'\n'
+   +(POSE_ERR ? 'ERR '+POSE_ERR.slice(0,60)+'\n' : '')
+   +(MODEL_ERR ? 'fallback '+MODEL_ERR.slice(0,60)+'\n' : '')
+   +'state '+state+'   reps '+reps+'  ok '+valid+'\n'
    +'depth '+f(depth)+'  raw '+f(rawDepth)+'  bottom '+f(bottom)+'\n'
    +'stand '+f(standD)+'  start@ '+f(standD==null?null:standD+START_DROP)+'\n'
    +'knee '+f(live.knee)+'  hip '+f(live.hip)+'  armed '+armed;
