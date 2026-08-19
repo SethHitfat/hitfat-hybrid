@@ -618,9 +618,14 @@ function releaseMetrics(samples, ankleY){
   return {speed:best.sp, height:apex};
 }
 function pt(kp,i){ return kp[i]; }
-function ok(p){ return p && p.score>MINSCORE; }
+/* Not every model reports a per-keypoint confidence. BlazePose returns all 33
+   landmarks every frame and may leave score undefined, and `undefined > 0.35` is
+   false — which marks every joint invisible and pins the app on MOVE INTO FRAME
+   while pose is actually working fine. Treat a missing score as visible. */
+function kscore(p){ return (p && typeof p.score === 'number') ? p.score : (p ? 1 : 0); }
+function ok(p){ return !!p && kscore(p) > MINSCORE; }
 function usableSide(kp){
-  const l=(pt(kp,K.LHIP).score+pt(kp,K.LKNEE).score)/2, r=(pt(kp,K.RHIP).score+pt(kp,K.RKNEE).score)/2;
+  const l=(kscore(pt(kp,K.LHIP))+kscore(pt(kp,K.LKNEE)))/2, r=(kscore(pt(kp,K.RHIP))+kscore(pt(kp,K.RKNEE)))/2;
   return r>l ? {hip:K.RHIP,knee:K.RKNEE,ank:K.RANK,sh:K.RSH,wr:K.RWR} : {hip:K.LHIP,knee:K.LKNEE,ank:K.LANK,sh:K.LSH,wr:K.LWR};
 }
 
@@ -731,7 +736,7 @@ function smooth(kp){
 /* ball path — the wrist midpoint traces where the ball travels */
 let trail=[], poseErrN=0, POSE_ERR='', lastPoses=0;
 function pushTrail(p,torso){
-  if(!p || p.score<MINSCORE) return;
+  if(!p || kscore(p)<MINSCORE) return;
   trail.push({x:p.x,y:p.y,t:Date.now(),torso});
   if(trail.length>70) trail.shift();
 }
@@ -758,7 +763,7 @@ window.addEventListener('unhandledrejection', e=>{
 });
 
 const DIAG = location.search.indexOf('diag=1') > -1;
-let diagEl=null, lastDepth=null, lastRaw=null, frames=0;
+let diagEl=null, lastDepth=null, lastRaw=null, frames=0, lastKP=null;
 function diag(){
   const depth=lastDepth, rawDepth=lastRaw;
   if(!DIAG) return;
@@ -775,6 +780,8 @@ function diag(){
    +'video '+(video.videoWidth||0)+'x'+(video.videoHeight||0)+'  canvas '+overlay.width+'x'+overlay.height+'  poses '+lastPoses+'\n'
    +(POSE_ERR ? 'ERR '+POSE_ERR.slice(0,60)+'\n' : '')
    +(MODEL_ERR ? 'fallback '+MODEL_ERR.slice(0,60)+'\n' : '')
+   +(lastKP ? 'kp '+lastKP.length+'  hipS '+f(kscore(lastKP[K.LHIP]))+'/'+f(kscore(lastKP[K.RHIP]))
+              +'  kneeS '+f(kscore(lastKP[K.LKNEE]))+'/'+f(kscore(lastKP[K.RKNEE]))+'\n' : 'kp none\n')
    +'state '+state+'   reps '+reps+'  ok '+valid+'\n'
    +'depth '+f(depth)+'  raw '+f(rawDepth)+'  bottom '+f(bottom)+'\n'
    +'stand '+f(standD)+'  start@ '+f(standD==null?null:standD+START_DROP)+'\n'
@@ -783,6 +790,7 @@ function diag(){
 
 /* every frame: measure, judge, draw */
 function analyze(kp0){
+  lastKP=kp0;
   const kp=smooth(kp0);
   const s=usableSide(kp), hip=pt(kp,s.hip), knee=pt(kp,s.knee), sh=pt(kp,s.sh), ank=pt(kp,s.ank);
   const torso=Math.max(30, Math.abs(hip.y-(ok(sh)?sh.y:hip.y-100)));
