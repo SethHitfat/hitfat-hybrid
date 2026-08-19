@@ -706,6 +706,7 @@ async function loop(){
     if(++poseErrN===30) setStatus('POSE FAILED','go');
   }
   lastPoses = poses.length;
+  frames++; diag();          // every frame, before any pose check can bail out
   ctx.clearRect(0,0,overlay.width,overlay.height);
   paintClock();
   if(poses[0]){ analyze(poses[0].keypoints); }
@@ -732,8 +733,9 @@ function pushTrail(p,torso){
 /* On-screen readout for debugging a set that will not count, since pose only runs
    on a real phone and there is no console to watch. Off unless the URL says ?diag=1. */
 const DIAG = location.search.indexOf('diag=1') > -1;
-let diagEl=null;
-function diag(depth, rawDepth){
+let diagEl=null, lastDepth=null, lastRaw=null, frames=0;
+function diag(){
+  const depth=lastDepth, rawDepth=lastRaw;
   if(!DIAG) return;
   if(!diagEl){
     diagEl=document.createElement('div');
@@ -743,14 +745,15 @@ function diag(depth, rawDepth){
   }
   const f=(v)=> v==null ? '—' : (typeof v==='number' ? v.toFixed(2) : v);
   diagEl.textContent =
-    'model '+MODEL+'  backend '+BACKEND+'  det '+(detector?'yes':'NO')+'\n'
+    'frames '+frames+'  armed '+armed+'  running '+running+'\n'
+   +'model '+MODEL+'  backend '+BACKEND+'  det '+(detector?'yes':'NO')+'\n'
    +'video '+(video.videoWidth||0)+'x'+(video.videoHeight||0)+'  canvas '+overlay.width+'x'+overlay.height+'  poses '+lastPoses+'\n'
    +(POSE_ERR ? 'ERR '+POSE_ERR.slice(0,60)+'\n' : '')
    +(MODEL_ERR ? 'fallback '+MODEL_ERR.slice(0,60)+'\n' : '')
    +'state '+state+'   reps '+reps+'  ok '+valid+'\n'
    +'depth '+f(depth)+'  raw '+f(rawDepth)+'  bottom '+f(bottom)+'\n'
    +'stand '+f(standD)+'  start@ '+f(standD==null?null:standD+START_DROP)+'\n'
-   +'knee '+f(live.knee)+'  hip '+f(live.hip)+'  armed '+armed;
+   +'knee '+f(live.knee)+'  hip '+f(live.hip);
 }
 
 /* every frame: measure, judge, draw */
@@ -783,7 +786,7 @@ function analyze(kp0){
   const rtorso=Math.max(30, Math.abs(rhip.y-(ok(rsh)?rsh.y:rhip.y-100)));
   const rawDepth=(ok(rhip)&&ok(rknee)) ? (rhip.y-rknee.y)/rtorso : depth;
   // gauge (map depth -0.4..0.4 → 0..100%)
-  diag(depth, rawDepth);
+  lastDepth=depth; lastRaw=rawDepth;
   const g=Math.max(0,Math.min(100,(depth+0.4)/0.8*100)); $('gfill').style.height=g+'%';
   $('gline').style.bottom=((VALID_TH+0.4)/0.8*100)+'%';
 
