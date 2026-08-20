@@ -766,6 +766,22 @@
   .cmtab{flex:none;background:var(--surface);border:1px solid var(--line);color:#fff;border-radius:99px;
          padding:8px 16px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;}
   .cmtab.on{background:var(--hitfat);color:var(--hitfat-ink);border-color:var(--hitfat);}
+  .cmphoto{flex:none;background:#141414;border:1px solid var(--line);color:var(--dim);border-radius:12px;
+           padding:11px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;}
+  .cmphoto:active{transform:scale(.98);}
+  .cmcrow{display:flex;gap:8px;align-items:stretch;}
+  .cmimgprev{position:relative;margin-bottom:9px;}
+  .cmimgprev img{width:100%;max-height:220px;object-fit:cover;border-radius:12px;display:block;}
+  .cmimgprev button{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;
+                    background:rgba(0,0,0,.72);border:1px solid rgba(255,255,255,.25);color:#fff;
+                    font-size:17px;line-height:1;cursor:pointer;padding:0;}
+  .cmimgwait{background:#141414;border:1px dashed var(--line);border-radius:12px;padding:22px;text-align:center;
+             color:var(--dim);font-size:13px;margin-bottom:9px;}
+  .cmcimg{width:100%;max-height:300px;object-fit:cover;border-radius:12px;margin-top:9px;display:block;cursor:zoom-in;}
+  .cmimg{cursor:zoom-in;max-height:420px;object-fit:cover;}
+  .cmzoom{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.94);display:flex;align-items:center;
+          justify-content:center;padding:18px;cursor:zoom-out;}
+  .cmzoom img{max-width:100%;max-height:100%;border-radius:10px;}
   .cmpost{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:11px;}
   .cmdots{position:absolute;top:10px;right:10px;background:none;border:0;color:var(--dim2);font-size:19px;
           line-height:1;padding:5px 9px;cursor:pointer;border-radius:8px;}
@@ -6104,7 +6120,7 @@ function cmPostCard(p){
         + (meta.length?'<div class="wm">'+cmEsc(meta.join(' · '))+'</div>':'')
         + (p.is_pb?'<div class="cmpb">🔥 New Personal Best</div>':'')+'</div>' : '')
     + (p.caption   ? '<div class="cmcap">'+cmEsc(p.caption)+'</div>' : '')
-    + (p.image_url ? '<img class="cmimg" src="'+cmEsc(p.image_url)+'" alt="" loading="lazy">' : '')
+    + (p.image_url ? '<img class="cmimg" src="'+cmEsc(p.image_url)+'" alt="" loading="lazy" onclick="event.stopPropagation();cmZoom(\''+cmEsc(p.image_url)+'\')">' : '')
     + '<div class="cmacts">'
       + '<button class="cmact" onclick="cmReact(\''+cmEsc(p.id)+'\',this)">🔥 <span>'+(p.reaction_count||0)+'</span></button>'
       + '<button class="cmact" onclick="openThread(\''+cmEsc(p.id)+'\')">💬 <span>'+(p.comment_count||0)+'</span></button>'
@@ -6213,7 +6229,9 @@ function cmCompose(){
     + '<p class="msub">Malaysia Hybrid Community</p>'
     + '<textarea id="cm-post" rows="5" maxlength="1000" placeholder="Ask a question, share a session, look for a training partner…" '
     + 'style="width:100%;background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:11px 13px;color:#fff;font:inherit;font-size:14px;resize:none;"></textarea>'
-    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Cancel</button>'
+    + '<div id="cm-pimg"></div>'
+    + '<button class="cmphoto" style="margin-top:10px;" onclick="cmPickImage(\'cm-pimg\')">📷 Add photo</button>'
+    + '<div class="modalrow"><button class="cancel" onclick="cmClearImage(\'cm-pimg\');closeModal()">Cancel</button>'
     + '<button class="confirm" onclick="cmSubmitPost()">Post</button></div>';
   $('modal').classList.add('on');
   setTimeout(()=>{ const i=$('cm-post'); if(i) i.focus(); },80);
@@ -6221,12 +6239,15 @@ function cmCompose(){
 
 async function cmSubmitPost(){
   const el = $('cm-post'); const text = el ? el.value.trim() : '';
-  if(!text){ closeModal(); return; }
+  const img = cmPendingImg;
+  if(!text && !img){ closeModal(); return; }
   closeModal();
+  cmPendingImg = null;
   await cmEnsureProfile();
   await cmLoadGroup();
   const d = await cmWrite(()=> sb.from('posts').insert({
-    user_id:HF.userId, post_type:'manual', caption:text, group_id: cmGrp ? cmGrp.id : null
+    user_id:HF.userId, post_type:'manual', caption:text || null, image_url: img ? img.url : null,
+    group_id: cmGrp ? cmGrp.id : null
   }));
   if(!d){ cmFail('Could not post right now.'); return; }
   if(cmGrp && !cmJoined){                      // posting into the group joins you
@@ -6247,7 +6268,7 @@ let cmReplyTo = null;          // comment id being replied to, null = top level
 
 async function cmComments(postId){
   const rows = await cmQ(()=> sb.from('comments')
-      .select('id,user_id,post_id,parent_comment_id,content,created_at,is_demo')
+      .select('id,user_id,post_id,parent_comment_id,content,image_url,created_at,is_demo')
       .eq('post_id',postId).is('deleted_at',null).order('created_at',{ascending:true}));
   if(!rows || !rows.length) return [];
   const ids = Array.from(new Set(rows.map(r=>r.user_id)));
@@ -6265,6 +6286,7 @@ function cmCommentRow(c, isReply){
       + '<div class="cmcw"><div class="n">'+cmEsc(cmName(a))+cmTag(a.is_official,a.is_demo)+'</div>'
       + '<div class="t">'+cmEsc(cmAgo(c.created_at))+'</div></div></div>'
     + '<div class="cmcb">'+cmEsc(c.content)+'</div>'
+    + (c.image_url ? '<img class="cmcimg" src="'+cmEsc(c.image_url)+'" alt="" loading="lazy" onclick="cmZoom(\''+cmEsc(c.image_url)+'\')">' : '')
     + '<div class="cmca">'
       + (isReply ? '' : '<button onclick="cmSetReply(\''+cmEsc(c.id)+'\',\''+cmEsc(cmName(a)).replace(/'/g,"&#39;")+'\')">Reply</button>')
       + '<button onclick="cmMenu(\'comment\',\''+cmEsc(c.id)+'\','+(mine?'true':'false')+')">\u22ef</button>'
@@ -6309,8 +6331,12 @@ async function openThread(postId){
     + '<div class="cmcbar">'
       + '<div id="cm-replybar" class="cmreply" style="display:none;"><span></span>'
         + '<button onclick="cmClearReply()">Cancel</button></div>'
+      + '<div id="cm-cimg"></div>'
       + '<textarea id="cm-cinput" rows="2" maxlength="600" placeholder="Write a comment…"></textarea>'
-      + '<button class="go" onclick="cmAddComment(\''+cmEsc(postId)+'\')">Post</button>'
+      + '<div class="cmcrow">'
+        + '<button class="cmphoto" onclick="cmPickImage(\'cm-cimg\')">📷 Photo</button>'
+        + '<button class="go" style="flex:1" onclick="cmAddComment(\''+cmEsc(postId)+'\')">Post</button>'
+      + '</div>'
     + '</div>';
   cmClearReply();
 }
@@ -6322,9 +6348,11 @@ function cmBackFromThread(){
 
 async function cmAddComment(postId){
   const i = $('cm-cinput'); const text = i ? i.value.trim() : '';
-  if(!text) return;
+  const img = cmPendingImg;
+  if(!text && !img) return;                       // a photo on its own is a valid comment
   if(i){ i.value=''; i.blur(); }
-  const row = { user_id:HF.userId, post_id:postId, content:text };
+  cmPendingImg = null;
+  const row = { user_id:HF.userId, post_id:postId, content: text || '📷', image_url: img ? img.url : null };
   if(cmReplyTo) row.parent_comment_id = cmReplyTo;   // one level only — replies do not nest further
   const d = await cmWrite(()=> sb.from('comments').insert(row));
   if(!d){ cmFail('Could not post that comment.'); return; }
@@ -6843,6 +6871,81 @@ function cmRestoreFind(){
   i.focus();
   const n = i.value.length;
   try{ i.setSelectionRange(n,n); }catch(e){}
+}
+
+/* ---------- photos on posts and comments ----------
+   Shrunk on the phone before it leaves: a modern camera file is 4-8MB, and
+   nobody scrolling a feed needs more than 1280px. Uploaded to Storage under a
+   folder named after the uploader, which is what the bucket policy checks. */
+let cmPendingImg = null;      // {url, path} chosen but not yet attached
+
+function cmShrink(file, maxPx){
+  return new Promise((resolve, reject)=>{
+    const r = new FileReader();
+    r.onerror = ()=> reject(new Error('Could not read that file'));
+    r.onload = e => {
+      const img = new Image();
+      img.onerror = ()=> reject(new Error('That file is not an image'));
+      img.onload = ()=>{
+        const M = maxPx || 1280;
+        let w = img.width, h = img.height;
+        if(w > M || h > M){ const k = M/Math.max(w,h); w = Math.round(w*k); h = Math.round(h*k); }
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        c.getContext('2d').drawImage(img, 0, 0, w, h);
+        c.toBlob(b => b ? resolve(b) : reject(new Error('Could not process that image')), 'image/jpeg', 0.82);
+      };
+      img.src = e.target.result;
+    };
+    r.readAsDataURL(file);
+  });
+}
+
+async function cmUpload(file){
+  if(!cmOn()) return null;
+  const blob = await cmShrink(file, 1280);
+  const path = HF.userId + '/' + Date.now() + '-' + Math.random().toString(36).slice(2,8) + '.jpg';
+  const { error } = await sb.storage.from('community').upload(path, blob, {contentType:'image/jpeg', upsert:false});
+  if(error){ cmLastErr = error.message||''; console.warn('[community upload]', error); return null; }
+  const { data } = sb.storage.from('community').getPublicUrl(path);
+  return { url: (data && data.publicUrl) || null, path };
+}
+
+/* One hidden input, reused — creating one per composer leaks them. */
+function cmPickImage(previewId){
+  let inp = $('cm-imgfile');
+  if(!inp){
+    inp = document.createElement('input');
+    inp.type='file'; inp.accept='image/*'; inp.id='cm-imgfile'; inp.style.display='none';
+    document.body.appendChild(inp);
+  }
+  inp.onchange = async () => {
+    const f = inp.files && inp.files[0];
+    inp.value = '';
+    if(!f) return;
+    const box = $(previewId);
+    if(box) box.innerHTML = '<div class="cmimgwait">Uploading…</div>';
+    const up = await cmUpload(f);
+    if(!up || !up.url){ if(box) box.innerHTML=''; cmFail('Could not upload that photo.'); return; }
+    cmPendingImg = up;
+    if(box) box.innerHTML = '<div class="cmimgprev"><img src="'+cmEsc(up.url)+'" alt="">'
+      + '<button onclick="cmClearImage(\''+previewId+'\')" aria-label="Remove photo">\u00d7</button></div>';
+  };
+  inp.click();
+}
+
+/* Feed photos are capped in height so one tall shot cannot own the screen —
+   tapping opens it properly. */
+function cmZoom(url){
+  const d = document.createElement('div');
+  d.className = 'cmzoom';
+  d.onclick = ()=> d.remove();
+  d.innerHTML = '<img src="'+cmEsc(url)+'" alt="">';
+  document.body.appendChild(d);
+}
+
+function cmClearImage(previewId){
+  cmPendingImg = null;
+  const box = $(previewId); if(box) box.innerHTML = '';
 }
 
 /* ---------- shell ----------
