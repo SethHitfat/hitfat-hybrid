@@ -7107,8 +7107,12 @@ async function cmBuildDiscover(){
     // clubs sit below the people and scroll sideways: six full-width rows of
     // empty clubs pushed the athletes off the screen entirely
     + ((clubs && clubs.length && !filtering)
-        ? '<div class="sechead" style="margin:24px 0 10px;">Clubs in Malaysia</div>'
+        ? '<div class="sechead" style="margin:24px 0 10px;">'
+            + (clubs.length > 1 ? 'Clubs in Malaysia' : 'Training club') + '</div>'
           + '<div class="hscroll">' + clubs.map(cmClubCard).join('') + '</div>'
+          + (clubs.length === 1
+              ? '<div class="cmnote">More clubs open as gyms around Malaysia join.</div>'
+              : '')
         : '')
     + (!filtering && rows.length
         ? '<div class="sechead" style="margin:24px 0 10px;">Training today</div>' + rows.map(cmPostCard).join('')
