@@ -81,6 +81,8 @@
      the icon there only — the pill's position is untouched, since that took a long
      run of fixes to get right on iOS. */
   @media (max-width:360px){
+    /* four equal chips leave ~46px of text room at 320px, which clips "Programs" */
+    .tchip{font-size:11.5px;padding:11px 4px;letter-spacing:-.2px;}
     .tab{font-size:9.5px;padding:7px 0 6px;letter-spacing:-.1px;}
     .tab svg{width:20px;height:20px;}
     .tab .ticon{width:26px;height:26px;}
@@ -279,14 +281,23 @@
   .hubrow .ht small{display:block;font-size:11.5px;color:var(--dim);margin-top:2px;}
   .hubrow .ha{flex:none;color:#5a5a5a;font-size:17px;}
   /* sticky, because a filter you have to scroll back up to reach is not a filter */
-  .tchips{position:sticky;top:0;z-index:20;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;
+  .tlabcard{display:flex;align-items:center;gap:12px;background:linear-gradient(150deg,#1d1a05 0%,#121212 62%);
+            border:1px solid rgba(255,224,0,.22);border-radius:16px;padding:14px;margin-bottom:14px;cursor:pointer;}
+  .tlabcard .tl{flex:none;width:38px;height:38px;border-radius:11px;background:rgba(255,224,0,.09);
+                display:flex;align-items:center;justify-content:center;color:var(--hitfat);}
+  .tlabcard .tl svg{width:21px;height:21px;}
+  .tlabcard .tt{flex:1;min-width:0;}
+  .tlabcard .tt b{display:block;font-size:15px;font-weight:700;letter-spacing:-.2px;}
+  .tlabcard .tt small{display:block;font-size:12px;color:var(--dim);margin-top:2px;line-height:1.35;}
+  .tlabcard .ta{flex:none;color:#5a5a5a;font-size:17px;}
+  .tchips{position:sticky;top:0;z-index:20;display:flex;gap:7px;overflow:hidden;scrollbar-width:none;
           -webkit-overflow-scrolling:touch;padding:10px 18px;flex:none;
           background:rgba(0,0,0,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
           border-bottom:1px solid var(--line);}
   .tchips::-webkit-scrollbar{display:none;}
-  .tchip{flex:none;background:var(--surface);border:1px solid var(--line);color:var(--dim);border-radius:99px;
-         padding:8px 16px;font:inherit;font-size:13.5px;font-weight:600;letter-spacing:-.1px;cursor:pointer;
-         white-space:nowrap;transition:background .12s,color .12s;}
+  .tchip{flex:1 1 0;min-width:0;background:var(--surface);border:1px solid var(--line);color:var(--dim);
+         border-radius:99px;padding:11px 10px;font:inherit;font-size:13.5px;font-weight:600;letter-spacing:-.1px;
+         cursor:pointer;white-space:nowrap;transition:background .12s,color .12s;}
   .tchip.on{background:#fff;color:#000;border-color:#fff;}
   .tchip:active{transform:scale(.97);}
   @media (prefers-reduced-motion:reduce){ .tchip{transition:none;} }
@@ -1097,6 +1108,7 @@
         <div id="target-grid">
           <button class="back" onclick="switchTab('programs')">← Workout Library</button>
           <div class="hgroup"><div class="k">Workout Library</div><h2>TARGET SESSIONS</h2><p>Pick the station or quality holding you back. Each target has focused, no-fluff sessions to bring it up to race standard.</p></div>
+          <div id="tlab"></div>
           <div class="tgrid" id="tgrid"></div>
         </div>
         <div id="target-list" style="display:none;">
@@ -2924,6 +2936,12 @@ const ICONS={
 };
 const icon=n=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONS[n]||ICONS.engine}</svg>`;
 function renderTargets(){
+  const lab=$('tlab');
+  if(lab) lab.innerHTML =
+      '<div class="tlabcard" onclick="location.href=\'lab.html\'">'
+    + '<div class="tl">'+icon('wallball')+'</div>'
+    + '<div class="tt"><b>Wall Ball Lab</b><small>Depth judged on your phone — see why you lose reps</small></div>'
+    + '<div class="ta">›</div></div>';
   $('tgrid').innerHTML=TARGET_ORDER.map(k=>{
     const t=TARGETS[k];
     return `<div class="tcard" onclick="openTarget('${k}')">
@@ -6671,13 +6689,16 @@ async function renderProgressCommunity(){
    it: the surface stays put and the content changes beneath. Chips are real
    navigation into the existing screens rather than a menu that has to be opened
    and dismissed every time. */
+/* Four, because six did not fit: two chips sat off-screen and scrolling the row
+   pushed the ACTIVE chip out of view, which is the one thing a filter bar must
+   never lose. Wall Ball Lab moved into Targets, where someone looking to fix
+   their wall ball would actually look, and Explore is reached from the screens
+   that already link to it rather than spending a slot on a catch-all. */
 const TRAIN_TABS = [
   {k:'store',    l:'Programs'},
   {k:'programs', l:'Library'},
   {k:'target',   l:'Targets'},
-  {k:'timer',    l:'Timer'},
-  {k:'lab',      l:'Wall Ball'},
-  {k:'explore',  l:'Explore'}
+  {k:'timer',    l:'Timer'}
 ];
 
 function paintTrainChips(tab){
