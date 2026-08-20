@@ -743,6 +743,19 @@
   .cmact{flex:1;background:#141414;border:1px solid var(--line);color:#cfcfcf;border-radius:10px;
          padding:8px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;}
   .cmact:active{transform:scale(.98);}
+  .cmtag{display:inline-block;margin-left:7px;font-size:9.5px;font-weight:700;letter-spacing:.5px;
+         text-transform:uppercase;color:var(--dim2);border:1px solid var(--line);border-radius:99px;
+         padding:2px 6px;vertical-align:middle;}
+  .cmtag.off{color:var(--hitfat-ink);background:var(--hitfat);border-color:var(--hitfat);}
+  .cmgroup{background:linear-gradient(150deg,#1d1a05 0%,#121212 60%);border:1px solid rgba(255,224,0,.22);
+           border-radius:18px;padding:18px;cursor:pointer;}
+  .cmgroup .gn,.cmghead .gn{font-size:19px;font-weight:800;letter-spacing:-.3px;}
+  .cmgroup .gd,.cmghead .gd{font-size:13.5px;color:var(--dim);margin-top:5px;line-height:1.45;}
+  .cmgroup .gm,.cmghead .gm{font-size:12px;color:var(--dim2);margin-top:8px;}
+  .cmghead{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;margin-bottom:12px;}
+  .cmcompose{width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;
+             padding:14px;color:var(--dim2);font:inherit;font-size:14px;cursor:pointer;}
+  .cmcompose:active{transform:scale(.995);}
   .cmrow{display:flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--line);
          border-radius:14px;padding:11px 13px;margin-bottom:9px;}
   .cmrl{display:flex;align-items:center;gap:11px;flex:1;min-width:0;cursor:pointer;}
@@ -5724,6 +5737,25 @@ let cmMe = null;             // my profile row
 let cmFollowingIds = null;   // Set of ids I follow
 let cmViewing = null;        // athlete id currently open
 let cmUp = false;            // do the community tables actually exist yet?
+let cmGrp = null;            // the one official group
+let cmJoined = false;        // am I a member of it
+let cmStats = null;          // real-only counts (demo excluded)
+
+/* Demo content exists so the space is not empty on day one. It is always ranked
+   BELOW real activity, always labelled in the interface, and never counted in
+   any production number. Flip this off once the community carries itself. */
+const ENABLE_COMMUNITY_DEMO_DATA = true;
+const OFFICIAL_GROUP = 'malaysia-hybrid';
+
+/* Real first, demo after — never interleaved, so a newcomer's own post always
+   sits above seeded discussion. */
+function cmRank(rows){
+  const list = (rows||[]).filter(r => ENABLE_COMMUNITY_DEMO_DATA || !r.is_demo);
+  return list.sort((a,b)=>{
+    if(!!a.is_demo !== !!b.is_demo) return a.is_demo ? 1 : -1;
+    return new Date(b.created_at) - new Date(a.created_at);
+  });
+}
 
 const cmOn    = () => !!(sb && HF.userId);
 const cmEsc   = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -5839,13 +5871,21 @@ function cmAvatar(p, size){
        + 'justify-content:center;font-weight:800;font-size:'+Math.round(s*0.42)+'px;color:var(--hitfat);">'+cmEsc(initial)+'</div>';
 }
 
+/* Seeded athletes are always labelled. They exist to show how the space works,
+   never to look like customers. */
+function cmTag(official, demo){
+  if(official) return '<span class="cmtag off">Official</span>';
+  if(demo)     return '<span class="cmtag">Demo Athlete</span>';
+  return '';
+}
+
 function cmPostCard(p){
   const meta = [];
   if(p.workout_mins) meta.push(p.workout_mins+' min');
   if(p.state) meta.push(p.state);
   return '<div class="cmpost">'
     + '<div class="cmhead" onclick="openAthlete(\''+cmEsc(p.user_id)+'\')">'+cmAvatar(p,38)
-      + '<div class="cmwho"><div class="n">'+cmEsc(cmName(p))+'</div>'
+      + '<div class="cmwho"><div class="n">'+cmEsc(cmName(p))+cmTag(p.author_is_official,p.author_is_demo)+'</div>'
       + '<div class="t">'+cmEsc(cmAgo(p.created_at))+(cmPlace(p)?' · '+cmEsc(cmPlace(p)):'')+'</div></div></div>'
     + (p.workout_title ? '<div class="cmwork"><div class="wt">'+cmEsc(p.workout_title)+'</div>'
         + (meta.length?'<div class="wm">'+cmEsc(meta.join(' · '))+'</div>':'')
@@ -5875,8 +5915,14 @@ async function cmReact(postId){
    either. Listing athletes is what makes the loop reachable on day one. */
 async function cmAthletes(){
   if(!cmOn()) return [];
-  const d = await cmQ(()=> sb.from('profiles').select('id,username,display_name,name,avatar_url,state,city,experience_level,primary_race_category,hyrox_pb').neq('id',HF.userId).limit(40));
-  return d || [];
+  const d = await cmQ(()=> sb.from('profiles')
+      .select('id,username,display_name,name,avatar_url,state,city,experience_level,primary_race_category,hyrox_pb,is_demo,is_official')
+      .neq('id',HF.userId).limit(60));
+  // real athletes first, then the official account, then demo
+  return (d||[]).sort((a,b)=>{
+    const rank = x => x.is_demo ? 2 : (x.is_official ? 1 : 0);
+    return rank(a)-rank(b);
+  });
 }
 
 function cmAthleteRow(a){
@@ -5884,10 +5930,83 @@ function cmAthleteRow(a){
   const sub = [cmPlace(a), a.primary_race_category, a.experience_level].filter(Boolean).join(' \u00b7 ');
   return '<div class="cmrow">'
     + '<div class="cmrl" onclick="openAthlete(\''+cmEsc(a.id)+'\')">'+cmAvatar(a,42)
-      + '<div class="cmrt"><div class="n">'+cmEsc(cmName(a))+'</div>'
+      + '<div class="cmrt"><div class="n">'+cmEsc(cmName(a))+cmTag(a.is_official,a.is_demo)+'</div>'
       + (sub?'<div class="t">'+cmEsc(sub)+'</div>':'')+'</div></div>'
     + '<button class="cmfollow'+(follows?' on':'')+'" onclick="event.stopPropagation();cmFollow(\''+cmEsc(a.id)+'\',this)">'
       + (follows?'Following':'Follow')+'</button></div>';
+}
+
+/* ---------- the one official group ---------- */
+async function cmLoadGroup(){
+  if(!cmOn()) return null;
+  if(!cmGrp){
+    const g = await cmQ(()=> sb.from('community_groups').select('id,name,slug,description').eq('slug',OFFICIAL_GROUP).maybeSingle());
+    cmGrp = g || null;
+  }
+  if(cmGrp){
+    const mine = await cmQ(()=> sb.from('community_group_members').select('id').eq('group_id',cmGrp.id).eq('user_id',HF.userId).maybeSingle());
+    cmJoined = !!mine;
+  }
+  // member count comes from the real-only view: demo members never inflate it
+  if(!cmStats) cmStats = await cmQ(()=> sb.from('community_stats').select('*').maybeSingle());
+  return cmGrp;
+}
+
+async function cmJoinGroup(btn){
+  if(!cmOn() || !cmGrp) return;
+  if(btn) btn.disabled = true;
+  if(cmJoined){
+    await cmQ(()=> sb.from('community_group_members').delete().eq('group_id',cmGrp.id).eq('user_id',HF.userId));
+    cmJoined = false;
+  }else{
+    await cmQ(()=> sb.from('community_group_members').insert({group_id:cmGrp.id, user_id:HF.userId}));
+    cmJoined = true;
+    track('community_join_group',{});
+  }
+  cmStats = null;
+  renderCommunity();
+}
+
+/* Composer — text now, with an image and workout attachment to follow. */
+function cmCompose(){
+  if(!cmOn()) return;
+  $('modal-sheet').innerHTML = '<h3>Share with the community</h3>'
+    + '<p class="msub">Malaysia Hybrid Community 🇲🇾</p>'
+    + '<textarea id="cm-post" rows="5" maxlength="1000" placeholder="Ask a question, share a session, look for a training partner…" '
+    + 'style="width:100%;background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:11px 13px;color:#fff;font:inherit;font-size:14px;resize:none;"></textarea>'
+    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Cancel</button>'
+    + '<button class="confirm" onclick="cmSubmitPost()">Post</button></div>';
+  $('modal').classList.add('on');
+  setTimeout(()=>{ const i=$('cm-post'); if(i) i.focus(); },80);
+}
+
+async function cmSubmitPost(){
+  const el = $('cm-post'); const text = el ? el.value.trim() : '';
+  if(!text){ closeModal(); return; }
+  closeModal();
+  await cmEnsureProfile();
+  await cmLoadGroup();
+  const d = await cmQ(()=> sb.from('posts').insert({
+    user_id:HF.userId, post_type:'manual', caption:text, group_id: cmGrp ? cmGrp.id : null
+  }));
+  if(d===null){ nfToast('Could not post right now.'); return; }
+  if(cmGrp && !cmJoined){                      // posting into the group joins you
+    await cmQ(()=> sb.from('community_group_members').insert({group_id:cmGrp.id, user_id:HF.userId}));
+    cmJoined = true;
+  }
+  track('community_post',{type:'manual'});
+  nfToast('Posted ✓');
+  renderCommunity();
+}
+
+function cmGroupCard(){
+  if(!cmGrp) return '';
+  const n = (cmStats && cmStats.real_group_members) || 0;
+  return '<div class="cmgroup" onclick="cmSetFeed(\'group\')">'
+    + '<div class="gn">'+cmEsc(cmGrp.name)+'</div>'
+    + '<div class="gd">'+cmEsc(cmGrp.description||'')+'</div>'
+    + '<div class="gm">'+n+' member'+(n===1?'':'s')+' · Malaysia\'s main hybrid discussion space</div>'
+    + '<button class="go sec" style="margin-top:12px;width:100%;" onclick="event.stopPropagation();cmSetFeed(\'group\')">Open Community</button></div>';
 }
 
 /* ---------- screens ---------- */
@@ -5895,44 +6014,72 @@ function cmShell(body){
   const tab = (k,l) => '<button class="cmtab'+(cmFeedMode===k?' on':'')+'" onclick="cmSetFeed(\''+k+'\')">'+l+'</button>';
   return '<div class="hgroup"><div class="k">HITFAT</div><h2>COMMUNITY</h2>'
        + '<p>The home of hybrid fitness in Malaysia — train, track, compete, connect.</p></div>'
-       + '<div class="cmtabs">'+tab('following','Following')+tab('discover','Discover')+'</div>'
+       + '<div class="cmtabs">'+tab('discover','Discover')+tab('following','Following')+tab('group','Group')+'</div>'
        + '<div id="cmfeed">'+body+'</div>';
 }
-function cmSetFeed(m){ cmFeedMode=m; renderCommunity(); }
+let cmSwitched = false;
+function cmSetFeed(m){ cmFeedMode=m; cmSwitched=true; renderCommunity(); }
 
 async function renderCommunity(){
   const el = $('community'); if(!el) return;
   cmViewing = null;
   if(!cmOn()){ el.innerHTML = cmShell('<div class="cmempty"><b>Sign in to join</b><p>Community uses your HITFAT account.</p></div>'); return; }
   el.innerHTML = cmShell('<div class="cmempty">Loading…</div>');
-  if(!cmMe) await cmEnsureProfile();
-  if(!cmFollowingIds) await cmLoadFollowing();
-
-  const posts = await cmFetchFeed(cmFeedMode);
-  let body;
   if(!cmUp) await cmProbe();
   if(!cmUp){ el.innerHTML = cmShell('<div class="cmempty"><b>Community is being set up</b>'
     + '<p>This is coming shortly — your training, programs and progress are unaffected.</p></div>'); return; }
-  if(cmFeedMode==='discover'){
-    const people = await cmAthletes();
-    el.innerHTML = cmShell(
-        (people.length
-          ? '<div class="sechead" style="margin:4px 0 10px;">Athletes on HITFAT</div>' + people.map(cmAthleteRow).join('')
-          : '<div class="cmempty"><b>No other athletes yet</b><p>You are early — invite your training partners.</p></div>')
-      + (posts.length
-          ? '<div class="sechead" style="margin:24px 0 10px;">Recent activity</div>' + posts.map(cmPostCard).join('')
-          : ''));
-    return;
-  }
-  if(posts.length) body = posts.map(cmPostCard).join('');
-  else if(cmFeedMode==='following')
-    body = '<div class="cmempty"><b>Build your hybrid circle</b>'
-         + '<p>Follow athletes from Malaysia and see their workouts, PBs and race journey here.</p>'
-         + '<button class="go" onclick="cmSetFeed(\'discover\')">Discover athletes</button></div>';
-  else
-    body = '<div class="cmempty"><b>Nothing here yet</b>'
-         + '<p>Be the first — finish a workout and share it to the community.</p></div>';
-  el.innerHTML = cmShell(body);
+  if(!cmMe) await cmEnsureProfile();
+  if(!cmFollowingIds) await cmLoadFollowing();
+  await cmLoadGroup();
+
+  // A newcomer follows nobody, so Following would open empty. Discover is the
+  // honest default until they have built a circle.
+  if(cmFeedMode==='following' && cmFollowingIds.size===0 && !cmSwitched) cmFeedMode='discover';
+
+  if(cmFeedMode==='group')     return cmRenderGroup(el);
+  if(cmFeedMode==='discover')  return cmRenderDiscover(el);
+  return cmRenderFollowing(el);
+}
+
+async function cmRenderGroup(el){
+  if(!cmGrp){ el.innerHTML = cmShell('<div class="cmempty"><b>Group unavailable</b><p>The community group has not been set up yet.</p></div>'); return; }
+  const n = (cmStats && cmStats.real_group_members) || 0;
+  const rows = cmRank(await cmQ(()=> sb.from('post_feed').select('*').eq('group_id',cmGrp.id).order('created_at',{ascending:false}).limit(30)) || []);
+  const pinned = rows.filter(r=>r.is_pinned);
+  const rest   = rows.filter(r=>!r.is_pinned);
+
+  el.innerHTML = cmShell(
+      '<div class="cmghead"><div class="gn">'+cmEsc(cmGrp.name)+'</div>'
+    + '<div class="gd">'+cmEsc(cmGrp.description||'')+'</div>'
+    + '<div class="gm">'+n+' member'+(n===1?'':'s')+'</div>'
+    + '<button class="go'+(cmJoined?' sec':'')+'" style="margin-top:12px;width:100%;" onclick="cmJoinGroup(this)">'
+    + (cmJoined?'Joined':'Join Community')+'</button></div>'
+    + '<button class="cmcompose" onclick="cmCompose()">Share with the community…</button>'
+    + (pinned.length ? '<div class="sechead" style="margin:18px 0 10px;">Pinned</div>' + pinned.map(cmPostCard).join('') : '')
+    + (rest.length
+        ? '<div class="sechead" style="margin:20px 0 10px;">Discussion</div>' + rest.map(cmPostCard).join('')
+        : '<div class="cmempty"><b>No discussion yet</b><p>Start it — ask a question or share a session.</p></div>'));
+}
+
+async function cmRenderDiscover(el){
+  const people = (await cmAthletes()).filter(a=> ENABLE_COMMUNITY_DEMO_DATA || !a.is_demo);
+  const posts  = cmRank(await cmFetchFeed('discover'));
+  el.innerHTML = cmShell(
+      cmGroupCard()
+    + (people.length ? '<div class="sechead" style="margin:20px 0 10px;">Athletes for you</div>' + people.slice(0,12).map(cmAthleteRow).join('') : '')
+    + (posts.length  ? '<div class="sechead" style="margin:22px 0 10px;">Training today</div>' + posts.map(cmPostCard).join('') : ''));
+}
+
+async function cmRenderFollowing(el){
+  const posts = cmRank(await cmFetchFeed('following'));
+  if(posts.length){ el.innerHTML = cmShell(posts.map(cmPostCard).join('')); return; }
+  // Never leave the rest of the screen blank: suggest people and the group.
+  const people = (await cmAthletes()).filter(a=> ENABLE_COMMUNITY_DEMO_DATA || !a.is_demo);
+  el.innerHTML = cmShell(
+      '<div class="cmempty"><b>Build your hybrid circle</b>'
+    + '<p>Follow Malaysian hybrid athletes and see their workouts, PBs and race journey here.</p></div>'
+    + (people.length ? '<div class="sechead" style="margin:20px 0 10px;">Suggested athletes</div>' + people.slice(0,8).map(cmAthleteRow).join('') : '')
+    + cmGroupCard());
 }
 
 async function openAthlete(id){
