@@ -51,6 +51,12 @@
   .hgroup .k,.ptar{color:var(--hitfat) !important;}
 
   .topbar{display:flex;align-items:center;justify-content:space-between;padding:calc(14px + env(safe-area-inset-top,0px)) 18px 2px;flex:none;border-bottom:none;}
+  .topav{flex:none;width:34px;height:34px;border-radius:50%;background:#161616 center/cover no-repeat;
+         border:1px solid var(--line);color:var(--hitfat);font:inherit;font-size:14px;font-weight:800;
+         cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;}
+  .topav.haspic{color:transparent;border-color:rgba(255,224,0,.35);}
+  .topav:active{transform:scale(.94);}
+  .topav:focus-visible{outline:2px solid var(--hitfat);outline-offset:2px;}
   .logo{font-family:'Inter',system-ui,sans-serif;font-weight:800;font-size:19px;letter-spacing:-.3px;line-height:1;color:#fff;white-space:nowrap;}
   .logo .y{color:var(--hyrox);}
   .logo small{display:block;font-size:8px;letter-spacing:4px;color:var(--dim);font-weight:500;margin-top:3px;}
@@ -968,7 +974,8 @@
        not clipped/anchored by .app's overflow:hidden (iOS Safari bug) -->
 
   <div class="screen" id="screen">
-    <div class="topbar"><div class="logo"><span>HITFAT</span> <span class="y">HYBRID</span></div></div>
+    <div class="topbar"><div class="logo"><span>HITFAT</span> <span class="y">HYBRID</span></div>
+      <button class="topav" id="topav" onclick="switchTab('profile')" aria-label="Your profile"></button></div>
       <!-- SKRIN HOME (personalized dashboard — dirender oleh renderHome()) -->
       <div id="home" class="pad" style="display:none;">
         <div id="home-install"></div>
@@ -1224,7 +1231,6 @@
     <button class="tab" id="tab-store" onclick="switchTab('store')"><img class="ticon" src="icon-programs.png" alt="" width="24" height="24">Programs</button>
     <button class="tab" id="tab-community" onclick="switchTab('community')"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20c0-3.4 3-5.4 6.5-5.4s6.5 2 6.5 5.4"/><circle cx="17.5" cy="7" r="2.6"/><path d="M17 13.4c2.9.3 4.5 2.2 4.5 4.9"/></svg>Community</button>
     <button class="tab" id="tab-progress" onclick="switchTab('progress')"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3M20 16V6"/></svg>Progress</button>
-    <button class="tab" id="tab-profile" onclick="switchTab('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Profile</button>
     <button class="tab" id="tab-pro" style="display:none" onclick="switchTab('pro')"></button>
     <button class="tab" id="tab-programs" style="display:none" onclick="switchTab('programs')"></button>
     <button class="tab" id="tab-target" style="display:none" onclick="switchTab('target')"></button>
@@ -4025,7 +4031,13 @@ function renderSessionDetail(data){
 function saveGeneralNote(){ const inp=$('prog-note-input'); if(inp){ HF.data.note=inp.value; HF.save(); nfToast('Note saved'); } }
 
 /* --- Name / greeting personalisation --- */
-function updateAvatar(){ try{ const a=$('topav'); if(a){ const n=((HF.data.prefs&&HF.data.prefs.name)||'').trim(); a.textContent=n?n[0].toUpperCase():'●'; a.style.color=n?'#FFE000':''; a.style.fontWeight=n?'800':''; } }catch(e){} }
+/* The topbar avatar is now the only way into Profile, so it has to render the
+   photo when there is one — an initial alone reads as decoration, not a door. */
+function updateAvatar(){ try{ const a=$('topav'); if(a){
+  const pic=(HF.data.prefs&&HF.data.prefs.avatar)||'';
+  a.style.backgroundImage = pic ? "url('"+pic+"')" : '';
+  a.classList.toggle('haspic', !!pic);
+  if(pic){ a.textContent=''; return; } const n=((HF.data.prefs&&HF.data.prefs.name)||'').trim(); a.textContent=n?n[0].toUpperCase():'●'; a.style.color=n?'#FFE000':''; a.style.fontWeight=n?'800':''; } }catch(e){} }
 function openNameEditor(){
   const cur=((HF.data.prefs&&HF.data.prefs.name)||'').replace(/"/g,'&quot;');
   $('modal-sheet').innerHTML=`<h3>Your Name</h3>
