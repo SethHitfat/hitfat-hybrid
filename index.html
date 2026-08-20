@@ -781,6 +781,27 @@
   @media (prefers-reduced-motion:reduce){ .cmskel{animation:none;} }
   .cmact.on{color:var(--hitfat);border-color:rgba(255,224,0,.35);background:rgba(255,224,0,.07);}
   #cmfeed{min-height:220px;}
+  .cmtabs{overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
+  .cmtabs::-webkit-scrollbar{display:none;}
+  .cmscopes{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;}
+  .cmscopes::-webkit-scrollbar{display:none;}
+  .cmscope{flex:none;background:var(--surface);border:1px solid var(--line);color:var(--dim);border-radius:99px;
+           padding:7px 14px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;}
+  .cmscope.on{color:#fff;border-color:rgba(255,224,0,.45);background:#181500;}
+  .cmlb{display:flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--line);
+        border-radius:14px;padding:10px 13px;margin-bottom:8px;cursor:pointer;}
+  .cmlb.me{border-color:var(--hitfat);background:#161200;}
+  .cmlb .rk{flex:none;width:30px;text-align:center;font-size:14px;font-weight:800;color:var(--dim);
+            font-variant-numeric:tabular-nums;}
+  .cmlb.me .rk{color:var(--hitfat);}
+  .lbn{flex:1;min-width:0;}
+  .lbn .n{font-size:14px;font-weight:700;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .lbn .t{font-size:11.5px;color:var(--dim2);margin-top:2px;}
+  .lbn .you{font-size:9.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--hitfat-ink);
+            background:var(--hitfat);border-radius:99px;padding:2px 6px;vertical-align:middle;}
+  .cmlb .sc{flex:none;font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.4px;}
+  .cmlbgap{text-align:center;color:var(--dim2);letter-spacing:3px;padding:4px 0 8px;}
+  .cmnote{color:var(--dim2);font-size:11.5px;margin-top:14px;line-height:1.5;}
   .cmtag{display:inline-block;margin-left:7px;font-size:9.5px;font-weight:700;letter-spacing:.5px;
          text-transform:uppercase;color:var(--dim2);border:1px solid var(--line);border-radius:99px;
          padding:2px 6px;vertical-align:middle;}
@@ -6379,6 +6400,82 @@ async function cmMarkAllRead(){
   openNotifs();
 }
 
+/* ---------- leaderboard ----------
+   Each athlete publishes their OWN score to profiles; RLS lets you write only
+   your own row, and everyone can read. Ranking is on performance only — never
+   posts or followers — and the view excludes demo and official accounts in SQL,
+   so a seeded athlete can never occupy a rank whatever the client asks for. */
+let cmScope = 'my';            // my | state | club
+
+async function cmPublishScore(){
+  if(!cmOn()) return;
+  try{
+    if(typeof hybridScore !== 'function') return;
+    const score = hybridScore();
+    if(score == null || isNaN(score)) return;
+    await cmWrite(()=> sb.from('profiles').update({
+      hybrid_score: Math.round(score),
+      total_sessions: (HF.totalDone && HF.totalDone()) || 0,
+      streak_days: (HF.streak && HF.streak()) || 0,
+      score_updated_at: new Date().toISOString()
+    }).eq('id', HF.userId));
+  }catch(e){ console.warn('[community] score publish', e); }
+}
+
+function cmRankRow(r, rankField, me){
+  const rank = r[rankField] || 0;
+  const medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':null;
+  return '<div class="cmlb'+(me?' me':'')+'" onclick="openAthlete(\''+cmEsc(r.id)+'\')">'
+    + '<div class="rk">'+(medal||rank)+'</div>'
+    + cmAvatar(r,36)
+    + '<div class="lbn"><div class="n">'+cmEsc(cmName(r))+(me?' <span class="you">You</span>':'')+'</div>'
+    + '<div class="t">'+cmEsc([cmPlace(r), (r.total_sessions||0)+' sessions'].filter(Boolean).join(' · '))+'</div></div>'
+    + '<div class="sc">'+(r.hybrid_score||0)+'</div></div>';
+}
+
+async function cmBuildBoard(){
+  const field = cmScope==='state' ? 'rank_state' : (cmScope==='club' ? 'rank_club' : 'rank_my');
+  const mine  = cmMe || {};
+  let q = sb.from('leaderboard').select('*').order('hybrid_score',{ascending:false}).limit(50);
+  if(cmScope==='state'){
+    if(!mine.state) return cmScopeBar()
+      + '<div class="cmempty"><b>Set your state first</b><p>Add it in Profile → Athlete Profile, then you can see how you rank in your own state.</p>'
+      + '<button class="go" onclick="openAthleteEditor()">Edit athlete profile</button></div>';
+    q = q.eq('state', mine.state);
+  }
+  if(cmScope==='club'){
+    if(!mine.club_id) return cmScopeBar()
+      + '<div class="cmempty"><b>You are not in a club yet</b><p>Club rankings open once you belong to one.</p></div>';
+    q = q.eq('club_id', mine.club_id);
+  }
+  const rows = await cmQ(()=> q) || [];
+
+  if(!rows.length) return cmScopeBar()
+    + '<div class="cmempty"><b>No rankings yet</b>'
+    + '<p>Rankings count real athletes only — seeded demo profiles are excluded on purpose. '
+    + 'Complete a few sessions and yours will appear here.</p></div>';
+
+  const inList = rows.some(r=> r.id===HF.userId);
+  let tail = '';
+  if(!inList){
+    // outside the top 50 — still show where they stand rather than nothing
+    const meRow = await cmQ(()=> sb.from('leaderboard').select('*').eq('id',HF.userId).maybeSingle());
+    if(meRow) tail = '<div class="cmlbgap">···</div>' + cmRankRow(meRow, field, true);
+  }
+  const title = cmScope==='state' ? cmEsc(mine.state)+' ranking'
+              : cmScope==='club'  ? 'Club ranking' : 'Malaysia ranking';
+  return cmScopeBar()
+    + '<div class="sechead" style="margin:16px 0 10px;">'+title+'</div>'
+    + rows.map(r=> cmRankRow(r, field, r.id===HF.userId)).join('') + tail
+    + '<div class="cmnote">Ranked on Hybrid Score, then sessions completed. Real athletes only.</div>';
+}
+
+function cmScopeBar(){
+  const b = (k,l)=> '<button class="cmscope'+(cmScope===k?' on':'')+'" onclick="cmSetScope(\''+k+'\')">'+l+'</button>';
+  return '<div class="cmscopes">'+b('my','Malaysia')+b('state','My state')+b('club','My club')+'</div>';
+}
+function cmSetScope(k){ cmScope=k; cmCache.board=null; renderCommunity(); }
+
 /* ---------- shell ----------
    The shell (title + tabs) is mounted ONCE. Only the feed body is swapped, so
    switching tabs no longer tears down and rebuilds the header — which is what
@@ -6388,7 +6485,7 @@ function cmShell(body){
   return '<div class="cmtop"><div class="hgroup" style="flex:1;"><div class="k">HITFAT</div><h2>COMMUNITY</h2>'
        + '<p>The home of hybrid fitness in Malaysia — train, track, compete, connect.</p></div>'
        + '<button class="cmbell" id="cm-bell" onclick="openNotifs()">\ud83d\udd14</button></div>'
-       + '<div class="cmtabs">'+tab('discover','Discover')+tab('following','Following')+tab('group','Group')+'</div>'
+       + '<div class="cmtabs">'+tab('discover','Discover')+tab('following','Following')+tab('group','Group')+tab('board','Ranking')+'</div>'
        + '<div id="cmfeed">'+(body||'')+'</div>';
 }
 
@@ -6397,7 +6494,7 @@ let cmSwitched = false;
 
 function cmMount(el){
   if(el.getAttribute('data-cm') !== '1'){ el.innerHTML = cmShell(''); el.setAttribute('data-cm','1'); }
-  ['discover','following','group'].forEach(k=>{
+  ['discover','following','group','board'].forEach(k=>{
     const b = $('cmtab-'+k); if(b) b.classList.toggle('on', cmFeedMode===k);
   });
 }
@@ -6441,14 +6538,16 @@ async function renderCommunity(){
   ]);
   if(!cmFollowingIds) cmFollowingIds = new Set();   // never leave this undefined
   cmLoadUnread();                                   // badge, fire and forget
+  cmPublishScore();                                 // keep my rank current
 
   if(cmFeedMode==='following' && cmFollowingIds.size===0 && !cmSwitched) cmFeedMode='discover';
   cmMount(el);
 
   let html;
   try{
-    if(cmFeedMode==='group')          html = await cmBuildGroup();
-    else if(cmFeedMode==='discover')  html = await cmBuildDiscover();
+    if(cmFeedMode==='board')          html = await cmBuildBoard();
+    else if(cmFeedMode==='group')   html = await cmBuildGroup();
+    else if(cmFeedMode==='discover') html = await cmBuildDiscover();
     else                              html = await cmBuildFollowing();
   }catch(e){
     // A skeleton that never resolves tells the athlete nothing and tells me less.
