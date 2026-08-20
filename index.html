@@ -743,6 +743,21 @@
   .cmact{flex:1;background:#141414;border:1px solid var(--line);color:#cfcfcf;border-radius:10px;
          padding:8px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;}
   .cmact:active{transform:scale(.98);}
+  .cmc{border-left:2px solid var(--line);padding:0 0 0 12px;margin-bottom:14px;}
+  .cmc.reply{margin-left:22px;border-left-color:#1b1b1b;}
+  .cmch{display:flex;align-items:center;gap:9px;cursor:pointer;}
+  .cmcw .n{font-size:13.5px;font-weight:700;letter-spacing:-.15px;}
+  .cmcw .t{font-size:11px;color:var(--dim2);margin-top:1px;}
+  .cmcb{font-size:14px;color:#e6e6e6;line-height:1.5;margin-top:7px;}
+  .cmca{display:flex;gap:14px;margin-top:7px;}
+  .cmca button{background:none;border:0;color:var(--dim2);font:inherit;font-size:12px;font-weight:600;cursor:pointer;padding:2px 0;}
+  .cmca button:hover{color:var(--dim);}
+  .cmcbar{position:sticky;bottom:0;background:var(--bg);padding:12px 0 4px;margin-top:18px;
+          border-top:1px solid var(--line);display:flex;flex-direction:column;gap:9px;}
+  .cmcbar textarea{width:100%;background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:11px 13px;
+                   color:#fff;font:inherit;font-size:14px;resize:none;}
+  .cmreply{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12.5px;color:var(--dim);}
+  .cmreply button{background:none;border:0;color:var(--hitfat);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;}
   .cmskel{height:96px;border-radius:16px;margin-bottom:11px;background:linear-gradient(100deg,#101010 30%,#181818 50%,#101010 70%);
           background-size:220% 100%;animation:cmsh 1.1s linear infinite;}
   @keyframes cmsh{from{background-position:180% 0}to{background-position:-40% 0}}
@@ -1044,6 +1059,7 @@
       <!-- COMMUNITY (added layer — existing panels untouched) -->
       <div id="community" style="display:none;"></div>
       <div id="athlete" style="display:none;"></div>
+      <div id="thread" style="display:none;"></div>
 
       <div id="progress" style="display:none;">
         <div class="hgroup"><div class="k">Your Training</div><h2>PROGRESS</h2><p>Your Hybrid Score, streak and history — all saved to your account.</p></div>
@@ -2455,7 +2471,7 @@ function showCategories(){ $('list').style.display='none'; $('detail').style.dis
 /* ============ TAB NAVIGATION ============ */
 /* every full-screen panel — openers must hide them ALL, otherwise the panel they came
    from stays visible underneath and the new screen looks like it never opened. */
-const PANELS=['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail','store','tsess','tmhome','community','athlete'];
+const PANELS=['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail','store','tsess','tmhome','community','athlete','thread'];
 function hidePanels(){ PANELS.forEach(id=>{ const e=$(id); if(e) e.style.display='none'; }); }
 function switchTab(tab){
   track('tab',{tab});
@@ -5760,6 +5776,7 @@ let cmFeedMode = 'following';
 let cmMe = null;             // my profile row
 let cmFollowingIds = null;   // Set of ids I follow
 let cmViewing = null;        // athlete id currently open
+let cmThreadId = null;       // post whose comments are open
 let cmUp = false;            // do the community tables actually exist yet?
 let cmGrp = null;            // the one official group
 let cmJoined = false;        // am I a member of it
@@ -5942,7 +5959,7 @@ function cmPostCard(p){
     + (p.image_url ? '<img class="cmimg" src="'+cmEsc(p.image_url)+'" alt="" loading="lazy">' : '')
     + '<div class="cmacts">'
       + '<button class="cmact" onclick="cmReact(\''+cmEsc(p.id)+'\',this)">🔥 <span>'+(p.reaction_count||0)+'</span></button>'
-      + '<button class="cmact" onclick="nfToast(\'Comments arrive in the next update.\')">💬 <span>'+(p.comment_count||0)+'</span></button>'
+      + '<button class="cmact" onclick="openThread(\''+cmEsc(p.id)+'\')">💬 <span>'+(p.comment_count||0)+'</span></button>'
     + '</div></div>';
 }
 
@@ -6062,6 +6079,116 @@ async function cmSubmitPost(){
   nfToast('Posted ✓');
   cmCache.group = null; cmCache.discover = null; cmCache.following = null;
   renderCommunity();
+}
+
+/* ---------- comments ----------
+   The FK from comments to auth.users was dropped so demo athletes could exist
+   without signups, which also means PostgREST cannot embed the author. Fetch the
+   authors in one extra query and join them here. */
+let cmReplyTo = null;          // comment id being replied to, null = top level
+
+async function cmComments(postId){
+  const rows = await cmQ(()=> sb.from('comments')
+      .select('id,user_id,post_id,parent_comment_id,content,created_at,is_demo')
+      .eq('post_id',postId).is('deleted_at',null).order('created_at',{ascending:true}));
+  if(!rows || !rows.length) return [];
+  const ids = Array.from(new Set(rows.map(r=>r.user_id)));
+  const profs = await cmQ(()=> sb.from('profiles')
+      .select('id,name,display_name,username,avatar_url,state,city,is_demo,is_official').in('id', ids));
+  const by = {}; (profs||[]).forEach(x=> by[x.id]=x);
+  return rows.map(r=> Object.assign({}, r, { author: by[r.user_id] || null }));
+}
+
+function cmCommentRow(c, isReply){
+  const a = c.author || {};
+  const mine = c.user_id === HF.userId;
+  return '<div class="cmc'+(isReply?' reply':'')+'">'
+    + '<div class="cmch" onclick="openAthlete(\''+cmEsc(c.user_id)+'\')">'+cmAvatar(a,30)
+      + '<div class="cmcw"><div class="n">'+cmEsc(cmName(a))+cmTag(a.is_official,a.is_demo)+'</div>'
+      + '<div class="t">'+cmEsc(cmAgo(c.created_at))+'</div></div></div>'
+    + '<div class="cmcb">'+cmEsc(c.content)+'</div>'
+    + '<div class="cmca">'
+      + (isReply ? '' : '<button onclick="cmSetReply(\''+cmEsc(c.id)+'\',\''+cmEsc(cmName(a)).replace(/'/g,"&#39;")+'\')">Reply</button>')
+      + (mine ? '<button onclick="cmDeleteComment(\''+cmEsc(c.id)+'\')">Delete</button>' : '')
+    + '</div></div>';
+}
+
+function cmSetReply(id, who){
+  cmReplyTo = id;
+  const bar = $('cm-replybar');
+  if(bar){ bar.style.display='flex'; bar.querySelector('span').textContent = 'Replying to '+who; }
+  const i = $('cm-cinput'); if(i) i.focus();
+}
+function cmClearReply(){
+  cmReplyTo = null;
+  const bar = $('cm-replybar'); if(bar) bar.style.display='none';
+}
+
+async function openThread(postId){
+  if(!cmOn()) return;
+  cmThreadId = postId;
+  hidePanels();
+  const el = $('thread'); if(!el) return;
+  el.style.display='block'; $('tabs').style.display='flex'; $('screen').scrollTop=0;
+  const back = '<button class="back" onclick="cmBackFromThread()">← Back</button>';
+  el.innerHTML = back + cmSkeleton(2);
+
+  const [post, comments] = await Promise.all([
+    cmQ(()=> sb.from('post_feed').select('*').eq('id',postId).maybeSingle()),
+    cmComments(postId)
+  ]);
+  if(!post){ el.innerHTML = back + '<div class="cmempty"><b>Post unavailable</b><p>It may have been removed.</p></div>'; return; }
+
+  const tops = comments.filter(c=>!c.parent_comment_id);
+  const kids = c => comments.filter(x=> x.parent_comment_id === c.id);
+
+  el.innerHTML = back
+    + cmPostCard(post)
+    + '<div class="sechead" style="margin:18px 0 10px;">'+comments.length+' comment'+(comments.length===1?'':'s')+'</div>'
+    + (tops.length
+        ? tops.map(c=> cmCommentRow(c,false) + kids(c).map(k=> cmCommentRow(k,true)).join('')).join('')
+        : '<div class="cmempty"><b>No comments yet</b><p>Be the first to reply.</p></div>')
+    + '<div class="cmcbar">'
+      + '<div id="cm-replybar" class="cmreply" style="display:none;"><span></span>'
+        + '<button onclick="cmClearReply()">Cancel</button></div>'
+      + '<textarea id="cm-cinput" rows="2" maxlength="600" placeholder="Write a comment…"></textarea>'
+      + '<button class="go" onclick="cmAddComment(\''+cmEsc(postId)+'\')">Post</button>'
+    + '</div>';
+  cmClearReply();
+}
+
+function cmBackFromThread(){
+  cmThreadId = null;
+  if(cmViewing) openAthlete(cmViewing); else switchTab('community');
+}
+
+async function cmAddComment(postId){
+  const i = $('cm-cinput'); const text = i ? i.value.trim() : '';
+  if(!text) return;
+  if(i){ i.value=''; i.blur(); }
+  const row = { user_id:HF.userId, post_id:postId, content:text };
+  if(cmReplyTo) row.parent_comment_id = cmReplyTo;   // one level only — replies do not nest further
+  const d = await cmQ(()=> sb.from('comments').insert(row));
+  if(d===null){ nfToast('Could not post that comment.'); return; }
+  track('community_comment',{reply:!!cmReplyTo});
+
+  // tell the author, unless they are commenting on their own post
+  const post = await cmQ(()=> sb.from('post_feed').select('user_id').eq('id',postId).maybeSingle());
+  if(post && post.user_id && post.user_id !== HF.userId){
+    cmQ(()=> sb.from('notifications').insert({ user_id:post.user_id, actor_id:HF.userId,
+      type: cmReplyTo ? 'reply' : 'comment', entity_type:'post', entity_id:postId }));
+  }
+  cmCache.discover=null; cmCache.following=null; cmCache.group=null;   // counts changed
+  cmClearReply();
+  openThread(postId);
+}
+
+async function cmDeleteComment(id){
+  if(!cmOn()) return;
+  const d = await cmQ(()=> sb.from('comments').delete().eq('id',id).eq('user_id',HF.userId));
+  if(d===null){ nfToast('Could not delete that comment.'); return; }
+  cmCache.discover=null; cmCache.following=null; cmCache.group=null;
+  if(cmThreadId) openThread(cmThreadId);
 }
 
 /* ---------- shell ----------
