@@ -4240,17 +4240,23 @@ async function phoneVerify(){
   closeModal();
 }
 
-/* ---- keep a readable profile row (name · email · phone) beside the JSON blob ---- */
+/* ---- keep a readable profile row beside the JSON blob ----
+   email and updated_at are deliberately NOT written any more. email is revoked
+   from browser roles now that profiles is public to signed-in athletes — the
+   address lives in auth.users where it belongs — and updated_at is maintained by
+   a trigger. Writing either would simply be refused.
+   Update first, insert second: `id` is not an updatable column, so an upsert
+   that writes the conflict key into its SET clause would be rejected. */
 async function syncProfile(session){
   if(!sb || !session || !session.user) return;
   try{
     const u=session.user, pf=HF.data.prefs||{};
-    await sb.from('profiles').upsert({
-      id: u.id,
-      email: u.email || null,
-      name: (pf.name||'').trim() || (u.user_metadata && (u.user_metadata.full_name||u.user_metadata.name)) || null,
-      updated_at: new Date().toISOString()
-    }, { onConflict:'id' });
+    const name = (pf.name||'').trim()
+              || (u.user_metadata && (u.user_metadata.full_name||u.user_metadata.name))
+              || null;
+    if(!name) return;
+    const r = await sb.from('profiles').update({name}).eq('id',u.id).select('id').maybeSingle();
+    if(!r || !r.data) await sb.from('profiles').insert({id:u.id, name});
   }catch(e){ console.warn('profile sync skipped', e && e.message); }
 }
 async function authSubmit(){
@@ -5735,15 +5741,25 @@ async function cmProbe(){
   return cmUp;
 }
 
+/* Update first, insert only if there is no row yet.
+   Column privileges are now granted individually, and `id` is deliberately not
+   updatable — an upsert that writes the conflict column into its SET clause would
+   be refused. Splitting the two paths keeps this independent of that detail. */
+async function cmSaveProfile(patch){
+  const d = await cmQ(()=> sb.from('profiles').update(patch).eq('id',HF.userId).select('id,username,display_name,name,avatar_url,bio,state,city,country,club_id,experience_level,primary_race_category,upcoming_race_name,hyrox_pb').maybeSingle());
+  if(d) return d;
+  return await cmQ(()=> sb.from('profiles').insert(Object.assign({id:HF.userId}, patch)).select('id,username,display_name,name,avatar_url,bio,state,city,country,club_id,experience_level,primary_race_category,upcoming_race_name,hyrox_pb').single());
+}
+
 async function cmEnsureProfile(){
   if(!cmOn()) return null;
   const prefs = HF.data.prefs || {};
   // email is deliberately absent: it lives in auth.users, the column is revoked
   // from browser clients, and select('*') would fail against it
-  const patch = { id:HF.userId };
+  const patch = {};
   if(prefs.name)   patch.name = prefs.name;
   if(prefs.avatar) patch.avatar_url = prefs.avatar;
-  cmMe = await cmQ(()=> sb.from('profiles').upsert(patch,{onConflict:'id'}).select('id,username,display_name,name,avatar_url,bio,state,city,country,club_id,experience_level,primary_race_category,upcoming_race_name,hyrox_pb').single());
+  cmMe = await cmSaveProfile(patch);
   return cmMe;
 }
 
@@ -5940,7 +5956,6 @@ async function saveAthleteProfile(){
   const v = id => { const e=$(id); return e ? e.value.trim() : ''; };
   const username = v('cm-user').replace(/[^A-Za-z0-9_.]/g,'').toLowerCase();
   const patch = {
-    id: HF.userId,
     username: username || null,
     state: v('cm-state') || null,
     city:  v('cm-city')  || null,
@@ -5949,7 +5964,7 @@ async function saveAthleteProfile(){
     hyrox_pb: v('cm-pb') || null
   };
   closeModal();
-  const d = await cmQ(()=> sb.from('profiles').upsert(patch,{onConflict:'id'}).select('id,username,display_name,name,avatar_url,bio,state,city,country,club_id,experience_level,primary_race_category,upcoming_race_name,hyrox_pb').single());
+  const d = await cmSaveProfile(patch);
   if(d===null){ nfToast('Could not save — that username may be taken.'); return; }
   cmMe = d;
   nfToast('Athlete profile saved ✓');
