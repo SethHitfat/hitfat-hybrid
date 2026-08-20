@@ -872,6 +872,7 @@
   .cmcompose{width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;
              padding:14px;color:var(--dim2);font:inherit;font-size:14px;cursor:pointer;}
   .cmcompose:active{transform:scale(.995);}
+  .cmclub{color:var(--hitfat) !important;cursor:pointer;font-weight:600;}
   .clublogo{flex:none;width:42px;height:42px;border-radius:12px;background:#1a1a1a;border:1px solid var(--line);
             display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;color:var(--hitfat);}
   .clublogo.big{width:66px;height:66px;border-radius:18px;font-size:26px;margin-bottom:11px;}
@@ -7004,13 +7005,19 @@ async function openAthlete(id){
   if(!cmFollowingIds) await cmLoadFollowing();
   const isMe    = id===HF.userId;
   const follows = cmFollowingIds.has(id);
+  let clubName = '';
+  if(p.club_id){
+    const list = await cmLoadClubs();
+    const c = (list||[]).filter(x=> x.id===p.club_id)[0];
+    clubName = c ? c.name : '';
+  }
   const detail  = [p.primary_race_category, p.experience_level].filter(Boolean).map(cmEsc);
 
   el.innerHTML = back
     + '<div class="cmprof">'+cmAvatar(p,74)
       + '<div class="cmpn">'+cmEsc(cmName(p))+cmTag(p.is_official,p.is_demo)+'</div>'
       + (cmPlace(p) ? '<div class="cmpm">'+cmEsc(cmPlace(p))+(p.country?', '+cmEsc(p.country):'')+'</div>' : '')
-      + (p.club_name ? '<div class="cmpm">'+cmEsc(p.club_name)+'</div>' : '')
+      + (clubName ? '<div class="cmpm cmclub" onclick="openClub(\''+cmEsc(p.club_id)+'\')">'+cmEsc(clubName)+'</div>' : '')
       + (detail.length ? '<div class="cmpm">'+detail.join(' · ')+'</div>' : '')
       + '<div class="cmpstats">'
         + '<div><b>'+fCount+'</b><small>Followers</small></div>'
