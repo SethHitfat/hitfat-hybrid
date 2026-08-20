@@ -77,6 +77,14 @@
   /* bottom:14px — Apple Fitness+ hugs the very bottom; the home indicator overlaps the pill's lower padding */
   .tabs{position:absolute;left:0;right:0;bottom:var(--navb, max(14px, env(safe-area-inset-bottom,14px)));margin:0 auto;width:calc(100% - 24px);max-width:414px;z-index:60;display:flex;align-items:center;gap:2px;background:rgba(24,24,26,.78);-webkit-backdrop-filter:blur(24px) saturate(1.6);backdrop-filter:blur(24px) saturate(1.6);border:1px solid rgba(255,255,255,.10);border-radius:26px;padding:6px 6px 9px;box-shadow:0 12px 40px rgba(0,0,0,.55);}
   .tab{flex:1;background:none;border:none;color:var(--dim);font-family:'Inter',system-ui,sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.1px;text-transform:none;padding:7px 2px 6px;cursor:pointer;border-radius:16px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:color .15s,background .15s;}
+  /* Six tabs overflow the pill on a 320px phone (iPhone SE). Shrink the label and
+     the icon there only — the pill's position is untouched, since that took a long
+     run of fixes to get right on iOS. */
+  @media (max-width:360px){
+    .tab{font-size:9.5px;padding:7px 0 6px;letter-spacing:-.1px;}
+    .tab svg{width:20px;height:20px;}
+    .tab .ticon{width:26px;height:26px;}
+  }
   .tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
   /* HITFAT Timer home (Spotify-style browse) */
   .tmtop{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:22px;}
@@ -713,6 +721,45 @@
   .pcard .info .by{font-size:11px;color:var(--dim2);margin-top:5px;}
   .pcard .info .price{position:absolute;bottom:13px;right:14px;font-family:'Oswald';font-weight:700;font-size:15px;color:var(--hyrox);}
   .pcard.full .info .price{position:static;float:right;margin-top:-2px;}
+
+  /* ---- Community layer: same language as the rest of the app, its own namespace ---- */
+  .cmtabs{display:flex;gap:8px;margin-bottom:14px;}
+  .cmtab{flex:none;background:var(--surface);border:1px solid var(--line);color:#fff;border-radius:99px;
+         padding:8px 16px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;}
+  .cmtab.on{background:var(--hitfat);color:var(--hitfat-ink);border-color:var(--hitfat);}
+  .cmpost{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:11px;}
+  .cmhead{display:flex;align-items:center;gap:11px;cursor:pointer;}
+  .cmwho{min-width:0;}
+  .cmwho .n{font-size:14.5px;font-weight:700;letter-spacing:-.2px;}
+  .cmwho .t{font-size:11.5px;color:var(--dim2);margin-top:1px;}
+  .cmwork{margin-top:11px;background:#141414;border:1px solid var(--line);border-radius:12px;padding:11px 13px;}
+  .cmwork .wt{font-size:15px;font-weight:700;letter-spacing:-.2px;}
+  .cmwork .wm{font-size:12px;color:var(--dim);margin-top:3px;}
+  .cmpb{display:inline-block;margin-top:8px;font-size:11px;font-weight:800;letter-spacing:.4px;
+        text-transform:uppercase;color:var(--hitfat-ink);background:var(--hitfat);border-radius:99px;padding:3px 9px;}
+  .cmcap{font-size:14px;color:#e8e8e8;margin-top:10px;line-height:1.45;}
+  .cmimg{width:100%;border-radius:12px;margin-top:10px;display:block;}
+  .cmacts{display:flex;gap:8px;margin-top:12px;}
+  .cmact{flex:1;background:#141414;border:1px solid var(--line);color:#cfcfcf;border-radius:10px;
+         padding:8px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;}
+  .cmact:active{transform:scale(.98);}
+  .cmempty{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:26px 20px;text-align:center;}
+  .cmempty b{display:block;font-size:16.5px;font-weight:800;letter-spacing:-.2px;}
+  .cmempty p{color:var(--dim);font-size:13.5px;margin-top:7px;line-height:1.5;}
+  .cmempty .go{margin-top:15px;}
+  .cmprof{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px 18px;text-align:center;
+          display:flex;flex-direction:column;align-items:center;}
+  .cmprof>img,.cmprof>div:first-child{margin-bottom:11px;}
+  .cmpn{font-size:21px;font-weight:800;letter-spacing:-.4px;}
+  .cmpm{font-size:13px;color:var(--dim);margin-top:3px;}
+  .cmpstats{display:flex;gap:26px;margin:16px 0 15px;}
+  .cmpstats b{display:block;font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;}
+  .cmpstats small{display:block;font-size:11px;color:var(--dim2);margin-top:1px;}
+  .cmcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:10px;}
+  .cml{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--dim2);}
+  .cmbig{font-size:26px;font-weight:800;letter-spacing:-.6px;margin-top:3px;}
+  .cmv{font-weight:700;margin-top:3px;}
+  .cmline{font-size:13.5px;color:#dcdcdc;padding:3px 0;}
   /* quick workout portrait artwork card */
   .qwcard{position:relative;flex:0 0 auto;width:158px;aspect-ratio:2/3;border-radius:16px;overflow:hidden;cursor:pointer;border:1px solid var(--line);background:#141414 center/cover no-repeat;padding:0;transition:transform .12s;}
   .qwcard:active{transform:scale(.97);}
@@ -833,6 +880,7 @@
         <div id="home-challenge"></div>
         <div id="home-wod"></div>
         <div id="home-races"></div>
+        <div id="home-community"></div>
         <div id="home-quick"></div>
       </div>
     <div class="pad">
@@ -964,6 +1012,10 @@
         <div id="pgd-body"></div>
       </div>
       <!-- SKRIN PROGRESS -->
+      <!-- COMMUNITY (added layer — existing panels untouched) -->
+      <div id="community" style="display:none;"></div>
+      <div id="athlete" style="display:none;"></div>
+
       <div id="progress" style="display:none;">
         <div class="hgroup"><div class="k">Your Training</div><h2>PROGRESS</h2><p>Your Hybrid Score, streak and history — all saved to your account.</p></div>
         <!-- grouped by the question an athlete is asking, not the order the features were built:
@@ -1004,6 +1056,7 @@
         <div id="pf-strava"></div>
         <div class="sechead">Settings</div>
         <button class="pflink" onclick="openNameEditor()"><span>Name &amp; photo</span><span class="arr">›</span></button>
+        <button class="pflink" onclick="openAthleteEditor()"><span>Athlete Profile (Community)</span><span class="arr">›</span></button>
         <button class="pflink" onclick="openTrackSelect(true)"><span>Change Track</span><span class="arr">›</span></button>
         <button class="pflink" onclick="restartOnboarding()"><span>Redo Onboarding</span><span class="arr">›</span></button>
         <button class="pflink" onclick="showReadiness(true)"><span>View Readiness &amp; Safety Notice</span><span class="arr">›</span></button>
@@ -1066,6 +1119,7 @@
     <button class="tab active" id="tab-home" onclick="switchTab('home')"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>Home</button>
     <button class="tab" id="tab-explore" onclick="switchTab('explore')"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="M21 21l-4.5-4.5"/></svg>Explore</button>
     <button class="tab" id="tab-store" onclick="switchTab('store')"><img class="ticon" src="icon-programs.png" alt="" width="24" height="24">Programs</button>
+    <button class="tab" id="tab-community" onclick="switchTab('community')"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20c0-3.4 3-5.4 6.5-5.4s6.5 2 6.5 5.4"/><circle cx="17.5" cy="7" r="2.6"/><path d="M17 13.4c2.9.3 4.5 2.2 4.5 4.9"/></svg>Community</button>
     <button class="tab" id="tab-progress" onclick="switchTab('progress')"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3M20 16V6"/></svg>Progress</button>
     <button class="tab" id="tab-profile" onclick="switchTab('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Profile</button>
     <button class="tab" id="tab-pro" style="display:none" onclick="switchTab('pro')"></button>
@@ -2372,7 +2426,7 @@ function showCategories(){ $('list').style.display='none'; $('detail').style.dis
 /* ============ TAB NAVIGATION ============ */
 /* every full-screen panel — openers must hide them ALL, otherwise the panel they came
    from stays visible underneath and the new screen looks like it never opened. */
-const PANELS=['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail','store','tsess','tmhome'];
+const PANELS=['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail','store','tsess','tmhome','community','athlete'];
 function hidePanels(){ PANELS.forEach(id=>{ const e=$(id); if(e) e.style.display='none'; }); }
 function switchTab(tab){
   track('tab',{tab});
@@ -2381,7 +2435,7 @@ function switchTab(tab){
   // hide every screen
   hidePanels();
   if(window.klTicker && tab!=='pro' && tab!=='home' && tab!=='explore'){ clearInterval(window.klTicker); window.klTicker=null; }
-  ['tab-home','tab-programs','tab-plans','tab-pro','tab-target','tab-kl','tab-progress','tab-profile','tab-explore','tab-coaches','tab-store'].forEach(id=>{ const b=$(id); if(b&&b.classList) b.classList.remove('active'); });
+  ['tab-home','tab-programs','tab-plans','tab-pro','tab-target','tab-kl','tab-progress','tab-profile','tab-explore','tab-coaches','tab-store','tab-community'].forEach(id=>{ const b=$(id); if(b&&b.classList) b.classList.remove('active'); });
   const setActive=id=>{ const b=$(id); if(b&&b.classList) b.classList.add('active'); };
   if(tab==='home'){
     $('home').style.display='block'; setActive('tab-home'); renderHome();
@@ -2399,6 +2453,8 @@ function switchTab(tab){
     $('pro').style.display='block'; setActive('tab-explore'); showCatalog();
   } else if(tab==='target'){
     $('target').style.display='block'; setActive('tab-explore'); showTargetGrid();
+  } else if(tab==='community'){
+    $('community').style.display='block'; setActive('tab-community'); renderCommunity();
   } else if(tab==='progress'){
     $('progress').style.display='block'; setActive('tab-progress'); renderProgress();
   } else if(tab==='profile'){
@@ -2900,6 +2956,7 @@ function renderHome(){
   if(window.klTicker){ clearInterval(window.klTicker); window.klTicker=null; }
 
   // 7) QUICK WORKOUTS
+  renderHomeCommunity();          // small preview only — Home stays a training dashboard
   $('home-quick').innerHTML=`<div class="sechead">Quick Workouts <span style="font-size:11px;color:#2ec27e;font-weight:800;letter-spacing:1px;">FREE</span></div>
     <div class="hscroll">${QUICK_WORKOUTS.map((_,i)=>quickCard(i)).join('')}</div>`;
 }
@@ -3402,6 +3459,9 @@ function saveComplete(){
   nfToast('Session logged ✓  RPE '+(_cRPE||'—'));
   // Return to My Plan / Home after finishing
   switchTab('home');
+  // then offer — never auto-post — to share the session to Community
+  const _sk=_cKey, _sn=_cName;
+  setTimeout(()=>{ try{ offerShare(_sk,_sn,null,false); }catch(e){} }, 700);
 }
 function finishWorkout(){ openCompleteModal(window.curSessionKey, cur?cur.title:'Workout'); }
 function closeModal(){ $('modal').classList.remove('on'); }
@@ -4236,6 +4296,7 @@ function startApp(){
     switchTab('home');
     if(!HF.data.onboarded) startOnboarding();
     _appStarted=true;
+    cmProbe();                       // community layer: available or not, decided once
     handlePaidRedirect();            // auto-unlock if the buyer just returned from BCL payment
     handleStravaReturn();            // finish Strava connect + auto-sync if just returned
     updateAvatar();                  // topbar avatar shows the user's initial
@@ -5628,6 +5689,315 @@ function boot(){
   });
 }
 if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded',boot); } else { boot(); }
+
+/* ============================================================
+   ████  COMMUNITY LAYER  ████
+   An additional layer on top of the existing training system. It reads the same
+   Supabase session and the same HF store and changes neither. Every query is
+   guarded: if the community tables do not exist yet, or the athlete is offline,
+   Community shows an empty state instead of throwing into the training app
+   around it. Requires hitfat-community-schema.sql to have been run once.
+   Modal, button and panel conventions are the app's existing ones.
+   ============================================================ */
+const MY_STATES = ['Johor','Kedah','Kelantan','Melaka','Negeri Sembilan','Pahang','Penang','Perak','Perlis',
+                   'Sabah','Sarawak','Selangor','Terengganu','Kuala Lumpur','Putrajaya','Labuan'];
+const XP_LEVELS = ['Beginner','Intermediate','Advanced','Pro'];
+
+let cmFeedMode = 'following';
+let cmMe = null;             // my profile row
+let cmFollowingIds = null;   // Set of ids I follow
+let cmViewing = null;        // athlete id currently open
+let cmUp = false;            // do the community tables actually exist yet?
+
+const cmOn    = () => !!(sb && HF.userId);
+const cmEsc   = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const cmName  = p => (p && (p.display_name || p.name || (p.username && '@'+p.username))) || 'Athlete';
+const cmPlace = p => [p && p.city, p && p.state].filter(Boolean).join(', ');
+
+/* One broken table must never take the training app down with it. */
+async function cmQ(fn){
+  if(!cmOn()) return null;
+  try{
+    const r = await fn();
+    if(r && r.error){ console.warn('[community]', r.error.message); return null; }
+    return r ? r.data : null;
+  }catch(e){ console.warn('[community]', e); return null; }
+}
+
+/* Mirror what the athlete already filled in, so Community is populated without
+   asking them to type their name and photo a second time. */
+/* Until the community schema has been run, every table 404s. Probe once so the
+   app never offers to share into something that cannot accept it. */
+async function cmProbe(){
+  if(!cmOn()){ cmUp=false; return false; }
+  const d = await cmQ(()=> sb.from('posts').select('id').limit(1));
+  cmUp = (d !== null);
+  return cmUp;
+}
+
+async function cmEnsureProfile(){
+  if(!cmOn()) return null;
+  const prefs = HF.data.prefs || {};
+  const patch = { id:HF.userId, email:HF.email || null };
+  if(prefs.name)   patch.name = prefs.name;
+  if(prefs.avatar) patch.avatar_url = prefs.avatar;
+  cmMe = await cmQ(()=> sb.from('profiles').upsert(patch,{onConflict:'id'}).select().single());
+  return cmMe;
+}
+
+async function cmLoadFollowing(){
+  if(!cmOn()) return new Set();
+  const d = await cmQ(()=> sb.from('follows').select('following_id').eq('follower_id',HF.userId));
+  cmFollowingIds = new Set((d||[]).map(r=>r.following_id));
+  return cmFollowingIds;
+}
+
+async function cmCount(table, col, val){
+  if(!cmOn()) return 0;
+  try{
+    const r = await sb.from(table).select('id',{count:'exact',head:true}).eq(col,val);
+    return (r && typeof r.count === 'number') ? r.count : 0;
+  }catch(e){ return 0; }
+}
+
+async function cmFollow(id, btn){
+  if(!cmOn() || id===HF.userId) return;
+  if(!cmFollowingIds) await cmLoadFollowing();
+  const following = cmFollowingIds.has(id);
+  if(btn) btn.disabled = true;
+  if(following){
+    await cmQ(()=> sb.from('follows').delete().eq('follower_id',HF.userId).eq('following_id',id));
+    cmFollowingIds.delete(id);
+  }else{
+    await cmQ(()=> sb.from('follows').insert({follower_id:HF.userId, following_id:id}));
+    cmFollowingIds.add(id);
+    // RLS requires actor_id to be me, so nobody can forge a notification from someone else
+    await cmQ(()=> sb.from('notifications').insert({user_id:id, actor_id:HF.userId, type:'follow',
+                                                    entity_type:'profile', entity_id:HF.userId}));
+    track('community_follow',{});
+  }
+  if(btn) btn.disabled = false;
+  if(cmViewing===id) openAthlete(id); else renderCommunity();
+}
+
+/* ---------- feed ---------- */
+async function cmFetchFeed(mode){
+  if(!cmOn()) return [];
+  let q = sb.from('post_feed').select('*').order('created_at',{ascending:false}).limit(20);
+  if(mode==='following'){
+    if(!cmFollowingIds) await cmLoadFollowing();
+    const ids = Array.from(cmFollowingIds);
+    ids.push(HF.userId);                    // your own posts belong in your own feed
+    q = q.in('user_id', ids);
+  }
+  return (await cmQ(()=> q)) || [];
+}
+
+function cmAgo(ts){
+  const s = Math.max(0,(Date.now()-new Date(ts).getTime())/1000);
+  if(s<60)    return 'just now';
+  if(s<3600)  return Math.floor(s/60)+'m ago';
+  if(s<86400) return Math.floor(s/3600)+'h ago';
+  const d = Math.floor(s/86400);
+  return d<7 ? d+'d ago' : new Date(ts).toLocaleDateString();
+}
+
+function cmAvatar(p, size){
+  const s = size||38;
+  const base = 'width:'+s+'px;height:'+s+'px;border-radius:50%;flex:none;';
+  if(p && p.avatar_url) return '<img src="'+cmEsc(p.avatar_url)+'" alt="" style="'+base+'object-fit:cover;">';
+  const initial = (cmName(p)||'A').trim().charAt(0).toUpperCase();
+  return '<div style="'+base+'background:#1a1a1a;border:1px solid var(--line);display:flex;align-items:center;'
+       + 'justify-content:center;font-weight:800;font-size:'+Math.round(s*0.42)+'px;color:var(--hitfat);">'+cmEsc(initial)+'</div>';
+}
+
+function cmPostCard(p){
+  const meta = [];
+  if(p.workout_mins) meta.push(p.workout_mins+' min');
+  if(p.state) meta.push(p.state);
+  return '<div class="cmpost">'
+    + '<div class="cmhead" onclick="openAthlete(\''+cmEsc(p.user_id)+'\')">'+cmAvatar(p,38)
+      + '<div class="cmwho"><div class="n">'+cmEsc(cmName(p))+'</div>'
+      + '<div class="t">'+cmEsc(cmAgo(p.created_at))+(cmPlace(p)?' · '+cmEsc(cmPlace(p)):'')+'</div></div></div>'
+    + (p.workout_title ? '<div class="cmwork"><div class="wt">'+cmEsc(p.workout_title)+'</div>'
+        + (meta.length?'<div class="wm">'+cmEsc(meta.join(' · '))+'</div>':'')
+        + (p.is_pb?'<div class="cmpb">🔥 New Personal Best</div>':'')+'</div>' : '')
+    + (p.caption   ? '<div class="cmcap">'+cmEsc(p.caption)+'</div>' : '')
+    + (p.image_url ? '<img class="cmimg" src="'+cmEsc(p.image_url)+'" alt="" loading="lazy">' : '')
+    + '<div class="cmacts">'
+      + '<button class="cmact" onclick="cmReact(\''+cmEsc(p.id)+'\')">🔥 <span>'+(p.reaction_count||0)+'</span></button>'
+      + '<button class="cmact" onclick="nfToast(\'Comments arrive in the next update.\')">💬 <span>'+(p.comment_count||0)+'</span></button>'
+    + '</div></div>';
+}
+
+async function cmReact(postId){
+  if(!cmOn()) return;
+  const mine = await cmQ(()=> sb.from('reactions').select('id').eq('user_id',HF.userId).eq('post_id',postId).maybeSingle());
+  if(mine) await cmQ(()=> sb.from('reactions').delete().eq('user_id',HF.userId).eq('post_id',postId));
+  else{
+    await cmQ(()=> sb.from('reactions').insert({user_id:HF.userId, post_id:postId, reaction_type:'strong'}));
+    track('community_react',{});
+  }
+  if(cmViewing) openAthlete(cmViewing); else renderCommunity();
+}
+
+/* ---------- screens ---------- */
+function cmShell(body){
+  const tab = (k,l) => '<button class="cmtab'+(cmFeedMode===k?' on':'')+'" onclick="cmSetFeed(\''+k+'\')">'+l+'</button>';
+  return '<div class="hgroup"><div class="k">HITFAT</div><h2>COMMUNITY</h2>'
+       + '<p>The home of hybrid fitness in Malaysia — train, track, compete, connect.</p></div>'
+       + '<div class="cmtabs">'+tab('following','Following')+tab('discover','Discover')+'</div>'
+       + '<div id="cmfeed">'+body+'</div>';
+}
+function cmSetFeed(m){ cmFeedMode=m; renderCommunity(); }
+
+async function renderCommunity(){
+  const el = $('community'); if(!el) return;
+  cmViewing = null;
+  if(!cmOn()){ el.innerHTML = cmShell('<div class="cmempty"><b>Sign in to join</b><p>Community uses your HITFAT account.</p></div>'); return; }
+  el.innerHTML = cmShell('<div class="cmempty">Loading…</div>');
+  if(!cmMe) await cmEnsureProfile();
+  if(!cmFollowingIds) await cmLoadFollowing();
+
+  const posts = await cmFetchFeed(cmFeedMode);
+  let body;
+  if(!cmUp) await cmProbe();
+  if(!cmUp){ el.innerHTML = cmShell('<div class="cmempty"><b>Community is being set up</b>'
+    + '<p>This is coming shortly — your training, programs and progress are unaffected.</p></div>'); return; }
+  if(posts.length) body = posts.map(cmPostCard).join('');
+  else if(cmFeedMode==='following')
+    body = '<div class="cmempty"><b>Build your hybrid circle</b>'
+         + '<p>Follow athletes from Malaysia and see their workouts, PBs and race journey here.</p>'
+         + '<button class="go" onclick="cmSetFeed(\'discover\')">Discover athletes</button></div>';
+  else
+    body = '<div class="cmempty"><b>Nothing here yet</b>'
+         + '<p>Be the first — finish a workout and share it to the community.</p></div>';
+  el.innerHTML = cmShell(body);
+}
+
+async function openAthlete(id){
+  if(!id || !cmOn()) return;
+  cmViewing = id;
+  hidePanels();
+  const el = $('athlete'); if(!el) return;
+  el.style.display='block'; $('tabs').style.display='flex'; $('screen').scrollTop=0; curTab='community';
+  const back = '<button class="back" onclick="switchTab(\'community\')">← Community</button>';
+  el.innerHTML = back + '<div class="cmempty">Loading…</div>';
+
+  const p = await cmQ(()=> sb.from('profiles').select('*').eq('id',id).single());
+  if(!p){ el.innerHTML = back + '<div class="cmempty"><b>Profile unavailable</b><p>This athlete may have blocked you, or the profile was removed.</p></div>'; return; }
+  if(!cmFollowingIds) await cmLoadFollowing();
+
+  const posts   = await cmQ(()=> sb.from('post_feed').select('*').eq('user_id',id).order('created_at',{ascending:false}).limit(10));
+  const fCount  = await cmCount('follows','following_id',id);
+  const gCount  = await cmCount('follows','follower_id',id);
+  const isMe    = id===HF.userId;
+  const follows = cmFollowingIds.has(id);
+  const detail  = [p.primary_race_category, p.experience_level].filter(Boolean).map(cmEsc);
+
+  el.innerHTML = back
+    + '<div class="cmprof">'+cmAvatar(p,74)
+      + '<div class="cmpn">'+cmEsc(cmName(p))+'</div>'
+      + (cmPlace(p) ? '<div class="cmpm">'+cmEsc(cmPlace(p))+(p.country?', '+cmEsc(p.country):'')+'</div>' : '')
+      + (p.club_name ? '<div class="cmpm">'+cmEsc(p.club_name)+'</div>' : '')
+      + (detail.length ? '<div class="cmpm">'+detail.join(' · ')+'</div>' : '')
+      + '<div class="cmpstats">'
+        + '<div><b>'+fCount+'</b><small>Followers</small></div>'
+        + '<div><b>'+gCount+'</b><small>Following</small></div>'
+        + '<div><b>'+(posts?posts.length:0)+'</b><small>Activities</small></div></div>'
+      + (isMe ? '<button class="go sec" onclick="switchTab(\'profile\')">Edit my profile</button>'
+              : '<button class="go'+(follows?' sec':'')+'" onclick="cmFollow(\''+cmEsc(id)+'\',this)">'+(follows?'Following':'Follow')+'</button>')
+    + '</div>'
+    + (p.hyrox_pb ? '<div class="cmcard"><div class="cml">HYROX PB</div><div class="cmbig">'+cmEsc(p.hyrox_pb)+'</div></div>' : '')
+    + (p.upcoming_race_name ? '<div class="cmcard"><div class="cml">Upcoming race</div><div class="cmv">'+cmEsc(p.upcoming_race_name)+'</div></div>' : '')
+    + '<div class="sechead" style="margin-top:22px;">Recent activity</div>'
+    + ((posts && posts.length) ? posts.map(cmPostCard).join('') : '<div class="cmempty">No activities yet.</div>');
+}
+
+/* ---------- athlete details, edited from Profile ---------- */
+function openAthleteEditor(){
+  if(!cmOn()){ nfToast('Sign in first.'); return; }
+  const p = cmMe || {};
+  const opt = (list,cur) => ['<option value="">—</option>'].concat(
+        list.map(v=>'<option value="'+cmEsc(v)+'"'+(cur===v?' selected':'')+'>'+cmEsc(v)+'</option>')).join('');
+  const inp = 'width:100%;background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:11px 13px;color:#fff;font:inherit;font-size:14px;margin-bottom:10px;';
+  $('modal-sheet').innerHTML = '<h3>Athlete Profile</h3>'
+    + '<p class="msub">Shown to other athletes in Community.</p>'
+    + '<input id="cm-user"  style="'+inp+'" maxlength="20" placeholder="Username (e.g. zaidi)" value="'+cmEsc(p.username||'')+'">'
+    + '<select id="cm-state" style="'+inp+'">'+opt(MY_STATES,p.state)+'</select>'
+    + '<input id="cm-city"  style="'+inp+'" maxlength="40" placeholder="City (e.g. Kota Bharu)" value="'+cmEsc(p.city||'')+'">'
+    + '<select id="cm-xp"   style="'+inp+'">'+opt(XP_LEVELS,p.experience_level)+'</select>'
+    + '<input id="cm-cat"   style="'+inp+'" maxlength="40" placeholder="Race category (e.g. Men\'s Doubles Pro)" value="'+cmEsc(p.primary_race_category||'')+'">'
+    + '<input id="cm-pb"    style="'+inp+'" maxlength="12" placeholder="HYROX PB (e.g. 1:08:59)" value="'+cmEsc(p.hyrox_pb||'')+'">'
+    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Cancel</button>'
+    + '<button class="confirm" onclick="saveAthleteProfile()">Save</button></div>';
+  $('modal').classList.add('on');
+}
+
+async function saveAthleteProfile(){
+  const v = id => { const e=$(id); return e ? e.value.trim() : ''; };
+  const username = v('cm-user').replace(/[^A-Za-z0-9_.]/g,'').toLowerCase();
+  const patch = {
+    id: HF.userId,
+    username: username || null,
+    state: v('cm-state') || null,
+    city:  v('cm-city')  || null,
+    experience_level: v('cm-xp') || null,
+    primary_race_category: v('cm-cat') || null,
+    hyrox_pb: v('cm-pb') || null
+  };
+  closeModal();
+  const d = await cmQ(()=> sb.from('profiles').upsert(patch,{onConflict:'id'}).select().single());
+  if(d===null){ nfToast('Could not save — that username may be taken.'); return; }
+  cmMe = d;
+  nfToast('Athlete profile saved ✓');
+  if(curTab==='profile') renderProfile();
+}
+
+/* ---------- sharing a finished workout (never automatic) ---------- */
+function offerShare(key, title, mins, isPB){
+  if(!cmOn() || !cmUp) return;      // silent when Community is not set up — never a failing modal
+  const t = title || 'Workout';
+  const safe = t.replace(/'/g,"\\'");
+  $('modal-sheet').innerHTML = '<h3>Share to Community</h3>'
+    + '<p class="msub">'+cmEsc(t)+(mins?' · '+mins+' min':'')+'</p>'
+    + '<textarea id="cm-cap" rows="3" maxlength="240" placeholder="Say something about this session…" '
+    + 'style="width:100%;background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:11px 13px;color:#fff;font:inherit;font-size:14px;resize:none;"></textarea>'
+    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Not now</button>'
+    + '<button class="confirm" onclick="cmSharePost(\''+cmEsc(key||'')+'\',\''+safe+'\','+(mins||0)+','+(isPB?'true':'false')+')">Share</button></div>';
+  $('modal').classList.add('on');
+}
+
+async function cmSharePost(key, title, mins, isPB){
+  const capEl = $('cm-cap');
+  const caption = capEl ? capEl.value.trim() : '';
+  closeModal();
+  await cmEnsureProfile();
+  const d = await cmQ(()=> sb.from('posts').insert({
+    user_id: HF.userId, post_type:'workout', caption: caption || null,
+    workout_session_id: key || null, workout_title: title || null,
+    workout_mins: mins || null, is_pb: !!isPB
+  }));
+  if(d===null){ nfToast('Could not share right now.'); return; }
+  track('community_post',{type:'workout'});
+  nfToast('Shared to Community ✓');
+  if(curTab==='community') renderCommunity();
+}
+
+/* ---------- small preview on Home (Home stays a training dashboard) ---------- */
+async function renderHomeCommunity(){
+  const el = $('home-community'); if(!el) return;
+  if(!cmOn()){ el.innerHTML=''; return; }
+  const posts = await cmQ(()=> sb.from('post_feed')
+      .select('name,display_name,username,workout_title,is_pb,created_at')
+      .order('created_at',{ascending:false}).limit(2));
+  if(!posts || !posts.length){ el.innerHTML=''; return; }
+  el.innerHTML = '<div class="sechead">Community</div><div class="cmcard">'
+    + posts.map(p=>'<div class="cmline">'+cmEsc(cmName(p))+' '
+        + (p.is_pb ? 'set a new PB' : 'completed '+cmEsc(p.workout_title||'a session'))+'</div>').join('')
+    + '<button class="go sec" style="margin-top:11px;width:100%;" onclick="switchTab(\'community\')">View Community</button></div>';
+}
+
 </script>
 </body>
 </html>
