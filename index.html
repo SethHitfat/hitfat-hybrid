@@ -872,6 +872,15 @@
   .cmcompose{width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;
              padding:14px;color:var(--dim2);font:inherit;font-size:14px;cursor:pointer;}
   .cmcompose:active{transform:scale(.995);}
+  .clublogo{flex:none;width:42px;height:42px;border-radius:12px;background:#1a1a1a;border:1px solid var(--line);
+            display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;color:var(--hitfat);}
+  .clublogo.big{width:66px;height:66px;border-radius:18px;font-size:26px;margin-bottom:11px;}
+  .cmfind{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+  .cmfind input{width:100%;background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:11px 13px;
+                color:#fff;font:inherit;font-size:14px;}
+  .cmsel{display:flex;gap:8px;}
+  .cmsel select{flex:1;min-width:0;background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:11px 12px;
+                color:#fff;font:inherit;font-size:13.5px;}
   .cmrow{display:flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--line);
          border-radius:14px;padding:11px 13px;margin-bottom:9px;}
   .cmrl{display:flex;align-items:center;gap:11px;flex:1;min-width:0;cursor:pointer;}
@@ -1158,6 +1167,7 @@
       <div id="athlete" style="display:none;"></div>
       <div id="thread" style="display:none;"></div>
       <div id="notifs" style="display:none;"></div>
+      <div id="club" style="display:none;"></div>
 
       <div id="progress" style="display:none;">
         <div class="hgroup"><div class="k">Your Training</div><h2>PROGRESS</h2><p>Your Hybrid Score, streak and history — all saved to your account.</p></div>
@@ -2571,7 +2581,7 @@ function showCategories(){ $('list').style.display='none'; $('detail').style.dis
 /* ============ TAB NAVIGATION ============ */
 /* every full-screen panel — openers must hide them ALL, otherwise the panel they came
    from stays visible underneath and the new screen looks like it never opened. */
-const PANELS=['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail','store','tsess','tmhome','community','athlete','thread','notifs'];
+const PANELS=['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail','store','tsess','tmhome','community','athlete','thread','notifs','club'];
 function hidePanels(){ PANELS.forEach(id=>{ const e=$(id); if(e) e.style.display='none'; }); }
 function switchTab(tab){
   track('tab',{tab});
@@ -6130,7 +6140,13 @@ async function cmReact(postId, btn){
    an empty feed and no way to follow anybody, so Following can never fill. */
 async function cmAthletes(){
   if(!cmOn()) return [];
-  const d = await cmQ(()=> sb.from('profiles').select('id,username,display_name,name,avatar_url,state,city,experience_level,primary_race_category,hyrox_pb,is_demo,is_official').neq('id',HF.userId).limit(60));
+  let q = sb.from('profiles')
+      .select('id,username,display_name,name,avatar_url,state,city,experience_level,primary_race_category,hyrox_pb,is_demo,is_official')
+      .neq('id',HF.userId).limit(60);
+  if(cmFind.q)     q = q.ilike('name','%'+cmFind.q+'%');
+  if(cmFind.state) q = q.eq('state', cmFind.state);
+  if(cmFind.level) q = q.eq('experience_level', cmFind.level);
+  const d = await cmQ(()=> q);
   // real athletes first, then the official account, then demo
   return (d||[]).sort((a,b)=>{
     const rank = x => x.is_demo ? 2 : (x.is_official ? 1 : 0);
@@ -6720,6 +6736,114 @@ function goTrain(k){
   switchTab(k);
 }
 
+/* ---------- clubs + athlete search ----------
+   Both live inside Discover rather than adding a sixth chip: finding a person
+   and finding a club are the same job, and the Community bar already carries
+   five. */
+let cmClubs = null, cmMyClub = null;
+const cmFind = { q:'', state:'', level:'' };
+
+async function cmLoadClubs(){
+  if(!cmOn()) return [];
+  if(!cmClubs) cmClubs = await cmQ(()=> sb.from('club_list').select('*').order('member_count',{ascending:false})) || [];
+  return cmClubs;
+}
+
+async function cmJoinClub(id, btn){
+  if(!cmOn()) return;
+  if(btn) btn.disabled = true;
+  const mine = cmMe && cmMe.club_id;
+  if(mine === id){                                   // leaving
+    await cmWrite(()=> sb.from('club_members').delete().eq('club_id',id).eq('user_id',HF.userId));
+    await cmWrite(()=> sb.from('profiles').update({club_id:null}).eq('id',HF.userId));
+    if(cmMe) cmMe.club_id = null;
+  }else{
+    if(mine) await cmWrite(()=> sb.from('club_members').delete().eq('club_id',mine).eq('user_id',HF.userId));
+    const ok = await cmWrite(()=> sb.from('club_members').insert({club_id:id, user_id:HF.userId}));
+    if(!ok){ cmFail('Could not join that club.'); if(btn) btn.disabled=false; return; }
+    await cmWrite(()=> sb.from('profiles').update({club_id:id}).eq('id',HF.userId));
+    if(cmMe) cmMe.club_id = id;
+    track('club_join',{});
+  }
+  cmClubs = null; cmCache.discover = null; cmCache.board = null;
+  if(cmViewingClub) openClub(cmViewingClub); else renderCommunity();
+}
+
+function cmClubRow(c){
+  const mine = cmMe && cmMe.club_id === c.id;
+  return '<div class="cmrow">'
+    + '<div class="cmrl" onclick="openClub(\''+cmEsc(c.id)+'\')">'
+      + '<div class="clublogo">'+cmEsc((c.name||'C').trim().charAt(0).toUpperCase())+'</div>'
+      + '<div class="cmrt"><div class="n">'+cmEsc(c.name)+(c.is_official?'<span class="cmtag off">Official</span>':'')+'</div>'
+      + '<div class="t">'+cmEsc([c.state, (c.member_count||0)+' member'+(c.member_count===1?'':'s')].filter(Boolean).join(' \u00b7 '))+'</div>'
+    + '</div></div>'
+    + '<button class="cmfollow'+(mine?' on':'')+'" onclick="event.stopPropagation();cmJoinClub(\''+cmEsc(c.id)+'\',this)">'
+      + (mine?'Joined':'Join')+'</button></div>';
+}
+
+let cmViewingClub = null;
+async function openClub(id){
+  if(!id || !cmOn()) return;
+  cmViewingClub = id; cmViewing = null;
+  hidePanels();
+  const el = $('club'); if(!el) return;
+  el.style.display='block'; $('tabs').style.display='flex'; $('screen').scrollTop=0; curTab='community';
+  const back = '<button class="back" onclick="cmViewingClub=null;switchTab(\'community\')">← Community</button>';
+  el.innerHTML = back + cmSkeleton(2);
+
+  const c = await cmQ(()=> sb.from('club_list').select('*').eq('id',id).maybeSingle());
+  if(!c){ el.innerHTML = back + '<div class="cmempty"><b>Club unavailable</b></div>'; return; }
+  const members = await cmQ(()=> sb.from('profiles')
+      .select('id,username,display_name,name,avatar_url,state,city,experience_level,primary_race_category,hyrox_pb,is_demo,is_official')
+      .eq('club_id',id).limit(40)) || [];
+  const real = members.filter(m=> !m.is_demo && !m.is_official);
+  const mine = cmMe && cmMe.club_id === id;
+
+  el.innerHTML = back
+    + '<div class="cmprof">'
+      + '<div class="clublogo big">'+cmEsc((c.name||'C').trim().charAt(0).toUpperCase())+'</div>'
+      + '<div class="cmpn">'+cmEsc(c.name)+'</div>'
+      + (c.state ? '<div class="cmpm">'+cmEsc([c.city,c.state].filter(Boolean).join(', '))+'</div>' : '')
+      + (c.description ? '<div class="cmpm">'+cmEsc(c.description)+'</div>' : '')
+      + '<div class="cmpstats"><div><b>'+(c.member_count||0)+'</b><small>Members</small></div></div>'
+      + '<button class="go'+(mine?' sec':'')+'" onclick="cmJoinClub(\''+cmEsc(id)+'\',this)">'+(mine?'Joined':'Join club')+'</button>'
+    + '</div>'
+    + '<div class="sechead" style="margin-top:22px;">Athletes</div>'
+    + (real.length ? real.map(cmAthleteRow).join('')
+                   : '<div class="cmempty"><b>No athletes yet</b><p>Be the first to join.</p></div>');
+}
+
+/* ---------- search ---------- */
+function cmFindBar(){
+  const opt = (list, cur) => ['<option value="">Any</option>']
+      .concat(list.map(v=>'<option value="'+cmEsc(v)+'"'+(cur===v?' selected':'')+'>'+cmEsc(v)+'</option>')).join('');
+  return '<div class="cmfind">'
+    + '<input id="cm-q" type="search" placeholder="Search athletes by name" value="'+cmEsc(cmFind.q)+'" oninput="cmFindSet(\'q\',this.value)">'
+    + '<div class="cmsel">'
+      + '<select onchange="cmFindSet(\'state\',this.value)">'+opt(MY_STATES, cmFind.state)+'</select>'
+      + '<select onchange="cmFindSet(\'level\',this.value)">'+opt(XP_LEVELS, cmFind.level)+'</select>'
+    + '</div></div>';
+}
+
+let cmFindTimer = null, cmRefocus = false;
+function cmFindSet(k, v){
+  cmFind[k] = v;
+  if(k==='q') cmRefocus = true;      // the redraw would otherwise take the keyboard away mid-word
+  clearTimeout(cmFindTimer);
+  // typing should not fire a query per keystroke
+  cmFindTimer = setTimeout(()=>{ cmCache.discover=null; renderCommunity(); }, k==='q' ? 350 : 0);
+}
+
+/* Put the cursor back where it was after a redraw. */
+function cmRestoreFind(){
+  if(!cmRefocus) return;
+  cmRefocus = false;
+  const i = $('cm-q'); if(!i) return;
+  i.focus();
+  const n = i.value.length;
+  try{ i.setSelectionRange(n,n); }catch(e){}
+}
+
 /* ---------- shell ----------
    The shell (title + tabs) is mounted ONCE. Only the feed body is swapped, so
    switching tabs no longer tears down and rebuilds the header — which is what
@@ -6804,6 +6928,7 @@ async function renderCommunity(){
   }
   cmCache[cmFeedMode] = html;
   cmBody(html);
+  cmRestoreFind();
 }
 
 async function cmBuildGroup(){
@@ -6826,15 +6951,25 @@ async function cmBuildGroup(){
 
 async function cmBuildDiscover(){
   cmLastErr = '';
-  const [people, posts] = await Promise.all([cmAthletes(), cmFetchFeed('discover')]);
+  const [people, posts, clubs] = await Promise.all([cmAthletes(), cmFetchFeed('discover'), cmLoadClubs()]);
   if(!people.length && !posts.length && cmLastErr)
     return '<div class="cmempty"><b>Community could not load</b><p style="word-break:break-word;">'+cmEsc(cmLastErr)+'</p>'
          + '<button class="go sec" onclick="cmCache.discover=null;renderCommunity()">Try again</button></div>';
   const ppl = people.filter(a=> ENABLE_COMMUNITY_DEMO_DATA || !a.is_demo);
   const rows = cmRank(posts);
+  const filtering = !!(cmFind.q || cmFind.state || cmFind.level);
   return cmGroupCard()
-    + (ppl.length  ? '<div class="sechead" style="margin:20px 0 10px;">Athletes for you</div>' + ppl.slice(0,12).map(cmAthleteRow).join('') : '')
-    + (rows.length ? '<div class="sechead" style="margin:22px 0 10px;">Training today</div>' + rows.map(cmPostCard).join('') : '');
+    + ((clubs && clubs.length)
+        ? '<div class="sechead" style="margin:20px 0 10px;">Clubs in Malaysia</div>' + clubs.slice(0,6).map(cmClubRow).join('')
+        : '')
+    + '<div class="sechead" style="margin:22px 0 10px;">Find athletes</div>'
+    + cmFindBar()
+    + (ppl.length
+        ? ppl.slice(0, filtering ? 40 : 12).map(cmAthleteRow).join('')
+        : '<div class="cmempty"><b>No athletes match</b><p>Try a different state or level.</p></div>')
+    + (!filtering && rows.length
+        ? '<div class="sechead" style="margin:22px 0 10px;">Training today</div>' + rows.map(cmPostCard).join('')
+        : '');
 }
 
 async function cmBuildFollowing(){
