@@ -278,6 +278,18 @@
   .hubrow .ht b{display:block;font-size:14.5px;font-weight:700;letter-spacing:-.2px;}
   .hubrow .ht small{display:block;font-size:11.5px;color:var(--dim);margin-top:2px;}
   .hubrow .ha{flex:none;color:#5a5a5a;font-size:17px;}
+  /* sticky, because a filter you have to scroll back up to reach is not a filter */
+  .tchips{position:sticky;top:0;z-index:20;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;
+          -webkit-overflow-scrolling:touch;padding:10px 18px;flex:none;
+          background:rgba(0,0,0,.86);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+          border-bottom:1px solid var(--line);}
+  .tchips::-webkit-scrollbar{display:none;}
+  .tchip{flex:none;background:var(--surface);border:1px solid var(--line);color:var(--dim);border-radius:99px;
+         padding:8px 16px;font:inherit;font-size:13.5px;font-weight:600;letter-spacing:-.1px;cursor:pointer;
+         white-space:nowrap;transition:background .12s,color .12s;}
+  .tchip.on{background:#fff;color:#000;border-color:#fff;}
+  .tchip:active{transform:scale(.97);}
+  @media (prefers-reduced-motion:reduce){ .tchip{transition:none;} }
   .gcards{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
   .gcard{position:relative;height:132px;border-radius:16px;overflow:hidden;cursor:pointer;background:#141414 center/cover no-repeat;}
   .gcard .ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.1) 35%,rgba(0,0,0,.85));}
@@ -985,6 +997,7 @@
 
   <div class="screen" id="screen">
     <div class="topbar"><div class="logo"><span>HITFAT</span> <span class="y">HYBRID</span></div></div>
+    <div class="tchips" id="tchips" style="display:none;"></div>
       <!-- SKRIN HOME (personalized dashboard — dirender oleh renderHome()) -->
       <div id="home" class="pad" style="display:none;">
         <div id="home-install"></div>
@@ -1237,7 +1250,7 @@
   <div class="tabs" id="tabs">
     <button class="tab active" id="tab-home" onclick="switchTab('home')"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>Home</button>
     <button class="tab" id="tab-community" onclick="switchTab('community')"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20c0-3.4 3-5.4 6.5-5.4s6.5 2 6.5 5.4"/><circle cx="17.5" cy="7" r="2.6"/><path d="M17 13.4c2.9.3 4.5 2.2 4.5 4.9"/></svg>Community</button>
-    <button class="tab center" id="tab-hub" onclick="openTrainHub()" aria-label="Train"><img src="icon-programs.png" alt="" width="30" height="30"></button>
+    <button class="tab center" id="tab-hub" onclick="switchTab('store')" aria-label="Train"><img src="icon-programs.png" alt="" width="30" height="30"></button>
     <button class="tab" id="tab-progress" onclick="switchTab('progress')"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3M20 16V6"/></svg>Progress</button>
     <button class="tab" id="tab-profile" onclick="switchTab('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Profile</button>
     <button class="tab" id="tab-explore" style="display:none" onclick="switchTab('explore')"></button>
@@ -2560,6 +2573,7 @@ function switchTab(tab){
   // everything reached through the centre button lights the centre button, so the
   // athlete is never on a screen with nothing selected
   if(['explore','store','programs','target','pro','plans','coaches','tsess','tmhome'].indexOf(tab)>-1) setActive('tab-hub');
+  paintTrainChips(tab);
   if(tab==='home'){
     $('home').style.display='block'; setActive('tab-home'); renderHome();
   } else if(tab==='explore'){
@@ -4522,6 +4536,7 @@ function scard(x){ const c=catOf(x.coll);
       <span class="ty">${x.blocks[0].type}</span><span class="est">${x.est} min</span></div>
     <div class="t">${x.title}</div><div class="m">${x.tag}</div></div>`; }
 function openTimerHome(){
+  setTimeout(()=>paintTrainChips('timer'), 0);
   hidePanels();
   $('tmhome').style.display='block'; $('tabs').style.display='flex'; curTab='tmhome';
   const feat=SESSIONS.slice(0,4);
@@ -6651,31 +6666,37 @@ async function renderProgressCommunity(){
     + '<div class="sa">View Community ›</div></div>';
 }
 
-/* ---------- the train hub ----------
-   The centre button holds everything you browse in order to train: the store,
-   the library, target work, timers and the wall ball tool. Explore and Programs
-   both answered "find me something to train", so they belong behind one door.
-   Progress deliberately stays in the strip — it is opened most days, and burying
-   a daily screen behind an unlabelled button costs more than it saves. */
-function openTrainHub(){
-  const row = (icon, title, sub, action) =>
-    '<button class="hubrow" onclick="closeModal();'+action+'">'
-    + '<span class="hi">'+icon+'</span>'
-    + '<span class="ht"><b>'+title+'</b><small>'+sub+'</small></span>'
-    + '<span class="ha">›</span></button>';
+/* ---------- the train bar ----------
+   A persistent row of chips under the header, the way Fitness+ and HITFAT+ do
+   it: the surface stays put and the content changes beneath. Chips are real
+   navigation into the existing screens rather than a menu that has to be opened
+   and dismissed every time. */
+const TRAIN_TABS = [
+  {k:'store',    l:'Programs'},
+  {k:'programs', l:'Library'},
+  {k:'target',   l:'Targets'},
+  {k:'timer',    l:'Timer'},
+  {k:'lab',      l:'Wall Ball'},
+  {k:'explore',  l:'Explore'}
+];
 
-  $('modal-sheet').innerHTML = '<h3>Train</h3>'
-    + '<p class="msub">Everything to train with, in one place.</p>'
-    + '<div class="hubgrid">'
-      + row(icon('plan'),    'Programs',        'Structured plans, free and paid', "switchTab('store')")
-      + row(icon('library'), 'Workout Library', 'Every session, by category',      "switchTab('programs')")
-      + row(icon('target'),  'Target Sessions', 'Fix a weak station or quality',   "switchTab('target')")
-      + row('⏱',             'Timer Sessions',  'Clock-driven work, no video',     "openTimerHome()")
-      + row('📐',            'Wall Ball Lab',   'Depth judged on your phone',      "location.href='lab.html'")
-      + row(icon('library'), 'Browse everything','Explore the whole catalogue',    "switchTab('explore')")
-    + '</div>'
-    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Close</button></div>';
-  $('modal').classList.add('on');
+function paintTrainChips(tab){
+  const bar = $('tchips'); if(!bar) return;
+  const active = (tab==='tmhome' || tab==='tsess') ? 'timer' : tab;
+  const on = TRAIN_TABS.some(t=> t.k===active);
+  bar.style.display = on ? 'flex' : 'none';
+  if(!on) return;
+  bar.innerHTML = TRAIN_TABS.map(t=>
+    '<button class="tchip'+(t.k===active?' on':'')+'" onclick="goTrain(\''+t.k+'\')">'+t.l+'</button>').join('');
+  // keep the selected chip in view when the row is scrolled
+  const sel = bar.querySelector('.tchip.on');
+  if(sel && sel.scrollIntoView) sel.scrollIntoView({block:'nearest', inline:'center'});
+}
+
+function goTrain(k){
+  if(k==='timer'){ openTimerHome(); paintTrainChips('timer'); return; }
+  if(k==='lab'){ location.href='lab.html'; return; }
+  switchTab(k);
 }
 
 /* ---------- shell ----------
