@@ -5725,6 +5725,24 @@ function boot(){
 }
 if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded',boot); } else { boot(); }
 
+/* A thrown error anywhere in the app is otherwise invisible on a phone: the
+   screen simply stops updating. This is what found the Rep Lab bug. */
+window.addEventListener('error', e=>{
+  console.error('JS error', e.message, e.filename, e.lineno);
+  try{ if(curTab==='community' && $('cmfeed'))
+    $('cmfeed').innerHTML = '<div class="cmempty"><b>Something broke</b><p style="word-break:break-word;">'
+      + String(e.message||'') + '<br>' + String(e.lineno||'') + '</p></div>';
+  }catch(_){}
+});
+window.addEventListener('unhandledrejection', e=>{
+  const r = e && e.reason;
+  console.error('Promise rejected', r);
+  try{ if(curTab==='community' && $('cmfeed'))
+    $('cmfeed').innerHTML = '<div class="cmempty"><b>Something broke</b><p style="word-break:break-word;">'
+      + String((r && (r.message||r))||'') + '</p></div>';
+  }catch(_){}
+});
+
 /* ============================================================
    ████  COMMUNITY LAYER  ████
    An additional layer on top of the existing training system. It reads the same
@@ -5769,13 +5787,18 @@ const cmName  = p => (p && (p.display_name || p.name || (p.username && '@'+p.use
 const cmPlace = p => [p && p.city, p && p.state].filter(Boolean).join(', ');
 
 /* One broken table must never take the training app down with it. */
+let cmLastErr = '';
 async function cmQ(fn){
   if(!cmOn()) return null;
   try{
     const r = await fn();
-    if(r && r.error){ console.warn('[community]', r.error.message); return null; }
+    if(r && r.error){
+      cmLastErr = (r.error.message||'')+(r.error.details?' · '+r.error.details:'');
+      console.warn('[community]', cmLastErr);
+      return null;
+    }
     return r ? r.data : null;
-  }catch(e){ console.warn('[community]', e); return null; }
+  }catch(e){ cmLastErr = (e && (e.message||e))+''; console.warn('[community]', e); return null; }
 }
 
 /* Mirror what the athlete already filled in, so Community is populated without
@@ -5794,6 +5817,11 @@ async function cmProbe(){
    updatable — an upsert that writes the conflict column into its SET clause would
    be refused. Splitting the two paths keeps this independent of that detail. */
 async function cmSaveProfile(patch){
+  // An empty update is not a no-op: PostgREST rejects it. Read instead of write.
+  if(!patch || !Object.keys(patch).length)
+    return await cmQ(()=> sb.from('profiles')
+      .select('id,username,display_name,name,avatar_url,bio,state,city,country,club_id,experience_level,primary_race_category,upcoming_race_name,hyrox_pb')
+      .eq('id',HF.userId).maybeSingle());
   const d = await cmQ(()=> sb.from('profiles').update(patch).eq('id',HF.userId).select('id,username,display_name,name,avatar_url,bio,state,city,country,club_id,experience_level,primary_race_category,upcoming_race_name,hyrox_pb').maybeSingle());
   if(d) return d;
   return await cmQ(()=> sb.from('profiles').insert(Object.assign({id:HF.userId}, patch)).select('id,username,display_name,name,avatar_url,bio,state,city,country,club_id,experience_level,primary_race_category,upcoming_race_name,hyrox_pb').single());
@@ -5991,20 +6019,31 @@ async function renderCommunity(){
     + '<p>This is coming shortly — your training, programs and progress are unaffected.</p></div>'); return; }
 
   // These three were sequential — four round trips before anything could render.
+  // Each is allowed to fail on its own — a profile that will not save must not
+  // stop the feed from rendering.
   await Promise.all([
-    cmMe ? null : cmEnsureProfile(),
-    cmFollowingIds ? null : cmLoadFollowing(),
-    cmGrp ? null : cmLoadGroup()
+    cmMe ? null : cmEnsureProfile().catch(e=>{ console.warn('[community] profile', e); }),
+    cmFollowingIds ? null : cmLoadFollowing().catch(e=>{ console.warn('[community] follows', e); }),
+    cmGrp ? null : cmLoadGroup().catch(e=>{ console.warn('[community] group', e); })
   ]);
+  if(!cmFollowingIds) cmFollowingIds = new Set();   // never leave this undefined
 
   if(cmFeedMode==='following' && cmFollowingIds.size===0 && !cmSwitched) cmFeedMode='discover';
   cmMount(el);
 
   let html;
-  if(cmFeedMode==='group')          html = await cmBuildGroup();
-  else if(cmFeedMode==='discover')  html = await cmBuildDiscover();
-  else                              html = await cmBuildFollowing();
-
+  try{
+    if(cmFeedMode==='group')          html = await cmBuildGroup();
+    else if(cmFeedMode==='discover')  html = await cmBuildDiscover();
+    else                              html = await cmBuildFollowing();
+  }catch(e){
+    // A skeleton that never resolves tells the athlete nothing and tells me less.
+    console.error('[community]', e);
+    cmBody('<div class="cmempty"><b>Community could not load</b><p style="word-break:break-word;">'
+      + cmEsc((e && (e.message||e))+'') + '</p>'
+      + '<button class="go sec" onclick="cmCache[cmFeedMode]=null;renderCommunity()">Try again</button></div>');
+    return;
+  }
   cmCache[cmFeedMode] = html;
   cmBody(html);
 }
@@ -6028,7 +6067,11 @@ async function cmBuildGroup(){
 }
 
 async function cmBuildDiscover(){
+  cmLastErr = '';
   const [people, posts] = await Promise.all([cmAthletes(), cmFetchFeed('discover')]);
+  if(!people.length && !posts.length && cmLastErr)
+    return '<div class="cmempty"><b>Community could not load</b><p style="word-break:break-word;">'+cmEsc(cmLastErr)+'</p>'
+         + '<button class="go sec" onclick="cmCache.discover=null;renderCommunity()">Try again</button></div>';
   const ppl = people.filter(a=> ENABLE_COMMUNITY_DEMO_DATA || !a.is_demo);
   const rows = cmRank(posts);
   return cmGroupCard()
