@@ -483,7 +483,7 @@ const $=id=>document.getElementById(id);
 const video=$('video'), overlay=$('overlay'), ctx=overlay.getContext('2d');
 let detector=null, stream=null, running=false, raf=null, facing='user';
 let reps=0, valid=0, grey=0, repData=[];
-let state='up', bottom=-1, live={}, standD=null;   // standD = depth while standing, the rep baseline
+let state='up', bottom=-1, live={}, standD=null, standK=null;  // standing depth and knee angle = the rep baseline
 
 // MoveNet keypoint indices (COCO): 5 Lsh 6 Rsh 9 Lwr 10 Rwr 11 Lhip 12 Rhip 13 Lknee 14 Rknee 15 Lank 16 Rank
 /* Two skeletons, one code path. BlazePose (MediaPipe) gives 33 points including hands
@@ -503,9 +503,17 @@ const GREY_BAND=0.06;           // ± band around threshold = "grey zone"
    together meant a squat that stopped above parallel never entered the down
    phase, so it was not counted at all — the athlete saw nothing instead of a
    rep marked high, which is the opposite of what this tool is for. */
-const START_DROP=0.35;          // descent from standing (torso units) that starts a rep
-const END_RISE=0.12;            // back within this of standing = rep finished
-const KNEE_START=140, KNEE_END=158;   // knee angle start/end, used when the ankle is visible
+/* Start generously, VALIDATE strictly. Triggering on a threshold alone counted 8
+   reps in 4 seconds from an athlete standing still — MoveNet's knee estimate
+   wobbles by 15 degrees on a distant figure in loose trousers, and any wobble
+   that crossed a line became a rep. A real wall ball has a floor on how fast and
+   how shallow it can be, so the rep is only counted once it clears all three. */
+const START_DROP=0.18;          // descent from standing (torso units) that opens a rep
+const END_RISE=0.10;            // back within this of standing = rep closed
+const KNEE_START=155, KNEE_END=162;   // knee angle open/close, when the ankle is visible
+const MIN_REP_MS=1100;          // nobody completes a wall ball faster than this
+const MIN_DROP=0.30;            // the hip must actually travel this far below standing
+const MIN_BEND=25;              // and the knee must bend at least this many degrees
 const G=9.81;                   // ball leaves the hands at hand speed — that is what we measure
 const H_SHOULDER_ANKLE=0.779;   // shoulder-to-ankle as a share of standing height (Drillis & Contini)
 const DEEP_KNEE=95;             // knee angle at the bottom we call a full squat
@@ -703,7 +711,7 @@ async function start(){
     return;
   }
   $('loading').style.display='none';
-  resize(); running=true; armed=false; trail=[]; reps=0;valid=0;grey=0;repData=[];state='up';standD=null;smoothKP=null;trail=[];
+  resize(); running=true; armed=false; trail=[]; reps=0;valid=0;grey=0;repData=[];state='up';standD=null;standK=null;smoothKP=null;trail=[];
   const cfg=wbCfg(); REP_TARGET=cfg.t; setTs=null; endTs=null;
   pxPerM=null; lastSpeed=null; lastArc=null;
   try{
@@ -798,7 +806,9 @@ function diag(){
               +'  kneeS '+f(kscore(lastKP[K.LKNEE]))+'/'+f(kscore(lastKP[K.RKNEE]))+'\n' : 'kp none\n')
    +'state '+state+'   reps '+reps+'  ok '+valid+'\n'
    +'depth '+f(depth)+'  raw '+f(rawDepth)+'  bottom '+f(bottom)+'\n'
-   +'stand '+f(standD)+'  start@ '+f(standD==null?null:standD+START_DROP)+'\n'
+   +'stand '+f(standD)+'  start@ '+f(standD==null?null:standD+START_DROP)+'  standK '+f(standK)+'\n'
+   +(state==='down' ? 'drop '+f(bottom-(rep&&rep.standAt||0))+'/'+MIN_DROP
+       +'  ms '+(Date.now()-(rep&&rep.tStart||Date.now()))+'/'+MIN_REP_MS+'\n' : '')
    +'knee '+f(live.knee)+'  hip '+f(live.hip);
 }
 
@@ -845,12 +855,15 @@ function analyze(kp0){
     else if(depth<standD) standD=standD*0.6+depth*0.4;
     else standD=standD*0.995+depth*0.005;
 
-    const byKnee  = (live.knee!=null && live.knee < KNEE_START);
+    if(live.knee!=null) standK = (standK==null) ? live.knee : Math.max(standK*0.97+live.knee*0.03, live.knee);
+
+    const byKnee  = (live.knee!=null && standK!=null && live.knee < Math.min(KNEE_START, standK-12));
     const byDepth = (depth > standD + START_DROP);
-    if(byKnee || byDepth){                     // they have clearly begun a squat
+    if(byKnee || byDepth){                     // possibly a squat — decided on the way back up
       state='down'; bottom=rawDepth;
       rep={tStart:now, tBottom:now, kneeMin:live.knee||180, hipMin:live.hip||180, leanMax:live.lean||0, ankMin:live.ankle||180,
-           sym:symDiff(), pathX:[], torso, wrist:[], ankleY:0};
+           sym:symDiff(), pathX:[], torso, wrist:[], ankleY:0,
+           standAt:(standD==null?rawDepth:standD), kneeAt:(standK==null?180:standK)};
     }
     setStatus('READY','');
   } else {
@@ -865,8 +878,15 @@ function analyze(kp0){
     setStatus(bottom>=VALID_TH?'GOOD DEPTH':'GO LOWER', bottom>=VALID_TH?'':'go');
     const upByKnee  = (live.knee!=null && live.knee > KNEE_END);
     const upByDepth = (standD!=null && depth < standD + END_RISE);
-    if(upByKnee || upByDepth){                 // returned to standing → rep complete
+    if(upByKnee || upByDepth){                 // back at standing — now decide if that was a rep
       state='up';
+      const durMs = now - rep.tStart;
+      const drop  = bottom - rep.standAt;                       // how far the hip really travelled
+      const bend  = (rep.kneeMin<180 && rep.kneeAt<180) ? (rep.kneeAt - rep.kneeMin) : null;
+      if(durMs < MIN_REP_MS || drop < MIN_DROP || (bend!=null && bend < MIN_BEND)){
+        setStatus('READY','');                                  // noise, not a rep — discard silently
+        return;
+      }
       const cls = bottom>=VALID_TH+GREY_BAND ? 'valid' : (bottom>=VALID_TH-GREY_BAND ? 'grey':'bad');
       const score = Math.max(0,Math.min(100,Math.round(50 + bottom*120)));
       const drift = rep.pathX.length>2 ? (Math.max.apply(null,rep.pathX)-Math.min.apply(null,rep.pathX))/(rep.torso||1) : null;
