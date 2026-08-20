@@ -262,6 +262,22 @@
   .catcard .arr{position:static;transform:none;color:#5a5a5a;font-size:17px;z-index:2;flex:none;margin-left:10px;}
 
   /* category tiles with artwork (Workout Library) */
+  .tab.center{flex:0 0 auto;padding:0;margin:0 2px;}
+  .tab.center img{width:44px;height:44px;border-radius:50%;background:#141200;padding:7px;
+                  border:1px solid rgba(255,224,0,.45);box-shadow:0 3px 14px rgba(255,224,0,.16);opacity:1;}
+  .tab.center:active img{transform:scale(.94);}
+  .hubgrid{display:flex;flex-direction:column;gap:8px;margin:14px 0 4px;}
+  .hubrow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#141414;
+          border:1px solid var(--line);border-radius:14px;padding:12px 13px;color:#fff;font:inherit;cursor:pointer;}
+  .hubrow:active{transform:scale(.99);}
+  .hubrow .hi{flex:none;width:34px;height:34px;border-radius:10px;background:rgba(255,224,0,.08);
+              border:1px solid rgba(255,224,0,.16);color:var(--hitfat);display:flex;align-items:center;
+              justify-content:center;font-size:16px;}
+  .hubrow .hi svg{width:19px;height:19px;}
+  .hubrow .ht{flex:1;min-width:0;}
+  .hubrow .ht b{display:block;font-size:14.5px;font-weight:700;letter-spacing:-.2px;}
+  .hubrow .ht small{display:block;font-size:11.5px;color:var(--dim);margin-top:2px;}
+  .hubrow .ha{flex:none;color:#5a5a5a;font-size:17px;}
   .gcards{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
   .gcard{position:relative;height:132px;border-radius:16px;overflow:hidden;cursor:pointer;background:#141414 center/cover no-repeat;}
   .gcard .ov{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.1) 35%,rgba(0,0,0,.85));}
@@ -1220,11 +1236,12 @@
        .app is pinned inset:0, so this row ALWAYS sits at the true bottom — deterministic, no iOS fixed-position quirks. -->
   <div class="tabs" id="tabs">
     <button class="tab active" id="tab-home" onclick="switchTab('home')"><svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>Home</button>
-    <button class="tab" id="tab-explore" onclick="switchTab('explore')"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7.5"/><path d="M21 21l-4.5-4.5"/></svg>Explore</button>
-    <button class="tab" id="tab-store" onclick="switchTab('store')"><img class="ticon" src="icon-programs.png" alt="" width="24" height="24">Programs</button>
     <button class="tab" id="tab-community" onclick="switchTab('community')"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20c0-3.4 3-5.4 6.5-5.4s6.5 2 6.5 5.4"/><circle cx="17.5" cy="7" r="2.6"/><path d="M17 13.4c2.9.3 4.5 2.2 4.5 4.9"/></svg>Community</button>
+    <button class="tab center" id="tab-hub" onclick="openTrainHub()" aria-label="Train"><img src="icon-programs.png" alt="" width="30" height="30"></button>
     <button class="tab" id="tab-progress" onclick="switchTab('progress')"><svg viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3M20 16V6"/></svg>Progress</button>
     <button class="tab" id="tab-profile" onclick="switchTab('profile')"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>Profile</button>
+    <button class="tab" id="tab-explore" style="display:none" onclick="switchTab('explore')"></button>
+    <button class="tab" id="tab-store" style="display:none" onclick="switchTab('store')"></button>
     <button class="tab" id="tab-pro" style="display:none" onclick="switchTab('pro')"></button>
     <button class="tab" id="tab-programs" style="display:none" onclick="switchTab('programs')"></button>
     <button class="tab" id="tab-target" style="display:none" onclick="switchTab('target')"></button>
@@ -2538,8 +2555,11 @@ function switchTab(tab){
   // hide every screen
   hidePanels();
   if(window.klTicker && tab!=='pro' && tab!=='home' && tab!=='explore'){ clearInterval(window.klTicker); window.klTicker=null; }
-  ['tab-home','tab-programs','tab-plans','tab-pro','tab-target','tab-kl','tab-progress','tab-profile','tab-explore','tab-coaches','tab-store','tab-community'].forEach(id=>{ const b=$(id); if(b&&b.classList) b.classList.remove('active'); });
+  ['tab-home','tab-programs','tab-plans','tab-pro','tab-target','tab-kl','tab-progress','tab-profile','tab-explore','tab-coaches','tab-store','tab-community','tab-hub'].forEach(id=>{ const b=$(id); if(b&&b.classList) b.classList.remove('active'); });
   const setActive=id=>{ const b=$(id); if(b&&b.classList) b.classList.add('active'); };
+  // everything reached through the centre button lights the centre button, so the
+  // athlete is never on a screen with nothing selected
+  if(['explore','store','programs','target','pro','plans','coaches','tsess','tmhome'].indexOf(tab)>-1) setActive('tab-hub');
   if(tab==='home'){
     $('home').style.display='block'; setActive('tab-home'); renderHome();
   } else if(tab==='explore'){
@@ -6629,6 +6649,33 @@ async function renderProgressCommunity(){
     + '<div class="cmstand" onclick="switchTab(\'community\')">'
     + '<div class="sl">'+bits.join('<span class="dot">·</span>')+'</div>'
     + '<div class="sa">View Community ›</div></div>';
+}
+
+/* ---------- the train hub ----------
+   The centre button holds everything you browse in order to train: the store,
+   the library, target work, timers and the wall ball tool. Explore and Programs
+   both answered "find me something to train", so they belong behind one door.
+   Progress deliberately stays in the strip — it is opened most days, and burying
+   a daily screen behind an unlabelled button costs more than it saves. */
+function openTrainHub(){
+  const row = (icon, title, sub, action) =>
+    '<button class="hubrow" onclick="closeModal();'+action+'">'
+    + '<span class="hi">'+icon+'</span>'
+    + '<span class="ht"><b>'+title+'</b><small>'+sub+'</small></span>'
+    + '<span class="ha">›</span></button>';
+
+  $('modal-sheet').innerHTML = '<h3>Train</h3>'
+    + '<p class="msub">Everything to train with, in one place.</p>'
+    + '<div class="hubgrid">'
+      + row(icon('plan'),    'Programs',        'Structured plans, free and paid', "switchTab('store')")
+      + row(icon('library'), 'Workout Library', 'Every session, by category',      "switchTab('programs')")
+      + row(icon('target'),  'Target Sessions', 'Fix a weak station or quality',   "switchTab('target')")
+      + row('⏱',             'Timer Sessions',  'Clock-driven work, no video',     "openTimerHome()")
+      + row('📐',            'Wall Ball Lab',   'Depth judged on your phone',      "location.href='lab.html'")
+      + row(icon('library'), 'Browse everything','Explore the whole catalogue',    "switchTab('explore')")
+    + '</div>'
+    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Close</button></div>';
+  $('modal').classList.add('on');
 }
 
 /* ---------- shell ----------
