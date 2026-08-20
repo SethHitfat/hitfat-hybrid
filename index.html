@@ -6269,11 +6269,18 @@ async function cmDoDelete(kind, id){
   return cmDeletePost(id);
 }
 
-/* Soft delete: the read policies filter deleted_at, so the post disappears while
-   its comments and counts stay intact rather than cascading away. */
+/* Soft delete was the nicer design — it keeps the comments — but the UPDATE kept
+   failing its WITH CHECK, and DELETE has no WITH CHECK to fail: it is authorised
+   by USING alone, the same clause that already lets deleting a comment work.
+   The cost is that the post's comments cascade with it, which is what people
+   expect from deleting a post anyway. */
 async function cmDeletePost(id){
-  const d = await cmWrite(()=> sb.from('posts').update({deleted_at:new Date().toISOString()})
-                              .eq('id',id).eq('user_id',HF.userId));
+  let d = await cmWrite(()=> sb.from('posts').delete().eq('id',id).eq('user_id',HF.userId));
+  if(!d){
+    // fall back to the soft delete in case DELETE is the one that is restricted
+    d = await cmWrite(()=> sb.from('posts').update({deleted_at:new Date().toISOString()})
+                             .eq('id',id).eq('user_id',HF.userId));
+  }
   if(!d){ cmFail('Could not delete that post.'); return; }
   nfToast('Post deleted');
   cmCache.discover=null; cmCache.following=null; cmCache.group=null;
