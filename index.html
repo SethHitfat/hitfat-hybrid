@@ -788,6 +788,12 @@
   .cmscope{flex:none;background:var(--surface);border:1px solid var(--line);color:var(--dim);border-radius:99px;
            padding:7px 14px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;}
   .cmscope.on{color:#fff;border-color:rgba(255,224,0,.45);background:#181500;}
+  .cmstand{display:flex;align-items:center;gap:12px;background:linear-gradient(150deg,#1d1a05 0%,#121212 62%);
+           border:1px solid rgba(255,224,0,.2);border-radius:16px;padding:14px 16px;cursor:pointer;}
+  .cmstand .sl{flex:1;min-width:0;font-size:13.5px;color:var(--dim);line-height:1.5;}
+  .cmstand .sl b{color:#fff;font-weight:800;font-size:15px;font-variant-numeric:tabular-nums;}
+  .cmstand .dot{color:var(--dim2);margin:0 7px;}
+  .cmstand .sa{flex:none;font-size:12.5px;font-weight:700;color:var(--hitfat);}
   .cmchal{background:linear-gradient(150deg,#1d1a05 0%,#121212 62%);border:1px solid rgba(255,224,0,.22);
           border-radius:18px;padding:18px;}
   .cmchal .ct{font-size:20px;font-weight:800;letter-spacing:-.4px;}
@@ -1116,6 +1122,7 @@
         <div class="hgroup"><div class="k">Your Training</div><h2>PROGRESS</h2><p>Your Hybrid Score, streak and history — all saved to your account.</p></div>
         <!-- grouped by the question an athlete is asking, not the order the features were built:
              where am I -> what have I done -> what am I capable of -> race day -> log something -> notes -->
+        <div id="prog-community"></div>
         <div id="prog-score"></div>
 
         <div id="prog-stats"></div>
@@ -3926,6 +3933,7 @@ function calcPaceMe(){
 }
 function renderProgress(){
   const wk=weekStats();
+  renderProgressCommunity();      // rank + challenge, linked across to Community
   const el=$('prog-score'); if(el){ el.innerHTML=`<div class="sechead" style="margin-top:14px;">Hybrid Score</div>${scoreDashHTML()}
     <div class="infonote" style="margin-bottom:6px;">${scoreSourceNote()}</div>
     ${suggestCard(AREA_PROGRAM[weakestArea()], 'Your weakest area is '+AREA_LABEL[weakestArea()].toLowerCase())}`; }
@@ -6589,6 +6597,38 @@ async function cmBuildChallenge(){
               + '<div class="sc">'+Number(r.points||0).toLocaleString()+'</div></div>').join('')
         : '<div class="cmnote" style="margin-top:18px;">Nobody has joined yet. Be first.</div>')
     + '<div class="cmnote">One point per minute trained. Real athletes only — seeded profiles are excluded.</div>';
+}
+
+/* ---------- where you stand, shown inside Progress ----------
+   Ranking and Challenge live in Community because they involve other people, but
+   they are still progress — so Progress carries a one-line summary that links
+   across, rather than making the athlete remember to go and look. */
+async function renderProgressCommunity(){
+  const el = $('prog-community'); if(!el) return;
+  el.innerHTML = '';
+  if(!cmOn()) return;
+  if(!cmUp) await cmProbe();
+  if(!cmUp) return;
+
+  cmPublishScore();
+  const [me, chal] = await Promise.all([
+    cmQ(()=> sb.from('leaderboard').select('rank_my,rank_state,hybrid_score,state').eq('id',HF.userId).maybeSingle()),
+    cmLoadChallenge()
+  ]);
+  const bits = [];
+  if(me && me.rank_my)  bits.push('<b>#'+me.rank_my+'</b> in Malaysia');
+  if(me && me.rank_state && me.state) bits.push('<b>#'+me.rank_state+'</b> in '+cmEsc(me.state));
+  if(chal){
+    const pts = cmChalMe ? Number(cmChalMe.points||0) : cmChalPoints(chal.start_date, chal.end_date).points;
+    const tgt = Number(chal.target_value||0);
+    bits.push('<b>'+pts.toLocaleString()+'</b> / '+tgt.toLocaleString()+' challenge points');
+  }
+  if(!bits.length) return;                       // nothing to say yet — say nothing
+
+  el.innerHTML = '<div class="sechead" style="margin-top:14px;">Where you stand</div>'
+    + '<div class="cmstand" onclick="switchTab(\'community\')">'
+    + '<div class="sl">'+bits.join('<span class="dot">·</span>')+'</div>'
+    + '<div class="sa">View Community ›</div></div>';
 }
 
 /* ---------- shell ----------
