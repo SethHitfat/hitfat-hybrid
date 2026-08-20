@@ -743,6 +743,16 @@
   .cmact{flex:1;background:#141414;border:1px solid var(--line);color:#cfcfcf;border-radius:10px;
          padding:8px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;}
   .cmact:active{transform:scale(.98);}
+  .cmrow{display:flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--line);
+         border-radius:14px;padding:11px 13px;margin-bottom:9px;}
+  .cmrl{display:flex;align-items:center;gap:11px;flex:1;min-width:0;cursor:pointer;}
+  .cmrt{min-width:0;}
+  .cmrt .n{font-size:14.5px;font-weight:700;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cmrt .t{font-size:11.5px;color:var(--dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .cmfollow{flex:none;background:var(--hitfat);color:var(--hitfat-ink);border:1px solid var(--hitfat);border-radius:99px;
+            padding:7px 15px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;}
+  .cmfollow.on{background:transparent;color:var(--dim);border-color:var(--line);}
+  .cmfollow:disabled{opacity:.5;}
   .cmempty{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:26px 20px;text-align:center;}
   .cmempty b{display:block;font-size:16.5px;font-weight:800;letter-spacing:-.2px;}
   .cmempty p{color:var(--dim);font-size:13.5px;margin-top:7px;line-height:1.5;}
@@ -5859,6 +5869,27 @@ async function cmReact(postId){
   if(cmViewing) openAthlete(cmViewing); else renderCommunity();
 }
 
+
+/* Discover has to show PEOPLE, not just posts. With no posts yet an athlete sees
+   an empty feed and has no way to follow anybody — so Following can never fill
+   either. Listing athletes is what makes the loop reachable on day one. */
+async function cmAthletes(){
+  if(!cmOn()) return [];
+  const d = await cmQ(()=> sb.from('profiles').select('id,username,display_name,name,avatar_url,state,city,experience_level,primary_race_category,hyrox_pb').neq('id',HF.userId).limit(40));
+  return d || [];
+}
+
+function cmAthleteRow(a){
+  const follows = cmFollowingIds && cmFollowingIds.has(a.id);
+  const sub = [cmPlace(a), a.primary_race_category, a.experience_level].filter(Boolean).join(' \u00b7 ');
+  return '<div class="cmrow">'
+    + '<div class="cmrl" onclick="openAthlete(\''+cmEsc(a.id)+'\')">'+cmAvatar(a,42)
+      + '<div class="cmrt"><div class="n">'+cmEsc(cmName(a))+'</div>'
+      + (sub?'<div class="t">'+cmEsc(sub)+'</div>':'')+'</div></div>'
+    + '<button class="cmfollow'+(follows?' on':'')+'" onclick="event.stopPropagation();cmFollow(\''+cmEsc(a.id)+'\',this)">'
+      + (follows?'Following':'Follow')+'</button></div>';
+}
+
 /* ---------- screens ---------- */
 function cmShell(body){
   const tab = (k,l) => '<button class="cmtab'+(cmFeedMode===k?' on':'')+'" onclick="cmSetFeed(\''+k+'\')">'+l+'</button>';
@@ -5882,6 +5913,17 @@ async function renderCommunity(){
   if(!cmUp) await cmProbe();
   if(!cmUp){ el.innerHTML = cmShell('<div class="cmempty"><b>Community is being set up</b>'
     + '<p>This is coming shortly — your training, programs and progress are unaffected.</p></div>'); return; }
+  if(cmFeedMode==='discover'){
+    const people = await cmAthletes();
+    el.innerHTML = cmShell(
+        (people.length
+          ? '<div class="sechead" style="margin:4px 0 10px;">Athletes on HITFAT</div>' + people.map(cmAthleteRow).join('')
+          : '<div class="cmempty"><b>No other athletes yet</b><p>You are early — invite your training partners.</p></div>')
+      + (posts.length
+          ? '<div class="sechead" style="margin:24px 0 10px;">Recent activity</div>' + posts.map(cmPostCard).join('')
+          : ''));
+    return;
+  }
   if(posts.length) body = posts.map(cmPostCard).join('');
   else if(cmFeedMode==='following')
     body = '<div class="cmempty"><b>Build your hybrid circle</b>'
