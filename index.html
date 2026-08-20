@@ -788,6 +788,18 @@
   .cmscope{flex:none;background:var(--surface);border:1px solid var(--line);color:var(--dim);border-radius:99px;
            padding:7px 14px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;}
   .cmscope.on{color:#fff;border-color:rgba(255,224,0,.45);background:#181500;}
+  .cmchal{background:linear-gradient(150deg,#1d1a05 0%,#121212 62%);border:1px solid rgba(255,224,0,.22);
+          border-radius:18px;padding:18px;}
+  .cmchal .ct{font-size:20px;font-weight:800;letter-spacing:-.4px;}
+  .cmchal .cd{font-size:13.5px;color:var(--dim);margin-top:6px;line-height:1.5;}
+  .cbar{height:10px;background:#1c1c1c;border-radius:99px;overflow:hidden;margin-top:15px;}
+  .cbar i{display:block;height:100%;background:var(--hitfat);border-radius:99px;transition:width .4s ease;}
+  .cnums{display:flex;justify-content:space-between;align-items:baseline;margin-top:9px;font-size:13px;color:var(--dim);}
+  .cnums b{font-size:19px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums;}
+  .cnums span{font-size:12px;color:var(--dim2);}
+  .cnote{font-size:12.5px;color:var(--dim);margin-top:11px;}
+  .cdone{font-size:13.5px;font-weight:700;color:var(--hitfat);margin-top:12px;}
+  @media (prefers-reduced-motion:reduce){ .cbar i{transition:none;} }
   .cmlb{display:flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--line);
         border-radius:14px;padding:10px 13px;margin-bottom:8px;cursor:pointer;}
   .cmlb.me{border-color:var(--hitfat);background:#161200;}
@@ -6476,6 +6488,109 @@ function cmScopeBar(){
 }
 function cmSetScope(k){ cmScope=k; cmCache.board=null; renderCommunity(); }
 
+/* ---------- monthly challenge ----------
+   Points are minutes trained. Session data lives in user_data behind RLS, so
+   each athlete computes and publishes their OWN progress, exactly as with the
+   leaderboard — nobody can write anybody else's row. */
+let cmChal = null, cmChalMe = null;
+
+function cmChalPoints(startISO, endISO){
+  // count every logged session inside the window; a session with no duration
+  // recorded is worth 30, which is about the shortest thing in the library
+  const a = new Date(startISO+'T00:00:00').getTime();
+  const b = new Date(endISO+'T23:59:59').getTime();
+  let pts = 0, n = 0;
+  const S = (HF.data && HF.data.sessions) || {};
+  Object.keys(S).forEach(k=>{
+    const v = S[k]; if(!v || !v.date) return;
+    const t = new Date(v.date).getTime();
+    if(isNaN(t) || t<a || t>b) return;
+    const m = Number(v.mins);
+    pts += (m && m>0) ? Math.min(m,180) : 30;      // cap one session, so a stuck timer cannot run away with it
+    n++;
+  });
+  return { points: Math.round(pts), sessions: n };
+}
+
+async function cmLoadChallenge(){
+  if(!cmOn()) return null;
+  if(!cmChal){
+    cmChal = await cmQ(()=> sb.from('challenges').select('*')
+        .eq('status','active').order('start_date',{ascending:false}).limit(1).maybeSingle()) || null;
+  }
+  if(cmChal){
+    cmChalMe = await cmQ(()=> sb.from('challenge_participants').select('*')
+        .eq('challenge_id',cmChal.id).eq('user_id',HF.userId).maybeSingle());
+  }
+  return cmChal;
+}
+
+async function cmJoinChallenge(btn){
+  if(!cmOn() || !cmChal) return;
+  if(btn) btn.disabled = true;
+  const p = cmChalPoints(cmChal.start_date, cmChal.end_date);
+  const ok = await cmWrite(()=> sb.from('challenge_participants')
+      .insert({challenge_id:cmChal.id, user_id:HF.userId, points:p.points, progress:p.points}));
+  if(!ok){ cmFail('Could not join the challenge.'); if(btn) btn.disabled=false; return; }
+  track('challenge_join',{});
+  cmChalMe = null; cmCache.chal = null;
+  renderCommunity();
+}
+
+/* Recompute and publish, then award the badge the first time the target is met. */
+async function cmSyncChallenge(){
+  if(!cmOn() || !cmChal || !cmChalMe) return;
+  const p = cmChalPoints(cmChal.start_date, cmChal.end_date);
+  if(p.points === cmChalMe.points) return;
+  const done = p.points >= Number(cmChal.target_value||0);
+  const patch = { points:p.points, progress:p.points };
+  if(done && !cmChalMe.completed_at) patch.completed_at = new Date().toISOString();
+  await cmWrite(()=> sb.from('challenge_participants').update(patch)
+      .eq('challenge_id',cmChal.id).eq('user_id',HF.userId));
+  if(done && !cmChalMe.completed_at && cmChal.badge_id){
+    await cmWrite(()=> sb.from('user_badges').insert({user_id:HF.userId, badge_id:cmChal.badge_id}));
+    nfToast('Challenge complete — badge unlocked 🏁');
+    track('challenge_complete',{});
+  }
+  cmChalMe = Object.assign({}, cmChalMe, patch);
+}
+
+async function cmBuildChallenge(){
+  await cmLoadChallenge();
+  if(!cmChal) return '<div class="cmempty"><b>No challenge running</b>'
+    + '<p>The next monthly challenge will appear here when it opens.</p></div>';
+  await cmSyncChallenge();
+
+  const target = Number(cmChal.target_value||0);
+  const mine   = cmChalMe ? Number(cmChalMe.points||0) : cmChalPoints(cmChal.start_date, cmChal.end_date).points;
+  const pct    = target ? Math.min(100, Math.round(mine/target*100)) : 0;
+  const days   = Math.max(0, Math.ceil((new Date(cmChal.end_date+'T23:59:59') - Date.now())/864e5));
+  const board  = await cmQ(()=> sb.from('challenge_board').select('*')
+      .eq('challenge_id',cmChal.id).order('points',{ascending:false}).limit(25)) || [];
+
+  return '<div class="cmchal">'
+    + '<div class="ct">'+cmEsc(cmChal.title)+'</div>'
+    + '<div class="cd">'+cmEsc(cmChal.description||'')+'</div>'
+    + '<div class="cbar"><i style="width:'+pct+'%"></i></div>'
+    + '<div class="cnums"><b>'+mine.toLocaleString()+'</b> / '+target.toLocaleString()+' points'
+      + '<span>'+days+' day'+(days===1?'':'s')+' left</span></div>'
+    + (cmChalMe
+        ? (cmChalMe.completed_at
+            ? '<div class="cdone">🏁 Completed — badge unlocked</div>'
+            : '<div class="cnote">You are in. Every minute you train this month counts.</div>')
+        : '<button class="go" style="width:100%;margin-top:12px;" onclick="cmJoinChallenge(this)">Join Challenge</button>')
+    + '</div>'
+    + (board.length
+        ? '<div class="sechead" style="margin:22px 0 10px;">Challenge standings</div>'
+          + board.map(r=> '<div class="cmlb'+(r.user_id===HF.userId?' me':'')+'" onclick="openAthlete(\''+cmEsc(r.user_id)+'\')">'
+              + '<div class="rk">'+(r.rank_in_challenge||0)+'</div>'+cmAvatar(r,36)
+              + '<div class="lbn"><div class="n">'+cmEsc(cmName(r))+(r.user_id===HF.userId?' <span class="you">You</span>':'')+'</div>'
+              + '<div class="t">'+cmEsc(cmPlace(r)||'')+'</div></div>'
+              + '<div class="sc">'+Number(r.points||0).toLocaleString()+'</div></div>').join('')
+        : '<div class="cmnote" style="margin-top:18px;">Nobody has joined yet. Be first.</div>')
+    + '<div class="cmnote">One point per minute trained. Real athletes only — seeded profiles are excluded.</div>';
+}
+
 /* ---------- shell ----------
    The shell (title + tabs) is mounted ONCE. Only the feed body is swapped, so
    switching tabs no longer tears down and rebuilds the header — which is what
@@ -6485,7 +6600,7 @@ function cmShell(body){
   return '<div class="cmtop"><div class="hgroup" style="flex:1;"><div class="k">HITFAT</div><h2>COMMUNITY</h2>'
        + '<p>The home of hybrid fitness in Malaysia — train, track, compete, connect.</p></div>'
        + '<button class="cmbell" id="cm-bell" onclick="openNotifs()">\ud83d\udd14</button></div>'
-       + '<div class="cmtabs">'+tab('discover','Discover')+tab('following','Following')+tab('group','Group')+tab('board','Ranking')+'</div>'
+       + '<div class="cmtabs">'+tab('discover','Discover')+tab('following','Following')+tab('group','Group')+tab('board','Ranking')+tab('chal','Challenge')+'</div>'
        + '<div id="cmfeed">'+(body||'')+'</div>';
 }
 
@@ -6494,7 +6609,7 @@ let cmSwitched = false;
 
 function cmMount(el){
   if(el.getAttribute('data-cm') !== '1'){ el.innerHTML = cmShell(''); el.setAttribute('data-cm','1'); }
-  ['discover','following','group','board'].forEach(k=>{
+  ['discover','following','group','board','chal'].forEach(k=>{
     const b = $('cmtab-'+k); if(b) b.classList.toggle('on', cmFeedMode===k);
   });
 }
@@ -6545,7 +6660,8 @@ async function renderCommunity(){
 
   let html;
   try{
-    if(cmFeedMode==='board')          html = await cmBuildBoard();
+    if(cmFeedMode==='chal')           html = await cmBuildChallenge();
+    else if(cmFeedMode==='board')   html = await cmBuildBoard();
     else if(cmFeedMode==='group')   html = await cmBuildGroup();
     else if(cmFeedMode==='discover') html = await cmBuildDiscover();
     else                              html = await cmBuildFollowing();
