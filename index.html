@@ -875,10 +875,33 @@
   .cmlb .sc{flex:none;font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-.4px;}
   .cmlbgap{text-align:center;color:var(--dim2);letter-spacing:3px;padding:4px 0 8px;}
   .cmnote{color:var(--dim2);font-size:11.5px;margin-top:14px;line-height:1.5;}
+  /* .go was defined only inside .today, so every button using it elsewhere fell
+     back to the browser default — a white bar with tiny text. These are the base
+     rules; the .today variants above are more specific and still win there. */
+  .go{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:var(--hitfat);
+      color:var(--hitfat-ink) !important;border:1px solid var(--hitfat);border-radius:99px;
+      padding:12px 20px;font-family:'Inter',system-ui,sans-serif;font-size:14px;font-weight:700;
+      letter-spacing:-.1px;cursor:pointer;transition:transform .12s,opacity .12s;}
+  .go:active{transform:scale(.98);}
+  .go:disabled{opacity:.55;cursor:default;}
+  .go.sec{background:transparent;color:#e4e4e4 !important;border-color:var(--line);}
+  .go.sec:hover{border-color:#3a3a3a;}
+  .go:focus-visible{outline:2px solid var(--hitfat);outline-offset:2px;}
   .cmtag{display:inline-block;margin-left:7px;font-size:9.5px;font-weight:700;letter-spacing:.5px;
          text-transform:uppercase;color:var(--dim2);border:1px solid var(--line);border-radius:99px;
          padding:2px 6px;vertical-align:middle;}
   .cmtag.off{color:var(--hitfat-ink);background:var(--hitfat);border-color:var(--hitfat);}
+  .gopen{margin-top:13px;font-size:13.5px;font-weight:700;color:var(--hitfat);}
+  .gopen span{margin-left:3px;}
+  .clubcard{flex:0 0 auto;width:168px;background:var(--surface);border:1px solid var(--line);border-radius:16px;
+            padding:14px;cursor:pointer;}
+  .clubcard .clublogo{margin-bottom:10px;}
+  .clubcard .cn{font-size:14px;font-weight:700;letter-spacing:-.2px;line-height:1.25;
+                display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:35px;}
+  .clubcard .cs{font-size:11.5px;color:var(--dim2);margin-top:5px;}
+  .clubcard .cmfollow{width:100%;margin-top:11px;}
+  /* four chips share the width; five did not fit and clipped "Challenge" */
+  .cmtab{flex:1 1 0;min-width:0;padding:10px 8px;}
   .cmgroup{background:linear-gradient(150deg,#1d1a05 0%,#121212 60%);border:1px solid rgba(255,224,0,.22);
            border-radius:18px;padding:18px;cursor:pointer;}
   .cmgroup .gn,.cmghead .gn{font-size:19px;font-weight:800;letter-spacing:-.3px;}
@@ -6219,7 +6242,7 @@ function cmGroupCard(){
     + '<div class="gn">'+cmEsc(cmGrp.name)+'</div>'
     + '<div class="gd">'+cmEsc(cmGrp.description||'')+'</div>'
     + '<div class="gm">'+n+' member'+(n===1?'':'s')+'</div>'
-    + '<button class="go sec" style="margin-top:12px;width:100%;" onclick="event.stopPropagation();cmSetFeed(\'group\')">Open Community</button></div>';
+    + '<div class="gopen">Open Community <span>\u203a</span></div></div>';
 }
 
 /* Composer — text for now; image and workout attachments follow. */
@@ -6590,7 +6613,8 @@ async function cmBuildBoard(){
 
 function cmScopeBar(){
   const b = (k,l)=> '<button class="cmscope'+(cmScope===k?' on':'')+'" onclick="cmSetScope(\''+k+'\')">'+l+'</button>';
-  return '<div class="cmscopes">'+b('my','Malaysia')+b('state','My state')+b('club','My club')+'</div>';
+  // shortened so all four fit without the last one clipping at the edge
+  return '<div class="cmscopes">'+b('my','Malaysia')+b('state','State')+b('club','Club')+b('challenge','Challenge')+'</div>';
 }
 function cmSetScope(k){ cmScope=k; cmCache.board=null; renderCommunity(); }
 
@@ -6798,6 +6822,17 @@ async function cmJoinClub(id, btn){
   if(cmViewingClub) openClub(cmViewingClub); else renderCommunity();
 }
 
+function cmClubCard(c){
+  const mine = cmMe && cmMe.club_id === c.id;
+  const n = c.member_count || 0;
+  return '<div class="clubcard" onclick="openClub(\''+cmEsc(c.id)+'\')">'
+    + '<div class="clublogo">'+cmEsc((c.name||'C').trim().charAt(0).toUpperCase())+'</div>'
+    + '<div class="cn">'+cmEsc(c.name)+'</div>'
+    + '<div class="cs">'+cmEsc(c.state||'')+' \u00b7 '+n+' member'+(n===1?'':'s')+'</div>'
+    + '<button class="cmfollow'+(mine?' on':'')+'" onclick="event.stopPropagation();cmJoinClub(\''+cmEsc(c.id)+'\',this)">'
+      + (mine?'Joined':'Join')+'</button></div>';
+}
+
 function cmClubRow(c){
   const mine = cmMe && cmMe.club_id === c.id;
   return '<div class="cmrow">'
@@ -6957,7 +6992,7 @@ function cmShell(body){
   return '<div class="cmtop"><div class="hgroup" style="flex:1;"><div class="k">HITFAT</div><h2>COMMUNITY</h2>'
        + '<p>The home of hybrid fitness in Malaysia — train, track, compete, connect.</p></div>'
        + '<button class="cmbell" id="cm-bell" onclick="openNotifs()">\ud83d\udd14</button></div>'
-       + '<div class="cmtabs">'+tab('discover','Discover')+tab('following','Following')+tab('group','Group')+tab('board','Ranking')+tab('chal','Challenge')+'</div>'
+       + '<div class="cmtabs">'+tab('discover','Discover')+tab('following','Following')+tab('group','Group')+tab('board','Compete')+'</div>'
        + '<div id="cmfeed">'+(body||'')+'</div>';
 }
 
@@ -6966,7 +7001,7 @@ let cmSwitched = false;
 
 function cmMount(el){
   if(el.getAttribute('data-cm') !== '1'){ el.innerHTML = cmShell(''); el.setAttribute('data-cm','1'); }
-  ['discover','following','group','board','chal'].forEach(k=>{
+  ['discover','following','group','board'].forEach(k=>{
     const b = $('cmtab-'+k); if(b) b.classList.toggle('on', cmFeedMode===k);
   });
 }
@@ -7017,8 +7052,9 @@ async function renderCommunity(){
 
   let html;
   try{
-    if(cmFeedMode==='chal')           html = await cmBuildChallenge();
-    else if(cmFeedMode==='board')   html = await cmBuildBoard();
+    if(cmFeedMode==='board')          html = (cmScope==='challenge')
+                                           ? cmScopeBar() + await cmBuildChallenge()
+                                           : await cmBuildBoard();
     else if(cmFeedMode==='group')   html = await cmBuildGroup();
     else if(cmFeedMode==='discover') html = await cmBuildDiscover();
     else                              html = await cmBuildFollowing();
@@ -7063,16 +7099,19 @@ async function cmBuildDiscover(){
   const rows = cmRank(posts);
   const filtering = !!(cmFind.q || cmFind.state || cmFind.level);
   return cmGroupCard()
-    + ((clubs && clubs.length)
-        ? '<div class="sechead" style="margin:20px 0 10px;">Clubs in Malaysia</div>' + clubs.slice(0,6).map(cmClubRow).join('')
-        : '')
     + '<div class="sechead" style="margin:22px 0 10px;">Find athletes</div>'
     + cmFindBar()
     + (ppl.length
-        ? ppl.slice(0, filtering ? 40 : 12).map(cmAthleteRow).join('')
+        ? ppl.slice(0, filtering ? 40 : 8).map(cmAthleteRow).join('')
         : '<div class="cmempty"><b>No athletes match</b><p>Try a different state or level.</p></div>')
+    // clubs sit below the people and scroll sideways: six full-width rows of
+    // empty clubs pushed the athletes off the screen entirely
+    + ((clubs && clubs.length && !filtering)
+        ? '<div class="sechead" style="margin:24px 0 10px;">Clubs in Malaysia</div>'
+          + '<div class="hscroll">' + clubs.map(cmClubCard).join('') + '</div>'
+        : '')
     + (!filtering && rows.length
-        ? '<div class="sechead" style="margin:22px 0 10px;">Training today</div>' + rows.map(cmPostCard).join('')
+        ? '<div class="sechead" style="margin:24px 0 10px;">Training today</div>' + rows.map(cmPostCard).join('')
         : '');
 }
 
