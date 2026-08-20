@@ -5823,6 +5823,21 @@ const cmPlace = p => [p && p.city, p && p.state].filter(Boolean).join(', ');
 
 /* One broken table must never take the training app down with it. */
 let cmLastErr = '';
+
+/* Writes must be judged by r.error, never by r.data. supabase-js returns
+   data:null on a SUCCESSFUL insert/update/delete unless .select() is chained,
+   and cmQ hands back data — so every successful write looked like a failure.
+   maybeSingle() legitimately returns null too, which is why cmQ cannot simply
+   treat null as success for everyone. */
+async function cmWrite(fn){
+  if(!cmOn()) return false;
+  try{
+    const r = await fn();
+    if(r && r.error){ cmLastErr = r.error.message||''; console.warn('[community write]', cmLastErr); return false; }
+    return true;
+  }catch(e){ cmLastErr = (e && (e.message||e))+''; console.warn('[community write]', e); return false; }
+}
+
 async function cmQ(fn){
   if(!cmOn()) return null;
   try{
@@ -5905,18 +5920,18 @@ async function cmFollow(id, btn){
 
   let ok;
   if(wasFollowing){
-    ok = await cmQ(()=> sb.from('follows').delete().eq('follower_id',HF.userId).eq('following_id',id));
+    ok = await cmWrite(()=> sb.from('follows').delete().eq('follower_id',HF.userId).eq('following_id',id));
   }else{
-    ok = await cmQ(()=> sb.from('follows').insert({follower_id:HF.userId, following_id:id}));
-    if(ok!==null){
+    ok = await cmWrite(()=> sb.from('follows').insert({follower_id:HF.userId, following_id:id}));
+    if(ok){
       // RLS forces actor_id to be me, so a notification cannot be forged
-      cmQ(()=> sb.from('notifications').insert({user_id:id, actor_id:HF.userId, type:'follow',
-                                                entity_type:'profile', entity_id:HF.userId}));
+      cmWrite(()=> sb.from('notifications').insert({user_id:id, actor_id:HF.userId, type:'follow',
+                                                  entity_type:'profile', entity_id:HF.userId}));
       track('community_follow',{});
     }
   }
 
-  if(ok===null){                                   // put the button back if it failed
+  if(!ok){                                         // put the button back if it failed
     if(wasFollowing) cmFollowingIds.add(id); else cmFollowingIds.delete(id);
     if(btn){ btn.textContent = wasFollowing ? 'Following' : 'Follow'; btn.classList.toggle('on', wasFollowing); }
     nfToast('Could not update follow — try again.');
@@ -5988,18 +6003,18 @@ async function cmReact(postId, btn){
   const span = btn ? btn.querySelector('span') : null;
   const n = span ? (parseInt(span.textContent,10)||0) : 0;
   if(mine){
-    await cmQ(()=> sb.from('reactions').delete().eq('user_id',HF.userId).eq('post_id',postId));
+    await cmWrite(()=> sb.from('reactions').delete().eq('user_id',HF.userId).eq('post_id',postId));
     if(span) span.textContent = Math.max(0,n-1);
     if(btn) btn.classList.remove('on');
   }else{
-    const r = await cmQ(()=> sb.from('reactions').insert({user_id:HF.userId, post_id:postId, reaction_type:'strong'}));
-    if(r!==null){
+    const r = await cmWrite(()=> sb.from('reactions').insert({user_id:HF.userId, post_id:postId, reaction_type:'strong'}));
+    if(r){
       if(span) span.textContent = n+1;
       if(btn) btn.classList.add('on');
       track('community_react',{});
       const post = await cmQ(()=> sb.from('post_feed').select('user_id').eq('id',postId).maybeSingle());
       if(post && post.user_id && post.user_id !== HF.userId)
-        cmQ(()=> sb.from('notifications').insert({ user_id:post.user_id, actor_id:HF.userId,
+        cmWrite(()=> sb.from('notifications').insert({ user_id:post.user_id, actor_id:HF.userId,
           type:'reaction', entity_type:'post', entity_id:postId }));
     }
   }
@@ -6050,10 +6065,10 @@ async function cmJoinGroup(btn){
   if(!cmOn() || !cmGrp) return;
   if(btn) btn.disabled = true;
   if(cmJoined){
-    await cmQ(()=> sb.from('community_group_members').delete().eq('group_id',cmGrp.id).eq('user_id',HF.userId));
+    await cmWrite(()=> sb.from('community_group_members').delete().eq('group_id',cmGrp.id).eq('user_id',HF.userId));
     cmJoined = false;
   }else{
-    await cmQ(()=> sb.from('community_group_members').insert({group_id:cmGrp.id, user_id:HF.userId}));
+    await cmWrite(()=> sb.from('community_group_members').insert({group_id:cmGrp.id, user_id:HF.userId}));
     cmJoined = true;
     track('community_join_group',{});
   }
@@ -6090,12 +6105,12 @@ async function cmSubmitPost(){
   closeModal();
   await cmEnsureProfile();
   await cmLoadGroup();
-  const d = await cmQ(()=> sb.from('posts').insert({
+  const d = await cmWrite(()=> sb.from('posts').insert({
     user_id:HF.userId, post_type:'manual', caption:text, group_id: cmGrp ? cmGrp.id : null
   }));
-  if(d===null){ nfToast('Could not post right now.'); return; }
+  if(!d){ nfToast('Could not post right now.'); return; }
   if(cmGrp && !cmJoined){                      // posting into the group joins you
-    await cmQ(()=> sb.from('community_group_members').insert({group_id:cmGrp.id, user_id:HF.userId}));
+    await cmWrite(()=> sb.from('community_group_members').insert({group_id:cmGrp.id, user_id:HF.userId}));
     cmJoined = true;
   }
   track('community_post',{type:'manual'});
@@ -6191,14 +6206,14 @@ async function cmAddComment(postId){
   if(i){ i.value=''; i.blur(); }
   const row = { user_id:HF.userId, post_id:postId, content:text };
   if(cmReplyTo) row.parent_comment_id = cmReplyTo;   // one level only — replies do not nest further
-  const d = await cmQ(()=> sb.from('comments').insert(row));
-  if(d===null){ nfToast('Could not post that comment.'); return; }
+  const d = await cmWrite(()=> sb.from('comments').insert(row));
+  if(!d){ nfToast('Could not post that comment.'); return; }
   track('community_comment',{reply:!!cmReplyTo});
 
   // tell the author, unless they are commenting on their own post
   const post = await cmQ(()=> sb.from('post_feed').select('user_id').eq('id',postId).maybeSingle());
   if(post && post.user_id && post.user_id !== HF.userId){
-    cmQ(()=> sb.from('notifications').insert({ user_id:post.user_id, actor_id:HF.userId,
+    cmWrite(()=> sb.from('notifications').insert({ user_id:post.user_id, actor_id:HF.userId,
       type: cmReplyTo ? 'reply' : 'comment', entity_type:'post', entity_id:postId }));
   }
   cmCache.discover=null; cmCache.following=null; cmCache.group=null;   // counts changed
@@ -6208,8 +6223,8 @@ async function cmAddComment(postId){
 
 async function cmDeleteComment(id){
   if(!cmOn()) return;
-  const d = await cmQ(()=> sb.from('comments').delete().eq('id',id).eq('user_id',HF.userId));
-  if(d===null){ nfToast('Could not delete that comment.'); return; }
+  const d = await cmWrite(()=> sb.from('comments').delete().eq('id',id).eq('user_id',HF.userId));
+  if(!d){ nfToast('Could not delete that comment.'); return; }
   cmCache.discover=null; cmCache.following=null; cmCache.group=null;
   if(cmThreadId) openThread(cmThreadId);
 }
@@ -6248,9 +6263,9 @@ async function cmDoDelete(kind, id){
 /* Soft delete: the read policies filter deleted_at, so the post disappears while
    its comments and counts stay intact rather than cascading away. */
 async function cmDeletePost(id){
-  const d = await cmQ(()=> sb.from('posts').update({deleted_at:new Date().toISOString()})
-                            .eq('id',id).eq('user_id',HF.userId));
-  if(d===null){ nfToast('Could not delete that post.'); return; }
+  const d = await cmWrite(()=> sb.from('posts').update({deleted_at:new Date().toISOString()})
+                              .eq('id',id).eq('user_id',HF.userId));
+  if(!d){ nfToast('Could not delete that post.'); return; }
   nfToast('Post deleted');
   cmCache.discover=null; cmCache.following=null; cmCache.group=null;
   if(cmThreadId===id){ cmThreadId=null; switchTab('community'); return; }
@@ -6259,9 +6274,9 @@ async function cmDeletePost(id){
 
 async function cmReport(kind, id){
   closeModal();
-  const d = await cmQ(()=> sb.from('reports').insert({
+  const d = await cmWrite(()=> sb.from('reports').insert({
     reporter_id:HF.userId, entity_type:kind, entity_id:id, reason:null }));
-  nfToast(d===null ? 'Could not send that report.' : 'Reported. Thank you — we will review it.');
+  nfToast(!d ? 'Could not send that report.' : 'Reported. Thank you — we will review it.');
 }
 
 /* ---------- notifications ----------
@@ -6338,12 +6353,12 @@ async function openNotifs(){
 }
 
 async function cmOpenNotif(id){
-  await cmQ(()=> sb.from('notifications').update({read:true}).eq('id',id).eq('user_id',HF.userId));
+  await cmWrite(()=> sb.from('notifications').update({read:true}).eq('id',id).eq('user_id',HF.userId));
   if(cmUnread>0){ cmUnread--; cmPaintBell(); }
 }
 
 async function cmMarkAllRead(){
-  await cmQ(()=> sb.from('notifications').update({read:true}).eq('user_id',HF.userId).eq('read',false));
+  await cmWrite(()=> sb.from('notifications').update({read:true}).eq('user_id',HF.userId).eq('read',false));
   cmUnread = 0; cmPaintBell();
   openNotifs();
 }
@@ -6573,12 +6588,12 @@ async function cmSharePost(key, title, mins, isPB){
   const caption = capEl ? capEl.value.trim() : '';
   closeModal();
   await cmEnsureProfile();
-  const d = await cmQ(()=> sb.from('posts').insert({
+  const d = await cmWrite(()=> sb.from('posts').insert({
     user_id: HF.userId, post_type:'workout', caption: caption || null,
     workout_session_id: key || null, workout_title: title || null,
     workout_mins: mins || null, is_pb: !!isPB
   }));
-  if(d===null){ nfToast('Could not share right now.'); return; }
+  if(!d){ nfToast('Could not share right now.'); return; }
   track('community_post',{type:'workout'});
   nfToast('Shared to Community ✓');
   cmCache.discover = null; cmCache.following = null;
