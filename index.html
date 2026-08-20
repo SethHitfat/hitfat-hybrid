@@ -5967,6 +5967,103 @@ async function cmReact(postId, btn){
   cmCache.discover = null; cmCache.following = null; cmCache.group = null;
 }
 
+/* ---------- athlete discovery ----------
+   Discover has to show PEOPLE, not just posts. With no posts yet an athlete sees
+   an empty feed and no way to follow anybody, so Following can never fill. */
+async function cmAthletes(){
+  if(!cmOn()) return [];
+  const d = await cmQ(()=> sb.from('profiles').select('id,username,display_name,name,avatar_url,state,city,experience_level,primary_race_category,hyrox_pb,is_demo,is_official').neq('id',HF.userId).limit(60));
+  // real athletes first, then the official account, then demo
+  return (d||[]).sort((a,b)=>{
+    const rank = x => x.is_demo ? 2 : (x.is_official ? 1 : 0);
+    return rank(a)-rank(b);
+  });
+}
+
+function cmAthleteRow(a){
+  const follows = cmFollowingIds && cmFollowingIds.has(a.id);
+  const sub = [cmPlace(a), a.primary_race_category, a.experience_level].filter(Boolean).join(' \u00b7 ');
+  return '<div class="cmrow">'
+    + '<div class="cmrl" onclick="openAthlete(\''+cmEsc(a.id)+'\')">'+cmAvatar(a,42)
+      + '<div class="cmrt"><div class="n">'+cmEsc(cmName(a))+cmTag(a.is_official,a.is_demo)+'</div>'
+      + (sub?'<div class="t">'+cmEsc(sub)+'</div>':'')+'</div></div>'
+    + '<button class="cmfollow'+(follows?' on':'')+'" onclick="event.stopPropagation();cmFollow(\''+cmEsc(a.id)+'\',this)">'
+      + (follows?'Following':'Follow')+'</button></div>';
+}
+
+/* ---------- the one official group ---------- */
+async function cmLoadGroup(){
+  if(!cmOn()) return null;
+  if(!cmGrp){
+    cmGrp = await cmQ(()=> sb.from('community_groups').select('id,name,slug,description').eq('slug',OFFICIAL_GROUP).maybeSingle()) || null;
+  }
+  if(cmGrp){
+    const mine = await cmQ(()=> sb.from('community_group_members').select('id').eq('group_id',cmGrp.id).eq('user_id',HF.userId).maybeSingle());
+    cmJoined = !!mine;
+  }
+  // member count comes from the real-only view: demo members never inflate it
+  if(!cmStats) cmStats = await cmQ(()=> sb.from('community_stats').select('*').maybeSingle());
+  return cmGrp;
+}
+
+async function cmJoinGroup(btn){
+  if(!cmOn() || !cmGrp) return;
+  if(btn) btn.disabled = true;
+  if(cmJoined){
+    await cmQ(()=> sb.from('community_group_members').delete().eq('group_id',cmGrp.id).eq('user_id',HF.userId));
+    cmJoined = false;
+  }else{
+    await cmQ(()=> sb.from('community_group_members').insert({group_id:cmGrp.id, user_id:HF.userId}));
+    cmJoined = true;
+    track('community_join_group',{});
+  }
+  cmStats = null; cmCache.group = null; cmCache.discover = null;
+  renderCommunity();
+}
+
+function cmGroupCard(){
+  if(!cmGrp) return '';
+  const n = (cmStats && cmStats.real_group_members) || 0;
+  return '<div class="cmgroup" onclick="cmSetFeed(\'group\')">'
+    + '<div class="gn">'+cmEsc(cmGrp.name)+'</div>'
+    + '<div class="gd">'+cmEsc(cmGrp.description||'')+'</div>'
+    + '<div class="gm">'+n+' member'+(n===1?'':'s')+'</div>'
+    + '<button class="go sec" style="margin-top:12px;width:100%;" onclick="event.stopPropagation();cmSetFeed(\'group\')">Open Community</button></div>';
+}
+
+/* Composer — text for now; image and workout attachments follow. */
+function cmCompose(){
+  if(!cmOn()) return;
+  $('modal-sheet').innerHTML = '<h3>Share with the community</h3>'
+    + '<p class="msub">Malaysia Hybrid Community</p>'
+    + '<textarea id="cm-post" rows="5" maxlength="1000" placeholder="Ask a question, share a session, look for a training partner…" '
+    + 'style="width:100%;background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:11px 13px;color:#fff;font:inherit;font-size:14px;resize:none;"></textarea>'
+    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Cancel</button>'
+    + '<button class="confirm" onclick="cmSubmitPost()">Post</button></div>';
+  $('modal').classList.add('on');
+  setTimeout(()=>{ const i=$('cm-post'); if(i) i.focus(); },80);
+}
+
+async function cmSubmitPost(){
+  const el = $('cm-post'); const text = el ? el.value.trim() : '';
+  if(!text){ closeModal(); return; }
+  closeModal();
+  await cmEnsureProfile();
+  await cmLoadGroup();
+  const d = await cmQ(()=> sb.from('posts').insert({
+    user_id:HF.userId, post_type:'manual', caption:text, group_id: cmGrp ? cmGrp.id : null
+  }));
+  if(d===null){ nfToast('Could not post right now.'); return; }
+  if(cmGrp && !cmJoined){                      // posting into the group joins you
+    await cmQ(()=> sb.from('community_group_members').insert({group_id:cmGrp.id, user_id:HF.userId}));
+    cmJoined = true;
+  }
+  track('community_post',{type:'manual'});
+  nfToast('Posted ✓');
+  cmCache.group = null; cmCache.discover = null; cmCache.following = null;
+  renderCommunity();
+}
+
 /* ---------- shell ----------
    The shell (title + tabs) is mounted ONCE. Only the feed body is swapped, so
    switching tabs no longer tears down and rebuilds the header — which is what
