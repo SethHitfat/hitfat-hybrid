@@ -727,7 +727,10 @@
   .cmtab{flex:none;background:var(--surface);border:1px solid var(--line);color:#fff;border-radius:99px;
          padding:8px 16px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;}
   .cmtab.on{background:var(--hitfat);color:var(--hitfat-ink);border-color:var(--hitfat);}
-  .cmpost{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:11px;}
+  .cmpost{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:11px;}
+  .cmdots{position:absolute;top:10px;right:10px;background:none;border:0;color:var(--dim2);font-size:19px;
+          line-height:1;padding:5px 9px;cursor:pointer;border-radius:8px;}
+  .cmdots:hover{color:var(--dim);background:#161616;}
   .cmhead{display:flex;align-items:center;gap:11px;cursor:pointer;}
   .cmwho{min-width:0;}
   .cmwho .n{font-size:14.5px;font-weight:700;letter-spacing:-.2px;}
@@ -743,6 +746,20 @@
   .cmact{flex:1;background:#141414;border:1px solid var(--line);color:#cfcfcf;border-radius:10px;
          padding:8px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;}
   .cmact:active{transform:scale(.98);}
+  .cmtop{display:flex;align-items:flex-start;gap:12px;}
+  .cmbell{position:relative;flex:none;width:42px;height:42px;border-radius:50%;background:var(--surface);
+          border:1px solid var(--line);font-size:17px;cursor:pointer;margin-top:6px;}
+  .cmbell.has{border-color:rgba(255,224,0,.4);}
+  .cmbell i{position:absolute;top:-3px;right:-3px;background:var(--hitfat);color:var(--hitfat-ink);
+            font-style:normal;font-size:10px;font-weight:800;border-radius:99px;padding:1px 5px;}
+  .cmn{display:flex;align-items:center;gap:11px;background:var(--surface);border:1px solid var(--line);
+       border-radius:14px;padding:12px 13px;margin-bottom:9px;cursor:pointer;}
+  .cmn.unread{border-color:rgba(255,224,0,.28);background:#141200;}
+  .cmnb{flex:1;min-width:0;}
+  .cmnb .tx{font-size:13.5px;line-height:1.4;color:#e8e8e8;}
+  .cmnb .tx b{color:#fff;font-weight:700;}
+  .cmnb .tm{font-size:11px;color:var(--dim2);margin-top:3px;}
+  .cmn .dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--hitfat);}
   .cmc{border-left:2px solid var(--line);padding:0 0 0 12px;margin-bottom:14px;}
   .cmc.reply{margin-left:22px;border-left-color:#1b1b1b;}
   .cmch{display:flex;align-items:center;gap:9px;cursor:pointer;}
@@ -1060,6 +1077,7 @@
       <div id="community" style="display:none;"></div>
       <div id="athlete" style="display:none;"></div>
       <div id="thread" style="display:none;"></div>
+      <div id="notifs" style="display:none;"></div>
 
       <div id="progress" style="display:none;">
         <div class="hgroup"><div class="k">Your Training</div><h2>PROGRESS</h2><p>Your Hybrid Score, streak and history — all saved to your account.</p></div>
@@ -2471,7 +2489,7 @@ function showCategories(){ $('list').style.display='none'; $('detail').style.dis
 /* ============ TAB NAVIGATION ============ */
 /* every full-screen panel — openers must hide them ALL, otherwise the panel they came
    from stays visible underneath and the new screen looks like it never opened. */
-const PANELS=['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail','store','tsess','tmhome','community','athlete','thread'];
+const PANELS=['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail','store','tsess','tmhome','community','athlete','thread','notifs'];
 function hidePanels(){ PANELS.forEach(id=>{ const e=$(id); if(e) e.style.display='none'; }); }
 function switchTab(tab){
   track('tab',{tab});
@@ -5952,6 +5970,7 @@ function cmPostCard(p){
     + '<div class="cmhead" onclick="openAthlete(\''+cmEsc(p.user_id)+'\')">'+cmAvatar(p,38)
       + '<div class="cmwho"><div class="n">'+cmEsc(cmName(p))+cmTag(p.author_is_official,p.author_is_demo)+'</div>'
       + '<div class="t">'+cmEsc(cmAgo(p.created_at))+(cmPlace(p)?' · '+cmEsc(cmPlace(p)):'')+'</div></div></div>'
+    + '<button class="cmdots" onclick="event.stopPropagation();cmMenu(\'post\',\''+cmEsc(p.id)+'\','+((p.user_id===HF.userId)?'true':'false')+')">\u22ef</button>'
     + (p.workout_title ? '<div class="cmwork"><div class="wt">'+cmEsc(p.workout_title)+'</div>'
         + (meta.length?'<div class="wm">'+cmEsc(meta.join(' · '))+'</div>':'')
         + (p.is_pb?'<div class="cmpb">🔥 New Personal Best</div>':'')+'</div>' : '')
@@ -5978,6 +5997,10 @@ async function cmReact(postId, btn){
       if(span) span.textContent = n+1;
       if(btn) btn.classList.add('on');
       track('community_react',{});
+      const post = await cmQ(()=> sb.from('post_feed').select('user_id').eq('id',postId).maybeSingle());
+      if(post && post.user_id && post.user_id !== HF.userId)
+        cmQ(()=> sb.from('notifications').insert({ user_id:post.user_id, actor_id:HF.userId,
+          type:'reaction', entity_type:'post', entity_id:postId }));
     }
   }
   // counts changed, so the cached feeds are stale — but do not redraw underfoot
@@ -6109,7 +6132,7 @@ function cmCommentRow(c, isReply){
     + '<div class="cmcb">'+cmEsc(c.content)+'</div>'
     + '<div class="cmca">'
       + (isReply ? '' : '<button onclick="cmSetReply(\''+cmEsc(c.id)+'\',\''+cmEsc(cmName(a)).replace(/'/g,"&#39;")+'\')">Reply</button>')
-      + (mine ? '<button onclick="cmDeleteComment(\''+cmEsc(c.id)+'\')">Delete</button>' : '')
+      + '<button onclick="cmMenu(\'comment\',\''+cmEsc(c.id)+'\','+(mine?'true':'false')+')">\u22ef</button>'
     + '</div></div>';
 }
 
@@ -6191,14 +6214,149 @@ async function cmDeleteComment(id){
   if(cmThreadId) openThread(cmThreadId);
 }
 
+/* ---------- post & comment actions ----------
+   A bare "Delete" link next to Reply is easy to hit by accident and easy to miss
+   entirely. Same shape people already know: a quiet ⋯ that opens a sheet, and a
+   separate confirm before anything is destroyed. */
+function cmMenu(kind, id, mine){
+  const label = kind==='comment' ? 'comment' : 'post';
+  $('modal-sheet').innerHTML = '<h3>'+(mine?'Your '+label:'This '+label)+'</h3>'
+    + (mine
+        ? '<button class="go sec" style="width:100%;margin-bottom:9px;color:#ff6b6b !important;" '
+          + 'onclick="cmConfirmDelete(\''+kind+'\',\''+cmEsc(id)+'\')">Delete '+label+'</button>'
+        : '<button class="go sec" style="width:100%;margin-bottom:9px;" '
+          + 'onclick="cmReport(\''+kind+'\',\''+cmEsc(id)+'\')">Report '+label+'</button>')
+    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Cancel</button></div>';
+  $('modal').classList.add('on');
+}
+
+function cmConfirmDelete(kind, id){
+  const label = kind==='comment' ? 'comment' : 'post';
+  $('modal-sheet').innerHTML = '<h3>Delete this '+label+'?</h3>'
+    + '<p class="msub">This cannot be undone.</p>'
+    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Cancel</button>'
+    + '<button class="confirm" style="background:#ff6b6b;color:#fff;" '
+    + 'onclick="cmDoDelete(\''+kind+'\',\''+cmEsc(id)+'\')">Delete</button></div>';
+}
+
+async function cmDoDelete(kind, id){
+  closeModal();
+  if(kind==='comment') return cmDeleteComment(id);
+  return cmDeletePost(id);
+}
+
+/* Soft delete: the read policies filter deleted_at, so the post disappears while
+   its comments and counts stay intact rather than cascading away. */
+async function cmDeletePost(id){
+  const d = await cmQ(()=> sb.from('posts').update({deleted_at:new Date().toISOString()})
+                            .eq('id',id).eq('user_id',HF.userId));
+  if(d===null){ nfToast('Could not delete that post.'); return; }
+  nfToast('Post deleted');
+  cmCache.discover=null; cmCache.following=null; cmCache.group=null;
+  if(cmThreadId===id){ cmThreadId=null; switchTab('community'); return; }
+  if(curTab==='community') renderCommunity(); else if(cmViewing) openAthlete(cmViewing);
+}
+
+async function cmReport(kind, id){
+  closeModal();
+  const d = await cmQ(()=> sb.from('reports').insert({
+    reporter_id:HF.userId, entity_type:kind, entity_id:id, reason:null }));
+  nfToast(d===null ? 'Could not send that report.' : 'Reported. Thank you — we will review it.');
+}
+
+/* ---------- notifications ----------
+   Rows are written by whoever caused them (RLS forces actor_id = auth.uid()), so
+   the actor's profile has to be fetched separately and joined here, same as
+   comments. */
+let cmUnread = 0;
+
+async function cmLoadUnread(){
+  if(!cmOn()) return 0;
+  try{
+    const r = await sb.from('notifications').select('id',{count:'exact',head:true})
+                .eq('user_id',HF.userId).eq('read',false);
+    cmUnread = (r && typeof r.count==='number') ? r.count : 0;
+  }catch(e){ cmUnread = 0; }
+  cmPaintBell();
+  return cmUnread;
+}
+
+function cmPaintBell(){
+  const b = $('cm-bell'); if(!b) return;
+  b.innerHTML = '\ud83d\udd14' + (cmUnread ? '<i>'+(cmUnread>9?'9+':cmUnread)+'</i>' : '');
+  b.classList.toggle('has', cmUnread>0);
+}
+
+function cmNotifText(n, actor){
+  const who = '<b>'+cmEsc(cmName(actor))+'</b>';
+  switch(n.type){
+    case 'follow':  return who+' followed you.';
+    case 'reaction':return who+' reacted to your post.';
+    case 'comment': return who+' commented on your post.';
+    case 'reply':   return who+' replied to your comment.';
+    case 'badge':   return 'You unlocked a new badge.';
+    case 'challenge': return 'Challenge update.';
+    default:        return who+' interacted with your training.';
+  }
+}
+
+async function openNotifs(){
+  if(!cmOn()) return;
+  hidePanels();
+  const el = $('notifs'); if(!el) return;
+  el.style.display='block'; $('tabs').style.display='flex'; $('screen').scrollTop=0;
+  const back = '<button class="back" onclick="switchTab(\'community\')">← Community</button>';
+  el.innerHTML = back + cmSkeleton(3);
+
+  const rows = await cmQ(()=> sb.from('notifications').select('*')
+      .eq('user_id',HF.userId).order('created_at',{ascending:false}).limit(50));
+  if(!rows || !rows.length){
+    el.innerHTML = back + '<div class="hgroup"><h2>NOTIFICATIONS</h2></div>'
+      + '<div class="cmempty"><b>Nothing yet</b><p>Follows, reactions and comments on your training will show up here.</p></div>';
+    return;
+  }
+  const ids = Array.from(new Set(rows.map(r=>r.actor_id).filter(Boolean)));
+  const profs = ids.length ? await cmQ(()=> sb.from('profiles')
+      .select('id,name,display_name,username,avatar_url,is_demo,is_official').in('id',ids)) : [];
+  const by = {}; (profs||[]).forEach(x=> by[x.id]=x);
+
+  el.innerHTML = back
+    + '<div class="hgroup"><h2>NOTIFICATIONS</h2></div>'
+    + (cmUnread ? '<button class="go sec" style="width:100%;margin-bottom:12px;" onclick="cmMarkAllRead()">Mark all as read</button>' : '')
+    + rows.map(n=>{
+        const a = by[n.actor_id] || null;
+        const dest = (n.entity_type==='post' && n.entity_id)
+              ? 'openThread(\''+cmEsc(n.entity_id)+'\')'
+              : (n.actor_id ? 'openAthlete(\''+cmEsc(n.actor_id)+'\')' : '');
+        return '<div class="cmn'+(n.read?'':' unread')+'" onclick="cmOpenNotif(\''+cmEsc(n.id)+'\');'+dest+'">'
+          + cmAvatar(a,36)
+          + '<div class="cmnb"><div class="tx">'+cmNotifText(n,a)+'</div>'
+          + '<div class="tm">'+cmEsc(cmAgo(n.created_at))+'</div></div>'
+          + (n.read?'':'<i class="dot"></i>')
+        + '</div>';
+      }).join('');
+}
+
+async function cmOpenNotif(id){
+  await cmQ(()=> sb.from('notifications').update({read:true}).eq('id',id).eq('user_id',HF.userId));
+  if(cmUnread>0){ cmUnread--; cmPaintBell(); }
+}
+
+async function cmMarkAllRead(){
+  await cmQ(()=> sb.from('notifications').update({read:true}).eq('user_id',HF.userId).eq('read',false));
+  cmUnread = 0; cmPaintBell();
+  openNotifs();
+}
+
 /* ---------- shell ----------
    The shell (title + tabs) is mounted ONCE. Only the feed body is swapped, so
    switching tabs no longer tears down and rebuilds the header — which is what
    made every click flash "Loading". */
 function cmShell(body){
   const tab = (k,l) => '<button class="cmtab" id="cmtab-'+k+'" onclick="cmSetFeed(\''+k+'\')">'+l+'</button>';
-  return '<div class="hgroup"><div class="k">HITFAT</div><h2>COMMUNITY</h2>'
+  return '<div class="cmtop"><div class="hgroup" style="flex:1;"><div class="k">HITFAT</div><h2>COMMUNITY</h2>'
        + '<p>The home of hybrid fitness in Malaysia — train, track, compete, connect.</p></div>'
+       + '<button class="cmbell" id="cm-bell" onclick="openNotifs()">\ud83d\udd14</button></div>'
        + '<div class="cmtabs">'+tab('discover','Discover')+tab('following','Following')+tab('group','Group')+'</div>'
        + '<div id="cmfeed">'+(body||'')+'</div>';
 }
@@ -6251,6 +6409,7 @@ async function renderCommunity(){
     cmGrp ? null : cmLoadGroup().catch(e=>{ console.warn('[community] group', e); })
   ]);
   if(!cmFollowingIds) cmFollowingIds = new Set();   // never leave this undefined
+  cmLoadUnread();                                   // badge, fire and forget
 
   if(cmFeedMode==='following' && cmFollowingIds.size===0 && !cmSwitched) cmFeedMode='discover';
   cmMount(el);
