@@ -5831,12 +5831,21 @@ let cmLastErr = '';
    treat null as success for everyone. */
 async function cmWrite(fn){
   if(!cmOn()) return false;
+  cmLastErr = '';
   try{
     const r = await fn();
-    if(r && r.error){ cmLastErr = r.error.message||''; console.warn('[community write]', cmLastErr); return false; }
+    if(r && r.error){
+      cmLastErr = [r.error.message, r.error.details, r.error.hint, r.error.code].filter(Boolean).join(' · ');
+      console.warn('[community write]', cmLastErr);
+      return false;
+    }
     return true;
   }catch(e){ cmLastErr = (e && (e.message||e))+''; console.warn('[community write]', e); return false; }
 }
+
+/* Say what actually went wrong. "Could not delete that post" on its own costs
+   another round trip with the user to find out anything. */
+function cmFail(msg){ nfToast(msg + (cmLastErr ? ' — ' + cmLastErr.slice(0,110) : '')); }
 
 async function cmQ(fn){
   if(!cmOn()) return null;
@@ -5934,7 +5943,7 @@ async function cmFollow(id, btn){
   if(!ok){                                         // put the button back if it failed
     if(wasFollowing) cmFollowingIds.add(id); else cmFollowingIds.delete(id);
     if(btn){ btn.textContent = wasFollowing ? 'Following' : 'Follow'; btn.classList.toggle('on', wasFollowing); }
-    nfToast('Could not update follow — try again.');
+    cmFail('Could not update follow.');
   }
 }
 
@@ -6108,7 +6117,7 @@ async function cmSubmitPost(){
   const d = await cmWrite(()=> sb.from('posts').insert({
     user_id:HF.userId, post_type:'manual', caption:text, group_id: cmGrp ? cmGrp.id : null
   }));
-  if(!d){ nfToast('Could not post right now.'); return; }
+  if(!d){ cmFail('Could not post right now.'); return; }
   if(cmGrp && !cmJoined){                      // posting into the group joins you
     await cmWrite(()=> sb.from('community_group_members').insert({group_id:cmGrp.id, user_id:HF.userId}));
     cmJoined = true;
@@ -6207,7 +6216,7 @@ async function cmAddComment(postId){
   const row = { user_id:HF.userId, post_id:postId, content:text };
   if(cmReplyTo) row.parent_comment_id = cmReplyTo;   // one level only — replies do not nest further
   const d = await cmWrite(()=> sb.from('comments').insert(row));
-  if(!d){ nfToast('Could not post that comment.'); return; }
+  if(!d){ cmFail('Could not post that comment.'); return; }
   track('community_comment',{reply:!!cmReplyTo});
 
   // tell the author, unless they are commenting on their own post
@@ -6224,7 +6233,7 @@ async function cmAddComment(postId){
 async function cmDeleteComment(id){
   if(!cmOn()) return;
   const d = await cmWrite(()=> sb.from('comments').delete().eq('id',id).eq('user_id',HF.userId));
-  if(!d){ nfToast('Could not delete that comment.'); return; }
+  if(!d){ cmFail('Could not delete that comment.'); return; }
   cmCache.discover=null; cmCache.following=null; cmCache.group=null;
   if(cmThreadId) openThread(cmThreadId);
 }
@@ -6265,7 +6274,7 @@ async function cmDoDelete(kind, id){
 async function cmDeletePost(id){
   const d = await cmWrite(()=> sb.from('posts').update({deleted_at:new Date().toISOString()})
                               .eq('id',id).eq('user_id',HF.userId));
-  if(!d){ nfToast('Could not delete that post.'); return; }
+  if(!d){ cmFail('Could not delete that post.'); return; }
   nfToast('Post deleted');
   cmCache.discover=null; cmCache.following=null; cmCache.group=null;
   if(cmThreadId===id){ cmThreadId=null; switchTab('community'); return; }
@@ -6593,7 +6602,7 @@ async function cmSharePost(key, title, mins, isPB){
     workout_session_id: key || null, workout_title: title || null,
     workout_mins: mins || null, is_pb: !!isPB
   }));
-  if(!d){ nfToast('Could not share right now.'); return; }
+  if(!d){ cmFail('Could not share right now.'); return; }
   track('community_post',{type:'workout'});
   nfToast('Shared to Community ✓');
   cmCache.discover = null; cmCache.following = null;
