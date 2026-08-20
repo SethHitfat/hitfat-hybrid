@@ -5738,10 +5738,12 @@ async function cmProbe(){
 async function cmEnsureProfile(){
   if(!cmOn()) return null;
   const prefs = HF.data.prefs || {};
-  const patch = { id:HF.userId, email:HF.email || null };
+  // email is deliberately absent: it lives in auth.users, the column is revoked
+  // from browser clients, and select('*') would fail against it
+  const patch = { id:HF.userId };
   if(prefs.name)   patch.name = prefs.name;
   if(prefs.avatar) patch.avatar_url = prefs.avatar;
-  cmMe = await cmQ(()=> sb.from('profiles').upsert(patch,{onConflict:'id'}).select().single());
+  cmMe = await cmQ(()=> sb.from('profiles').upsert(patch,{onConflict:'id'}).select('id,username,display_name,name,avatar_url,bio,state,city,country,club_id,experience_level,primary_race_category,upcoming_race_name,hyrox_pb').single());
   return cmMe;
 }
 
@@ -5884,7 +5886,7 @@ async function openAthlete(id){
   const back = '<button class="back" onclick="switchTab(\'community\')">← Community</button>';
   el.innerHTML = back + '<div class="cmempty">Loading…</div>';
 
-  const p = await cmQ(()=> sb.from('profiles').select('*').eq('id',id).single());
+  const p = await cmQ(()=> sb.from('profiles').select('id,username,display_name,name,avatar_url,bio,state,city,country,club_id,experience_level,primary_race_category,upcoming_race_name,hyrox_pb').eq('id',id).single());
   if(!p){ el.innerHTML = back + '<div class="cmempty"><b>Profile unavailable</b><p>This athlete may have blocked you, or the profile was removed.</p></div>'; return; }
   if(!cmFollowingIds) await cmLoadFollowing();
 
@@ -5947,7 +5949,7 @@ async function saveAthleteProfile(){
     hyrox_pb: v('cm-pb') || null
   };
   closeModal();
-  const d = await cmQ(()=> sb.from('profiles').upsert(patch,{onConflict:'id'}).select().single());
+  const d = await cmQ(()=> sb.from('profiles').upsert(patch,{onConflict:'id'}).select('id,username,display_name,name,avatar_url,bio,state,city,country,club_id,experience_level,primary_race_category,upcoming_race_name,hyrox_pb').single());
   if(d===null){ nfToast('Could not save — that username may be taken.'); return; }
   cmMe = d;
   nfToast('Athlete profile saved ✓');
