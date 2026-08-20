@@ -743,6 +743,12 @@
   .cmact{flex:1;background:#141414;border:1px solid var(--line);color:#cfcfcf;border-radius:10px;
          padding:8px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;}
   .cmact:active{transform:scale(.98);}
+  .cmskel{height:96px;border-radius:16px;margin-bottom:11px;background:linear-gradient(100deg,#101010 30%,#181818 50%,#101010 70%);
+          background-size:220% 100%;animation:cmsh 1.1s linear infinite;}
+  @keyframes cmsh{from{background-position:180% 0}to{background-position:-40% 0}}
+  @media (prefers-reduced-motion:reduce){ .cmskel{animation:none;} }
+  .cmact.on{color:var(--hitfat);border-color:rgba(255,224,0,.35);background:rgba(255,224,0,.07);}
+  #cmfeed{min-height:220px;}
   .cmtag{display:inline-block;margin-left:7px;font-size:9.5px;font-weight:700;letter-spacing:.5px;
          text-transform:uppercase;color:var(--dim2);border:1px solid var(--line);border-radius:99px;
          padding:2px 6px;vertical-align:middle;}
@@ -5823,21 +5829,35 @@ async function cmCount(table, col, val){
 async function cmFollow(id, btn){
   if(!cmOn() || id===HF.userId) return;
   if(!cmFollowingIds) await cmLoadFollowing();
-  const following = cmFollowingIds.has(id);
-  if(btn) btn.disabled = true;
-  if(following){
-    await cmQ(()=> sb.from('follows').delete().eq('follower_id',HF.userId).eq('following_id',id));
-    cmFollowingIds.delete(id);
-  }else{
-    await cmQ(()=> sb.from('follows').insert({follower_id:HF.userId, following_id:id}));
-    cmFollowingIds.add(id);
-    // RLS requires actor_id to be me, so nobody can forge a notification from someone else
-    await cmQ(()=> sb.from('notifications').insert({user_id:id, actor_id:HF.userId, type:'follow',
-                                                    entity_type:'profile', entity_id:HF.userId}));
-    track('community_follow',{});
+  const wasFollowing = cmFollowingIds.has(id);
+
+  // Answer the tap immediately. A follow is trivially reversible, so waiting on
+  // the round trip before showing anything just makes the app feel slow.
+  if(wasFollowing) cmFollowingIds.delete(id); else cmFollowingIds.add(id);
+  if(btn){
+    btn.textContent = wasFollowing ? 'Follow' : 'Following';
+    btn.classList.toggle('on', !wasFollowing);
   }
-  if(btn) btn.disabled = false;
-  if(cmViewing===id) openAthlete(id); else renderCommunity();
+  cmCache.following = null; cmCache.discover = null;   // feeds are stale now
+
+  let ok;
+  if(wasFollowing){
+    ok = await cmQ(()=> sb.from('follows').delete().eq('follower_id',HF.userId).eq('following_id',id));
+  }else{
+    ok = await cmQ(()=> sb.from('follows').insert({follower_id:HF.userId, following_id:id}));
+    if(ok!==null){
+      // RLS forces actor_id to be me, so a notification cannot be forged
+      cmQ(()=> sb.from('notifications').insert({user_id:id, actor_id:HF.userId, type:'follow',
+                                                entity_type:'profile', entity_id:HF.userId}));
+      track('community_follow',{});
+    }
+  }
+
+  if(ok===null){                                   // put the button back if it failed
+    if(wasFollowing) cmFollowingIds.add(id); else cmFollowingIds.delete(id);
+    if(btn){ btn.textContent = wasFollowing ? 'Following' : 'Follow'; btn.classList.toggle('on', wasFollowing); }
+    nfToast('Could not update follow — try again.');
+  }
 }
 
 /* ---------- feed ---------- */
@@ -5893,163 +5913,109 @@ function cmPostCard(p){
     + (p.caption   ? '<div class="cmcap">'+cmEsc(p.caption)+'</div>' : '')
     + (p.image_url ? '<img class="cmimg" src="'+cmEsc(p.image_url)+'" alt="" loading="lazy">' : '')
     + '<div class="cmacts">'
-      + '<button class="cmact" onclick="cmReact(\''+cmEsc(p.id)+'\')">🔥 <span>'+(p.reaction_count||0)+'</span></button>'
+      + '<button class="cmact" onclick="cmReact(\''+cmEsc(p.id)+'\',this)">🔥 <span>'+(p.reaction_count||0)+'</span></button>'
       + '<button class="cmact" onclick="nfToast(\'Comments arrive in the next update.\')">💬 <span>'+(p.comment_count||0)+'</span></button>'
     + '</div></div>';
 }
 
-async function cmReact(postId){
+async function cmReact(postId, btn){
   if(!cmOn()) return;
   const mine = await cmQ(()=> sb.from('reactions').select('id').eq('user_id',HF.userId).eq('post_id',postId).maybeSingle());
-  if(mine) await cmQ(()=> sb.from('reactions').delete().eq('user_id',HF.userId).eq('post_id',postId));
-  else{
-    await cmQ(()=> sb.from('reactions').insert({user_id:HF.userId, post_id:postId, reaction_type:'strong'}));
-    track('community_react',{});
-  }
-  if(cmViewing) openAthlete(cmViewing); else renderCommunity();
-}
-
-
-/* Discover has to show PEOPLE, not just posts. With no posts yet an athlete sees
-   an empty feed and has no way to follow anybody — so Following can never fill
-   either. Listing athletes is what makes the loop reachable on day one. */
-async function cmAthletes(){
-  if(!cmOn()) return [];
-  const d = await cmQ(()=> sb.from('profiles')
-      .select('id,username,display_name,name,avatar_url,state,city,experience_level,primary_race_category,hyrox_pb,is_demo,is_official')
-      .neq('id',HF.userId).limit(60));
-  // real athletes first, then the official account, then demo
-  return (d||[]).sort((a,b)=>{
-    const rank = x => x.is_demo ? 2 : (x.is_official ? 1 : 0);
-    return rank(a)-rank(b);
-  });
-}
-
-function cmAthleteRow(a){
-  const follows = cmFollowingIds && cmFollowingIds.has(a.id);
-  const sub = [cmPlace(a), a.primary_race_category, a.experience_level].filter(Boolean).join(' \u00b7 ');
-  return '<div class="cmrow">'
-    + '<div class="cmrl" onclick="openAthlete(\''+cmEsc(a.id)+'\')">'+cmAvatar(a,42)
-      + '<div class="cmrt"><div class="n">'+cmEsc(cmName(a))+cmTag(a.is_official,a.is_demo)+'</div>'
-      + (sub?'<div class="t">'+cmEsc(sub)+'</div>':'')+'</div></div>'
-    + '<button class="cmfollow'+(follows?' on':'')+'" onclick="event.stopPropagation();cmFollow(\''+cmEsc(a.id)+'\',this)">'
-      + (follows?'Following':'Follow')+'</button></div>';
-}
-
-/* ---------- the one official group ---------- */
-async function cmLoadGroup(){
-  if(!cmOn()) return null;
-  if(!cmGrp){
-    const g = await cmQ(()=> sb.from('community_groups').select('id,name,slug,description').eq('slug',OFFICIAL_GROUP).maybeSingle());
-    cmGrp = g || null;
-  }
-  if(cmGrp){
-    const mine = await cmQ(()=> sb.from('community_group_members').select('id').eq('group_id',cmGrp.id).eq('user_id',HF.userId).maybeSingle());
-    cmJoined = !!mine;
-  }
-  // member count comes from the real-only view: demo members never inflate it
-  if(!cmStats) cmStats = await cmQ(()=> sb.from('community_stats').select('*').maybeSingle());
-  return cmGrp;
-}
-
-async function cmJoinGroup(btn){
-  if(!cmOn() || !cmGrp) return;
-  if(btn) btn.disabled = true;
-  if(cmJoined){
-    await cmQ(()=> sb.from('community_group_members').delete().eq('group_id',cmGrp.id).eq('user_id',HF.userId));
-    cmJoined = false;
+  const span = btn ? btn.querySelector('span') : null;
+  const n = span ? (parseInt(span.textContent,10)||0) : 0;
+  if(mine){
+    await cmQ(()=> sb.from('reactions').delete().eq('user_id',HF.userId).eq('post_id',postId));
+    if(span) span.textContent = Math.max(0,n-1);
+    if(btn) btn.classList.remove('on');
   }else{
-    await cmQ(()=> sb.from('community_group_members').insert({group_id:cmGrp.id, user_id:HF.userId}));
-    cmJoined = true;
-    track('community_join_group',{});
+    const r = await cmQ(()=> sb.from('reactions').insert({user_id:HF.userId, post_id:postId, reaction_type:'strong'}));
+    if(r!==null){
+      if(span) span.textContent = n+1;
+      if(btn) btn.classList.add('on');
+      track('community_react',{});
+    }
   }
-  cmStats = null;
-  renderCommunity();
+  // counts changed, so the cached feeds are stale — but do not redraw underfoot
+  cmCache.discover = null; cmCache.following = null; cmCache.group = null;
 }
 
-/* Composer — text now, with an image and workout attachment to follow. */
-function cmCompose(){
-  if(!cmOn()) return;
-  $('modal-sheet').innerHTML = '<h3>Share with the community</h3>'
-    + '<p class="msub">Malaysia Hybrid Community 🇲🇾</p>'
-    + '<textarea id="cm-post" rows="5" maxlength="1000" placeholder="Ask a question, share a session, look for a training partner…" '
-    + 'style="width:100%;background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:11px 13px;color:#fff;font:inherit;font-size:14px;resize:none;"></textarea>'
-    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Cancel</button>'
-    + '<button class="confirm" onclick="cmSubmitPost()">Post</button></div>';
-  $('modal').classList.add('on');
-  setTimeout(()=>{ const i=$('cm-post'); if(i) i.focus(); },80);
-}
-
-async function cmSubmitPost(){
-  const el = $('cm-post'); const text = el ? el.value.trim() : '';
-  if(!text){ closeModal(); return; }
-  closeModal();
-  await cmEnsureProfile();
-  await cmLoadGroup();
-  const d = await cmQ(()=> sb.from('posts').insert({
-    user_id:HF.userId, post_type:'manual', caption:text, group_id: cmGrp ? cmGrp.id : null
-  }));
-  if(d===null){ nfToast('Could not post right now.'); return; }
-  if(cmGrp && !cmJoined){                      // posting into the group joins you
-    await cmQ(()=> sb.from('community_group_members').insert({group_id:cmGrp.id, user_id:HF.userId}));
-    cmJoined = true;
-  }
-  track('community_post',{type:'manual'});
-  nfToast('Posted ✓');
-  renderCommunity();
-}
-
-function cmGroupCard(){
-  if(!cmGrp) return '';
-  const n = (cmStats && cmStats.real_group_members) || 0;
-  return '<div class="cmgroup" onclick="cmSetFeed(\'group\')">'
-    + '<div class="gn">'+cmEsc(cmGrp.name)+'</div>'
-    + '<div class="gd">'+cmEsc(cmGrp.description||'')+'</div>'
-    + '<div class="gm">'+n+' member'+(n===1?'':'s')+' · Malaysia\'s main hybrid discussion space</div>'
-    + '<button class="go sec" style="margin-top:12px;width:100%;" onclick="event.stopPropagation();cmSetFeed(\'group\')">Open Community</button></div>';
-}
-
-/* ---------- screens ---------- */
+/* ---------- shell ----------
+   The shell (title + tabs) is mounted ONCE. Only the feed body is swapped, so
+   switching tabs no longer tears down and rebuilds the header — which is what
+   made every click flash "Loading". */
 function cmShell(body){
-  const tab = (k,l) => '<button class="cmtab'+(cmFeedMode===k?' on':'')+'" onclick="cmSetFeed(\''+k+'\')">'+l+'</button>';
+  const tab = (k,l) => '<button class="cmtab" id="cmtab-'+k+'" onclick="cmSetFeed(\''+k+'\')">'+l+'</button>';
   return '<div class="hgroup"><div class="k">HITFAT</div><h2>COMMUNITY</h2>'
        + '<p>The home of hybrid fitness in Malaysia — train, track, compete, connect.</p></div>'
        + '<div class="cmtabs">'+tab('discover','Discover')+tab('following','Following')+tab('group','Group')+'</div>'
-       + '<div id="cmfeed">'+body+'</div>';
+       + '<div id="cmfeed">'+(body||'')+'</div>';
 }
+
+const cmCache = {};                 // last rendered body per tab
 let cmSwitched = false;
-function cmSetFeed(m){ cmFeedMode=m; cmSwitched=true; renderCommunity(); }
+
+function cmMount(el){
+  if(el.getAttribute('data-cm') !== '1'){ el.innerHTML = cmShell(''); el.setAttribute('data-cm','1'); }
+  ['discover','following','group'].forEach(k=>{
+    const b = $('cmtab-'+k); if(b) b.classList.toggle('on', cmFeedMode===k);
+  });
+}
+function cmBody(html){ const f = $('cmfeed'); if(f) f.innerHTML = html; }
+
+/* Shown only when there is nothing cached to show — a shaped placeholder rather
+   than the word "Loading", so the layout does not jump when the real rows land. */
+function cmSkeleton(n){
+  let h=''; for(let i=0;i<(n||3);i++) h += '<div class="cmskel"></div>';
+  return h;
+}
+
+function cmSetFeed(m){
+  if(cmFeedMode===m) return;
+  cmFeedMode=m; cmSwitched=true;
+  const el=$('community'); if(!el) return;
+  cmMount(el);
+  cmBody(cmCache[m] || cmSkeleton(3));   // instant: cached body first, fetch after
+  renderCommunity();
+}
 
 async function renderCommunity(){
   const el = $('community'); if(!el) return;
   cmViewing = null;
-  if(!cmOn()){ el.innerHTML = cmShell('<div class="cmempty"><b>Sign in to join</b><p>Community uses your HITFAT account.</p></div>'); return; }
-  el.innerHTML = cmShell('<div class="cmempty">Loading…</div>');
+  cmMount(el);
+
+  if(!cmOn()){ cmBody('<div class="cmempty"><b>Sign in to join</b><p>Community uses your HITFAT account.</p></div>'); return; }
+  if(!cmCache[cmFeedMode]) cmBody(cmSkeleton(3));
+
   if(!cmUp) await cmProbe();
-  if(!cmUp){ el.innerHTML = cmShell('<div class="cmempty"><b>Community is being set up</b>'
+  if(!cmUp){ cmBody('<div class="cmempty"><b>Community is being set up</b>'
     + '<p>This is coming shortly — your training, programs and progress are unaffected.</p></div>'); return; }
-  if(!cmMe) await cmEnsureProfile();
-  if(!cmFollowingIds) await cmLoadFollowing();
-  await cmLoadGroup();
 
-  // A newcomer follows nobody, so Following would open empty. Discover is the
-  // honest default until they have built a circle.
+  // These three were sequential — four round trips before anything could render.
+  await Promise.all([
+    cmMe ? null : cmEnsureProfile(),
+    cmFollowingIds ? null : cmLoadFollowing(),
+    cmGrp ? null : cmLoadGroup()
+  ]);
+
   if(cmFeedMode==='following' && cmFollowingIds.size===0 && !cmSwitched) cmFeedMode='discover';
+  cmMount(el);
 
-  if(cmFeedMode==='group')     return cmRenderGroup(el);
-  if(cmFeedMode==='discover')  return cmRenderDiscover(el);
-  return cmRenderFollowing(el);
+  let html;
+  if(cmFeedMode==='group')          html = await cmBuildGroup();
+  else if(cmFeedMode==='discover')  html = await cmBuildDiscover();
+  else                              html = await cmBuildFollowing();
+
+  cmCache[cmFeedMode] = html;
+  cmBody(html);
 }
 
-async function cmRenderGroup(el){
-  if(!cmGrp){ el.innerHTML = cmShell('<div class="cmempty"><b>Group unavailable</b><p>The community group has not been set up yet.</p></div>'); return; }
+async function cmBuildGroup(){
+  if(!cmGrp) return '<div class="cmempty"><b>Group unavailable</b><p>The community group has not been set up yet.</p></div>';
   const n = (cmStats && cmStats.real_group_members) || 0;
   const rows = cmRank(await cmQ(()=> sb.from('post_feed').select('*').eq('group_id',cmGrp.id).order('created_at',{ascending:false}).limit(30)) || []);
   const pinned = rows.filter(r=>r.is_pinned);
   const rest   = rows.filter(r=>!r.is_pinned);
-
-  el.innerHTML = cmShell(
-      '<div class="cmghead"><div class="gn">'+cmEsc(cmGrp.name)+'</div>'
+  return '<div class="cmghead"><div class="gn">'+cmEsc(cmGrp.name)+'</div>'
     + '<div class="gd">'+cmEsc(cmGrp.description||'')+'</div>'
     + '<div class="gm">'+n+' member'+(n===1?'':'s')+'</div>'
     + '<button class="go'+(cmJoined?' sec':'')+'" style="margin-top:12px;width:100%;" onclick="cmJoinGroup(this)">'
@@ -6058,28 +6024,26 @@ async function cmRenderGroup(el){
     + (pinned.length ? '<div class="sechead" style="margin:18px 0 10px;">Pinned</div>' + pinned.map(cmPostCard).join('') : '')
     + (rest.length
         ? '<div class="sechead" style="margin:20px 0 10px;">Discussion</div>' + rest.map(cmPostCard).join('')
-        : '<div class="cmempty"><b>No discussion yet</b><p>Start it — ask a question or share a session.</p></div>'));
+        : '<div class="cmempty"><b>No discussion yet</b><p>Start it — ask a question or share a session.</p></div>');
 }
 
-async function cmRenderDiscover(el){
-  const people = (await cmAthletes()).filter(a=> ENABLE_COMMUNITY_DEMO_DATA || !a.is_demo);
-  const posts  = cmRank(await cmFetchFeed('discover'));
-  el.innerHTML = cmShell(
-      cmGroupCard()
-    + (people.length ? '<div class="sechead" style="margin:20px 0 10px;">Athletes for you</div>' + people.slice(0,12).map(cmAthleteRow).join('') : '')
-    + (posts.length  ? '<div class="sechead" style="margin:22px 0 10px;">Training today</div>' + posts.map(cmPostCard).join('') : ''));
+async function cmBuildDiscover(){
+  const [people, posts] = await Promise.all([cmAthletes(), cmFetchFeed('discover')]);
+  const ppl = people.filter(a=> ENABLE_COMMUNITY_DEMO_DATA || !a.is_demo);
+  const rows = cmRank(posts);
+  return cmGroupCard()
+    + (ppl.length  ? '<div class="sechead" style="margin:20px 0 10px;">Athletes for you</div>' + ppl.slice(0,12).map(cmAthleteRow).join('') : '')
+    + (rows.length ? '<div class="sechead" style="margin:22px 0 10px;">Training today</div>' + rows.map(cmPostCard).join('') : '');
 }
 
-async function cmRenderFollowing(el){
+async function cmBuildFollowing(){
   const posts = cmRank(await cmFetchFeed('following'));
-  if(posts.length){ el.innerHTML = cmShell(posts.map(cmPostCard).join('')); return; }
-  // Never leave the rest of the screen blank: suggest people and the group.
+  if(posts.length) return posts.map(cmPostCard).join('');
   const people = (await cmAthletes()).filter(a=> ENABLE_COMMUNITY_DEMO_DATA || !a.is_demo);
-  el.innerHTML = cmShell(
-      '<div class="cmempty"><b>Build your hybrid circle</b>'
+  return '<div class="cmempty"><b>Build your hybrid circle</b>'
     + '<p>Follow Malaysian hybrid athletes and see their workouts, PBs and race journey here.</p></div>'
     + (people.length ? '<div class="sechead" style="margin:20px 0 10px;">Suggested athletes</div>' + people.slice(0,8).map(cmAthleteRow).join('') : '')
-    + cmGroupCard());
+    + cmGroupCard();
 }
 
 async function openAthlete(id){
@@ -6089,22 +6053,26 @@ async function openAthlete(id){
   const el = $('athlete'); if(!el) return;
   el.style.display='block'; $('tabs').style.display='flex'; $('screen').scrollTop=0; curTab='community';
   const back = '<button class="back" onclick="switchTab(\'community\')">← Community</button>';
-  el.innerHTML = back + '<div class="cmempty">Loading…</div>';
+  el.innerHTML = back + cmSkeleton(2);
 
-  const p = await cmQ(()=> sb.from('profiles').select('id,username,display_name,name,avatar_url,bio,state,city,country,club_id,experience_level,primary_race_category,upcoming_race_name,hyrox_pb').eq('id',id).single());
+  // All four of these used to run one after another, so nothing appeared until
+  // the last had returned. They do not depend on each other.
+  const [p, posts, fCount, gCount] = await Promise.all([
+    cmQ(()=> sb.from('profiles').select('id,username,display_name,name,avatar_url,bio,state,city,country,club_id,experience_level,primary_race_category,upcoming_race_name,hyrox_pb,is_demo,is_official').eq('id',id).single()),
+    cmQ(()=> sb.from('post_feed').select('*').eq('user_id',id).order('created_at',{ascending:false}).limit(10)),
+    cmCount('follows','following_id',id),
+    cmCount('follows','follower_id',id),
+    cmFollowingIds ? null : cmLoadFollowing()
+  ]);
   if(!p){ el.innerHTML = back + '<div class="cmempty"><b>Profile unavailable</b><p>This athlete may have blocked you, or the profile was removed.</p></div>'; return; }
   if(!cmFollowingIds) await cmLoadFollowing();
-
-  const posts   = await cmQ(()=> sb.from('post_feed').select('*').eq('user_id',id).order('created_at',{ascending:false}).limit(10));
-  const fCount  = await cmCount('follows','following_id',id);
-  const gCount  = await cmCount('follows','follower_id',id);
   const isMe    = id===HF.userId;
   const follows = cmFollowingIds.has(id);
   const detail  = [p.primary_race_category, p.experience_level].filter(Boolean).map(cmEsc);
 
   el.innerHTML = back
     + '<div class="cmprof">'+cmAvatar(p,74)
-      + '<div class="cmpn">'+cmEsc(cmName(p))+'</div>'
+      + '<div class="cmpn">'+cmEsc(cmName(p))+cmTag(p.is_official,p.is_demo)+'</div>'
       + (cmPlace(p) ? '<div class="cmpm">'+cmEsc(cmPlace(p))+(p.country?', '+cmEsc(p.country):'')+'</div>' : '')
       + (p.club_name ? '<div class="cmpm">'+cmEsc(p.club_name)+'</div>' : '')
       + (detail.length ? '<div class="cmpm">'+detail.join(' · ')+'</div>' : '')
@@ -6187,6 +6155,7 @@ async function cmSharePost(key, title, mins, isPB){
   if(d===null){ nfToast('Could not share right now.'); return; }
   track('community_post',{type:'workout'});
   nfToast('Shared to Community ✓');
+  cmCache.discover = null; cmCache.following = null;
   if(curTab==='community') renderCommunity();
 }
 
