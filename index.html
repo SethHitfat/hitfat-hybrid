@@ -1075,13 +1075,14 @@
         <div id="home-hdr"></div>
         <div id="home-week"></div>
         <div id="home-today"></div>
-        <div id="home-activity"></div>
-        <div id="home-plans"></div>
-        <div id="home-challenge"></div>
+        <div id="home-free"></div>
         <div id="home-wod"></div>
-        <div id="home-races"></div>
-        <div id="home-community"></div>
         <div id="home-quick"></div>
+        <div id="home-challenge"></div>
+        <div id="home-community"></div>
+        <div id="home-activity"></div>
+        <div id="home-races"></div>
+        <div id="home-plans"></div>
       </div>
     <div class="pad">
       <!-- SKRIN 1: WORKOUT LIBRARY -->
@@ -1193,7 +1194,7 @@
       </div>
       <!-- SKRIN PROGRAMS (store) -->
       <div id="store" style="display:none;">
-        <div class="hgroup"><div class="k">HITFAT Programs</div><h2>PROGRAMS</h2><p>Structured programs built to reach a specific goal — buy once, unlocked in your account forever.</p></div>
+        <div class="hgroup"><div class="k">HITFAT Programs</div><h2>PROGRAMS</h2><p>Training plans for every stage of your hybrid journey. Start free and progress at your own pace.</p></div>
         <div id="store-body"></div>
       </div>
       <!-- SKRIN COACHES (V3 marketplace) -->
@@ -2991,6 +2992,7 @@ const ICONS={
   run:'<circle cx="13.4" cy="4" r="2.2"/><path d="M13.9 6.8 9.6 10.9l3.2 3.1-1.6 6.6"/><path d="M9.6 10.9 4.9 9.7"/><path d="M12.8 14 17.6 15.7"/>',
   grip:'<path d="M8.2 13.4V6.6a1.6 1.6 0 0 1 3.2 0v4.2V5.4a1.6 1.6 0 0 1 3.2 0v5.4V6.8a1.6 1.6 0 0 1 3.2 0v6.4c0 4-2.7 7-6.4 7-2.1 0-3.6-.9-4.7-2.5l-2.3-3.3a1.7 1.7 0 0 1 2.6-2.1z"/>',
   engine:'<path d="M2.4 12h4.2l2.6-6.6 4.2 13.2 2.6-6.6h6"/>',
+  timer:'<circle cx="12" cy="13.5" r="7.8"/><path d="M12 9.6v4.2l2.6 1.6M9.4 2.6h5.2M18.6 6.4l1.4-1.4"/>',
   target:'<circle cx="12" cy="12" r="8.4"/><circle cx="12" cy="12" r="3.4"/><path d="M12 1.6v4M12 18.4v4M1.6 12h4M18.4 12h4"/>',
   library:'<rect x="3" y="4" width="7.6" height="7.6" rx="1.6"/><rect x="13.4" y="4" width="7.6" height="7.6" rx="1.6"/><rect x="3" y="14.4" width="7.6" height="5.6" rx="1.6"/><rect x="13.4" y="14.4" width="7.6" height="5.6" rx="1.6"/>',
   plan:'<rect x="3" y="4.8" width="18" height="16.2" rx="2.4"/><path d="M3 9.6h18"/><path d="M8 2.6v4M16 2.6v4"/>'
@@ -3068,6 +3070,34 @@ function donutSVG(pct,color,size){
       stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 ${size/2} ${size/2})"/>
   </svg>`;
 }
+/* ---- START FREE ----
+   The product rule this update exists for: a new athlete must meet what they can
+   do before what they must buy. Every card in this row opens something that is
+   genuinely free today — nothing here leads to a price. */
+function renderStartFree(){
+  const el=$('home-free'); if(!el) return;
+  const cards=CATALOG_ORDER.filter(id=>CATALOG[id].access==='free').map(id=>{
+    const p=CATALOG[id];
+    return {k:'Free · '+p.tag, t:p.title, d:p.weeks+' weeks · '+(p.weeks*p.days)+' sessions',
+            img:p.img, go:"openProgramDetail('"+id+"','home')", cta:'Start'};
+  });
+  cards.push({k:'Free · Library', t:'Workout Library', d:'Video sessions by category',
+              img:IMG.rowGym, go:"switchTab('programs')", cta:'Open'});
+  cards.push({k:'Free · Targets', t:'Target Sessions', d:'Fix a weak station or quality',
+              img:IMG.wallball, go:"switchTab('target')", cta:'Open'});
+  cards.push({k:'Free · Tools', t:'Training Timers', d:'EMOM, intervals and race clock',
+              img:IMG.sprintTurf, go:"openTimerHome()", cta:'Open'});
+  el.innerHTML=`<div class="sechead">Start Free</div>
+    <div style="color:var(--dim);font-size:12.5px;line-height:1.5;margin:-6px 2px 12px;">Start your hybrid journey with free training, tools and community.</div>
+    <div class="hscroll">${cards.map(c=>`<div class="plan" style="background-image:url('${c.img}')" onclick="${c.go}">
+      <div class="ov"></div>
+      <div class="pi"><div class="tx">
+        <div class="k" style="color:#2ec27e;">${c.k}</div>
+        <div class="t">${c.t}</div>
+        <div class="d">${c.d}</div></div>
+      <button class="join" onclick="event.stopPropagation();${c.go}">${c.cta}</button></div></div>`).join('')}</div>`;
+}
+
 function renderHome(){
   try{ renderInstallBanner(); }catch(e){}
   const race = HF.data.track==='race';
@@ -3100,9 +3130,9 @@ function renderHome(){
         <div class="pi"><div class="tx">
             <div class="k">${nx.phase} · Day ${nx.day}</div>
             <div class="t">${wo.title}</div>
-            <div class="d">RPE ${wo.rpe} · ${totalMins(wo)} min · video-guided</div>
+            <div class="d">RPE ${wo.rpe} · ${totalMins(wo)} min · video-guided · <b style="color:#2ec27e;">Free</b></div>
           </div>
-          <button class="join" onclick="event.stopPropagation();openSessionDetail(${nx.c},${nx.w},'${nx.key}')">Start</button>
+          <button class="join" onclick="event.stopPropagation();openSessionDetail(${nx.c},${nx.w},'${nx.key}')">Start Free</button>
         </div></div>`;
   } else {
     $('home-today').innerHTML=`<div class="sechead" style="margin-top:0;">Today's Training</div>
@@ -3145,13 +3175,13 @@ function renderHome(){
   if(!ownsProgram('first-timer')) plans.push('first-timer');
   plans.push(race?'race-12':'build-engine'); plans.push('station-builder');
   const uniq=plans.filter((v,i,a)=>a.indexOf(v)===i).slice(0,4);
-  $('home-plans').innerHTML=`<div class="sechead">Trending Plans</div>
+  $('home-plans').innerHTML=`<div class="sechead">Recommended For You</div>
     <div class="hscroll">${uniq.map(id=>{ const p=CATALOG[id], st=programState(id), owned=ownsProgram(id);
       return `<div class="plan" style="background-image:url('${p.img}')" onclick="openProgramDetail('${id}','home')">
         <div class="ov"></div>
         <div class="pi"><div class="tx"><div class="k">${p.tag} · ${p.weeks} wk</div><div class="t">${p.title}</div>
           <div class="d">${p.goal}</div></div>
-          <button class="join" onclick="event.stopPropagation();${owned?`openProgramContent('${id}')`:`openProgramDetail('${id}','home')`}">${owned?'Open':(st==='SOON'?'Soon':'Join')}</button>
+          <button class="join" onclick="event.stopPropagation();${owned?`openProgramContent('${id}')`:`openProgramDetail('${id}','home')`}">${owned?'Open':(st==='SOON'?'Soon':'View')}</button>
         </div></div>`; }).join('')}</div>`;
 
   // 6) WORKOUT OF THE DAY (free, adaptive)
@@ -3167,6 +3197,7 @@ function renderHome(){
       </div>`;
   })();
 
+  try{ renderStartFree(); }catch(e){ console.error(e); }
   try{ renderChallenge(); }catch(e){ console.error(e); }
   try{ renderRaces(); }catch(e){ console.error(e); }
   if(window.klTicker){ clearInterval(window.klTicker); window.klTicker=null; }
@@ -5035,16 +5066,16 @@ const POPULAR_ID='race-12';       // exactly one anchor in the whole store
 /* the badge sells the program: show the price until it is bought, then OWNED */
 /* what the metadata line leads with: the price, or the state that replaces it */
 function metaLead(id,st){
-  if(st==='PAID') return '<b class="pz">'+fmtPrice(CATALOG[id].price)+'</b> · ';
-  if(st==='OWNED') return '<b class="oz">✓ Owned</b> · ';
+  if(st==='PAID') return '';                                  // value first — the price lives on the program page
+  if(st==='OWNED') return '<b class="oz">✓ Unlocked</b> · ';
   if(st==='SOON') return '<b class="sz">SOON</b> · ';
   if(st==='FREE') return '<b class="pz">Free</b> · ';
   return '';
 }
 function badgeLabel(id,st){
-  if(st==='PAID') return fmtPrice(CATALOG[id].price);
+  if(st==='PAID') return 'Full Program';
   if(st==='FREE') return 'Free';
-  if(st==='OWNED') return '✓ Owned';
+  if(st==='OWNED') return '✓ Unlocked';
   if(st==='SOON') return 'Soon';
   if(st==='COMPLETED') return 'Done';
   return st;
@@ -5147,12 +5178,14 @@ function renderPrograms(){
   // Road to HYROX KL always earns a slide: it is the flagship and the local race.
   const HERO_ORDER=['first-timer','race-12','road-kl','run-better','race-8','foundation-13',
                     'hybrid-beginner','build-engine','hybrid-strength','station-builder'];
-  let heroIds=HERO_ORDER.filter(x=>CATALOG[x]&&CATALOG[x].access==='paid'&&!ownsProgram(x)).slice(0,4);
-  if(!ownsProgram('road-kl') && heroIds.indexOf('road-kl')<0) heroIds=heroIds.slice(0,3).concat('road-kl');
+  let heroIds=HERO_ORDER.filter(x=>CATALOG[x]&&CATALOG[x].access==='paid'&&!ownsProgram(x)).slice(0,3);
+  if(!ownsProgram('road-kl') && heroIds.indexOf('road-kl')<0) heroIds=heroIds.slice(0,2).concat('road-kl');
+  // the first slide is always a door that opens for free — you meet the platform before the price list
+  heroIds=['hybrid-starter'].concat(heroIds);
   if(heroIds.length){
     h+=`<div class="heroes" id="store-heroes">${heroIds.map(hid=>{
       const f=CATALOG[hid], fst=programState(hid);
-      const kick=(hid===POPULAR_ID)?'Most popular':(hid==='first-timer'?'Start here':'Featured');
+      const kick=(f.access==='free')?'Free · Start here':((hid===POPULAR_ID)?'Most popular':(hid==='first-timer'?'Start here':'Featured'));
       return `<div class="plan" style="background-image:url('${f.img}')" onclick="openProgramDetail('${hid}','store')">
         <div class="ov"></div>
         <div class="pi"><div class="tx">
@@ -5161,17 +5194,40 @@ function renderPrograms(){
           <div class="d">${f.goal}</div>
           <div class="d" style="color:#8f8f8f;margin-top:1px;">${f.weeks} weeks · ${f.weeks*f.days} sessions</div>
         </div>
-        <button class="join" onclick="event.stopPropagation();${fst==='PAID'?`joinProgram('${hid}')`:`openProgramContent('${hid}')`}">${fst==='PAID'?'Join — '+fmtPrice(f.price):'Open'}</button></div></div>`;
+        <button class="join" onclick="event.stopPropagation();${fst==='PAID'?`openProgramDetail('${hid}','store')`:`openProgramContent('${hid}')`}">${fst==='PAID'?'View Program':(fst==='FREE'?'Start Free':'Open')}</button></div></div>`;
     }).join('')}</div>
     <div class="hdots" id="store-dots">${heroIds.map((_,i)=>`<i class="${i?'':'on'}"></i>`).join('')}</div>`;
   }
-  if(owned.length) h+=sec('Your Programs', owned.map(id=>programCard(id,true)).join(''));
-  h+=sec('Race Preparation', CATALOG_ORDER.filter(id=>CATALOG[id].tag==='Race Prep'&&!ownsProgram(id)&&CATALOG[id].access!=='free').map(id=>programCard(id,true)).join(''));
-  h+=sec('Build Specific Strengths', CATALOG_ORDER.filter(id=>CATALOG[id].access==='paid'&&CATALOG[id].tag!=='Race Prep'&&!ownsProgram(id)).map(id=>programCard(id,true)).join(''));
-  h+=sec('Free Programs', CATALOG_ORDER.filter(id=>CATALOG[id].access==='free').map(id=>programCard(id,true)).join(''));
-  h+=`<div class="exsec"><div class="eh"><h3>More Free Training</h3></div>
-    <div class="catcard" onclick="switchTab('programs')" style="margin-bottom:12px;"><div class="ci">${icon('library')}</div><div class="body"><div class="ttl">Workout Library</div><div class="cnt">Free sessions by category</div></div><div class="arr">›</div></div>
-    <div class="catcard" onclick="switchTab('target')"><div class="ci">${icon('target')}</div><div class="body"><div class="ttl">Target Sessions</div><div class="cnt">Fix a weak station or quality</div></div><div class="arr">›</div></div></div>`;
+  /* Order is the message: what you can do today, then what you can do free,
+     then — well down the page — what you can buy. Nothing was removed. */
+  const shown={};
+  const row=ids=>ids.filter(id=>CATALOG[id]&&!shown[id]).map(id=>{shown[id]=1; return programCard(id,true);}).join('');
+
+  // 1) CONTINUE TRAINING — programs already open to them
+  h+=sec('Continue Training', row(owned));
+
+  // 2) START FREE — everything an unpaid athlete can open right now
+  const freeIds=CATALOG_ORDER.filter(id=>CATALOG[id].access==='free');
+  h+=sec('Start Free', row(freeIds)+
+    `<div class="catcard" onclick="switchTab('programs')" style="margin-top:12px;"><div class="ci">${icon('library')}</div><div class="body"><div class="ttl">Workout Library</div><div class="cnt">Free video sessions by category</div></div><div class="arr">›</div></div>
+     <div class="catcard" onclick="switchTab('target')" style="margin-top:10px;"><div class="ci">${icon('target')}</div><div class="body"><div class="ttl">Target Sessions</div><div class="cnt">Fix a weak station or quality</div></div><div class="arr">›</div></div>
+     <div class="catcard" onclick="openTimerHome()" style="margin-top:10px;"><div class="ci">${icon('timer')}</div><div class="body"><div class="ttl">Training Timers</div><div class="cnt">EMOM, intervals and race clock</div></div><div class="arr">›</div></div>`,
+    'Free');
+
+  // 3) POPULAR — deliberately mixed, so the row is not a price list
+  h+=sec('Popular Programs', row(['hybrid-starter',POPULAR_ID,'first-timer']));
+
+  // 4-6) by what the athlete is trying to build
+  h+=sec('Race Preparation', row(CATALOG_ORDER.filter(id=>CATALOG[id].tag==='Race Prep')));
+  h+=sec('Build Your Engine', row(CATALOG_ORDER.filter(id=>CATALOG[id].tag==='Engine'||CATALOG[id].tag==='Running')));
+  h+=sec('Strength & Stations', row(CATALOG_ORDER.filter(id=>CATALOG[id].tag==='Strength')));
+
+  // 7) RECOVERY & MOBILITY — no program yet, but the free sessions exist
+  const rec=QUICK_WORKOUTS.map((q,i)=>[q,i]).filter(x=>x[0].tag==='Recovery'||x[0].tag==='Core');
+  h+=sec('Recovery & Mobility', rec.length?`<div class="hscroll">${rec.map(x=>quickCard(x[1])).join('')}</div>`:'', 'Free');
+
+  // 8) the rest of the catalogue, last
+  h+=sec('Full Programs', row(CATALOG_ORDER));
   $('store-body').innerHTML=h; $('screen').scrollTop=0;
   startHeroRotate(heroIds.length);
 }
