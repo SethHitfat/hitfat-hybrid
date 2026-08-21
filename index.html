@@ -8765,7 +8765,7 @@ async function renderPushRow(){
               : (on ? 'On' : 'Off');
   el.innerHTML = '<button class="pflink" onclick="pushToggle()"><span>Notifications</span>'
     + '<span class="arr" style="color:'+(state==='On'?'#2ec27e':'var(--dim)')+';font-weight:700;">'+state+'</span></button>'
-    + (on ? '<button class="pflink" onclick="pushTest();nfToast(\'Test sent — watch for it\')"><span style="color:var(--dim);">Send a test notification</span><span class="arr">›</span></button>' : '');
+    + '<button class="pflink" onclick="pushDiag()"><span style="color:var(--dim);">Check notifications</span><span class="arr">›</span></button>';
 }
 
 /* Tells the sender that a notification the athlete just caused should also be
@@ -8778,6 +8778,44 @@ async function pushTest(){
   if(!pushConfigured()) return;
   try{ await sb.functions.invoke('push', { body:{ to: HF.userId, type:'test' } }); }
   catch(e){ console.warn('[push] test', e); }
+}
+/* When a notification does not arrive there are six places it can have stopped,
+   and none of them are visible on a phone. This walks the whole chain and says
+   which link failed, in words, on screen. */
+async function pushDiag(){
+  const row=(k,v,bad)=>'<div class="pfrow"><span class="l">'+k+'</span>'
+    + '<span class="v" style="color:'+(bad?'#ff8a7a':'#fff')+';max-width:60%;text-align:right;word-break:break-word;">'+cmEsc(String(v))+'</span></div>';
+  $('modal-sheet').innerHTML='<h3>Notification check</h3><p class="msub">Working through the chain…</p>';
+  $('modal').classList.add('on');
+  const out=[];
+  const ios=/iPad|iPhone|iPod/.test(navigator.userAgent);
+  const standalone = window.navigator.standalone===true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  out.push(row('Key in app', pushConfigured()?'yes':'missing', !pushConfigured()));
+  out.push(row('Browser support', pushSupported()?'yes':'no', !pushSupported()));
+  if(ios) out.push(row('Installed to Home Screen', standalone?'yes':'no — iOS needs this', !standalone));
+  out.push(row('Permission', (window.Notification&&Notification.permission)||'—', (window.Notification&&Notification.permission!=='granted')));
+  const reg=await pushRegisterSW();
+  out.push(row('Service worker', reg?'registered':'not registered', !reg));
+  const sub=await pushCurrent();
+  out.push(row('Device subscribed', sub?'yes':'no', !sub));
+  if(sub){ try{ out.push(row('Push service', new URL(sub.endpoint).host)); }catch(e){} }
+  const saved=await cmQ(()=> sb.from('push_subs').select('endpoint').eq('user_id',HF.userId));
+  out.push(row('Saved in database', saved?String(saved.length):'query failed', !saved || !saved.length));
+  let res='—', bad=true;
+  try{
+    const r=await sb.functions.invoke('push',{ body:{ to:HF.userId, type:'test' } });
+    if(r && r.error){
+      let body='';
+      try{ body=JSON.stringify(await r.error.context.json()); }catch(e){ body=(r.error.message||'error'); }
+      res=body;
+    } else { res=JSON.stringify(r&&r.data); bad=!(r&&r.data&&r.data.sent>0); }
+  }catch(e){ res='threw: '+((e&&e.message)||e); }
+  out.push(row('Sender replied', res, bad));
+  $('modal-sheet').innerHTML='<h3>Notification check</h3>'
+    + '<p class="msub">Everything the app can see, in order. The first red line is where it stops.</p>'
+    + out.join('')
+    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Close</button>'
+    + '<button class="confirm" onclick="pushDiag()">Run again</button></div>';
 }
 async function pushNotify(toUserId, type){
   if(!pushConfigured() || !toUserId || toUserId===HF.userId) return;
