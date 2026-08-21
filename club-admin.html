@@ -181,9 +181,19 @@ async function loadCheckedIn(){
       .eq('session_id', curSession).order('checked_in_at',{ascending:false})) || [];
   if(!rows.length){ $('inlist').innerHTML = '<div class="m">Nobody yet.</div>'; return; }
   const names = await namesFor(rows.map(r=>r.user_id));
+  /* The coach is standing in the room, so the coach is the last word on who is
+     actually in it — one tap removes a check-in that should not be there. */
   $('inlist').innerHTML = rows.map(r=>`<div class="row" style="padding:6px 0;">
       <div class="g"><div class="t">${esc(names[r.user_id]||'Athlete')}</div>
-      <div class="m">${fmtTime(r.checked_in_at)}${r.method==='coach'?' · marked by coach':''}</div></div></div>`).join('');
+      <div class="m">${fmtTime(r.checked_in_at)}${r.method==='coach'?' · marked by coach':''}</div></div>
+      <button class="sm dg" onclick="removeCheckIn('${r.user_id}','${esc(names[r.user_id]||'this athlete')}')">Remove</button></div>`).join('');
+}
+async function removeCheckIn(userId, name){
+  if(!curSession) return;
+  if(!confirm('Remove '+name+' from this session?')) return;
+  const r = await sb.from('club_attendance').delete().eq('session_id', curSession).eq('user_id', userId);
+  if(r.error) return toast(r.error.message);
+  toast('Removed'); loadCheckedIn();
 }
 async function namesFor(ids){
   const uniq=[...new Set(ids)]; if(!uniq.length) return {};
