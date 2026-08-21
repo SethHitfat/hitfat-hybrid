@@ -1008,10 +1008,14 @@
   .pd-meta{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px;}
   .chip{background:var(--surface);border:1px solid var(--line);color:#ddd;font-size:11px;font-weight:600;padding:6px 11px;border-radius:99px;}
   .chip b{color:var(--hyrox);}
-  .joinbar{display:flex;gap:10px;align-items:center;margin:16px 0 6px;}
+  .joinbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0 6px;}
+  .joinbar .buy.sec{flex:1 0 100%;background:transparent;color:#fff !important;border:1px solid var(--line);}
   .joinbar .buy{flex:1;background:var(--hyrox);color:var(--hyrox-ink) !important;border:none;border-radius:99px;padding:16px;font-family:'Oswald';font-weight:700;font-size:15px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;}
   .joinbar .buy.owned{background:#0e6b8c;color:#fff !important;}
   .joinbar .buy.soon{background:#2a2a2a;color:var(--dim) !important;}
+  .klwk.locked .klwkh{opacity:.55;}
+  .klwk.locked .wd{color:var(--dim);}
+  .daycard.locked{opacity:.6;}
   .joinbar .wish{flex:0 0 auto;width:54px;height:54px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--dim);font-size:20px;cursor:pointer;}
   .joinbar .wish.on{color:var(--hyrox);border-color:var(--hyrox);}
   .phaselist2 .ph2{display:flex;align-items:center;gap:13px;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:13px 14px;margin-bottom:9px;}
@@ -1799,6 +1803,41 @@ function ownsProgram(id){ const p=CATALOG[id]; if(!p) return false; if(p.access=
    The Bayarcash flow stays fully wired; nothing to rebuild when going live. */
 const PAYMENTS_LIVE = true;
 function paymentsSoon(id){ const p=CATALOG[id]; return !PAYMENTS_LIVE && !!p && p.access==='paid' && !ownsProgram(id); }
+/* ---- FREE PREVIEW ----
+   Value before payment: week 1 of a paid program opens for everyone who walks in,
+   the rest unlocks when they buy it. This only decides what a NON-owner may open —
+   ownership, prices and the purchase path are untouched. Road to HYROX KL is
+   deliberately absent: its tracker is already open to everyone and this update
+   does not take away access that exists. */
+const PREVIEW_WEEKS = 1;
+const PREVIEWABLE = {'race-12':1,'race-8':1,'first-timer':1,'run-better':1,
+                     'hybrid-beginner':1,'build-engine':1,'hybrid-strength':1,'station-builder':1};
+function hasPreview(id){
+  const p=CATALOG[id];
+  if(!p || p.access!=='paid' || !PREVIEWABLE[id]) return false;
+  // a legacy race program outside its enrolment window cannot be opened at all,
+  // so offering to preview it would dead-end in a toast
+  if(PROGRAMS[id] && progAvail(PROGRAMS[id], new Date())!=='live') return false;
+  return true;
+}
+function previewing(id){ return hasPreview(id) && !ownsProgram(id); }
+function weekOpen(id,week){ return !previewing(id) || week<=PREVIEW_WEEKS; }
+function previewKicker(id){ return previewing(id) ? 'FREE PREVIEW' : 'OWNED'; }
+function previewNote(id){
+  if(!previewing(id)) return '';
+  const p=CATALOG[id];
+  return `<div class="infonote" style="margin:0 2px 14px;">Free preview — <b>Week ${PREVIEW_WEEKS}</b> is open, no payment needed.
+    Unlock the full ${p.weeks} weeks to keep going.
+    <b style="color:var(--acc);cursor:pointer;" onclick="openProgramDetail('${id}','store')">Unlock Full Program — ${fmtPrice(p.price)} \u25b8</b></div>`;
+}
+function lockedWeek(id,label,phase){
+  return `<div class="klwk locked"><div class="klwkh" onclick="openProgramDetail('${id}','store')">
+    <span class="wn">${label}</span><span class="wp">${phase||''}</span><span class="wd">\ud83d\udd12</span><span class="wc">\u203a</span></div></div>`;
+}
+function previewBlock(id){    // a locked session inside a phase list
+  return `<div class="daycard locked" onclick="openProgramDetail('${id}','store')">
+    <div class="num">\ud83d\udd12</div><div class="info"><div class="ty">Locked</div><div class="lbl">Unlock the full program to open this week</div></div><div class="arr">\u203a</div></div>`;
+}
 function programState(id){ // FREE | OWNED | PAID | SOON | COMPLETED  (+ IN PROGRESS handled by caller)
   const p=CATALOG[id]; if(!p) return 'SOON';
   if(p.access==='soon') return 'SOON';
@@ -2615,7 +2654,7 @@ const CATEGORIES=[
 ];
 
 /* ============ STATE ============ */
-let catIdx=0, cur=null, flat=[], idx=0, secs=0, mode='time', running=false, ticker=null, curTab='programs', curLevel='PRO', curProgram=null, curTarget=null;
+let catIdx=0, cur=null, flat=[], idx=0, secs=0, mode='time', running=false, ticker=null, curTab='programs', curLevel='PRO', curProgram=null, curProgramId=null, curTarget=null;
 const $=id=>document.getElementById(id);
 const fmtClock=s=>`${String(Math.floor(s/60)).padStart(2,'0')}:${String(Math.max(0,s%60)).padStart(2,'0')}`;
 const totalMins=w=>w.blocks.reduce((a,b)=>a+(b.mins||0),0);
@@ -2868,6 +2907,7 @@ function renderCatalog(){
 /* ---- Selected program ---- */
 function openProgram(id, level){
   const p=PROGRAMS[id];
+  curProgramId=id;
   if(!p){ nfToast('This plan is not available'); return; }
   const st=progAvail(p, new Date());
   if(st!=='live' && !ownsProgram(id)){
@@ -2877,6 +2917,7 @@ function openProgram(id, level){
     return;
   }
   curProgram=p;
+  curProgramId=id;
   curLevel=level||(p.levels&&p.levels[0])||'PRO';
   if(window.klTicker){ clearInterval(window.klTicker); window.klTicker=null; }
   $('pro-catalog').style.display='none';
@@ -2902,7 +2943,7 @@ function switchLevel(lvl){
 function renderProContent(){
   const data=curProgram&&curProgram.data; if(!data) return;
   const lvl=data[curLevel];
-  $('lvldesc').textContent=lvl.desc;
+  $('lvldesc').innerHTML=lvl.desc+previewNote(curProgramId);
   if(!lvl.weeks||lvl.weeks.length===0){
     $('blocklist').innerHTML=`<div class="emptywk">Coming soon — workouts for ${lvl.name} level will be added here.</div>`;
     return;
@@ -2925,13 +2966,13 @@ function renderProContent(){
         <div class="phase-desc">${wkRange} · ${wks.length} ${wks.length>1?'weeks':'week'}</div>
         ${wks.map(wk=>`
           <div class="week-label">Week ${wk.week} <span style="color:var(--dim);font-size:11px;letter-spacing:2px;">· ${wk.label}</span></div>
-          ${wk.days.map(d=>`
+          ${weekOpen(curProgramId,wk.week) ? wk.days.map(d=>`
             <div class="daycard" onclick="openProDay('${wk.label}',${d.day})">
               <div class="num">D${d.day}</div>
               <div class="info"><div class="ty">${d.type}</div><div class="lbl">${blockName} · ${wk.label}</div></div>
               <div class="arr">›</div>
             </div>
-          `).join('')}
+          `).join('') : previewBlock(curProgramId)}
         `).join('')}
       </div>
     </div>`;
@@ -2942,6 +2983,7 @@ function openProDay(label, dayNum){
   const data=curProgram&&curProgram.data; if(!data) return;
   const wk=data[curLevel].weeks.find(w=>w.label===label);
   if(!wk) return;
+  if(!weekOpen(curProgramId,wk.week)){ openProgramDetail(curProgramId,'store'); return; }
   const d=wk.days.find(x=>x.day===dayNum);
   if(!d) return;
   $('categories').style.display='none'; $('plans').style.display='none'; $('pro').style.display='none';
@@ -5073,7 +5115,7 @@ function metaLead(id,st){
   return '';
 }
 function badgeLabel(id,st){
-  if(st==='PAID') return 'Full Program';
+  if(st==='PAID') return hasPreview(id) ? 'Free Preview' : 'Full Program';
   if(st==='FREE') return 'Free';
   if(st==='OWNED') return '✓ Unlocked';
   if(st==='SOON') return 'Soon';
@@ -5308,7 +5350,9 @@ function openProgramDetail(id,backTab){ const p=CATALOG[id]; if(!p) return; trac
   const cta = soon ? `<button class="buy soon" disabled>Coming Soon</button>`
     : paySoon ? `<button class="buy soon" onclick="toggleWishlist('${id}');openProgramDetail('${id}')">${inWishlist(id)?'✓ We’ll notify you':'🔔 Notify me when it opens'}</button>`
     : ((owned||p.access==='free') ? `<button class="buy ${owned&&p.access!=='free'?'owned':''}" onclick="openProgramContent('${id}')">${p.access==='free'?'Start Program ▸':'Open Program ▸'}</button>`
-             : `<button class="buy" onclick="joinProgram('${id}')">Join Program — ${fmtPrice(p.price)}</button>`);
+             : hasPreview(id) ? `<button class="buy" onclick="openProgramContent('${id}')">Preview Week ${PREVIEW_WEEKS} — Free ▸</button>
+                                 <button class="buy sec" onclick="joinProgram('${id}')">Unlock Full Program — ${fmtPrice(p.price)}</button>`
+             : `<button class="buy" onclick="joinProgram('${id}')">Unlock Full Program — ${fmtPrice(p.price)}</button>`);
   const wish = (soon||paySoon)?'':`<button class="wish ${inWishlist(id)?'on':''}" onclick="toggleWishlist('${id}');openProgramDetail('${id}')">♥</button>`;
   $('pgd-body').innerHTML=`
     <div class="pd-hero" style="background-image:url('${p.img}')"><div class="edge"></div><div class="body"><span class="badge ${badgeCls(st)}">${badgeLabel(id,st)}</span><h2>${p.title}</h2></div></div>
@@ -5350,15 +5394,19 @@ function renderFirstTimer(){
   for(const wko of FIRST_TIMER){ for(const d of wko.days){ if(!HF.isDone('ft-w'+wko.week+'-d'+d.day)){ openWk=wko.week; break; } } if(openWk) break; }
   if(openWk===null) openWk=FIRST_TIMER.length;
   const weeks=FIRST_TIMER.map(wko=>{
+    if(!weekOpen('first-timer',wko.week)) return lockedWeek('first-timer','WEEK '+wko.week, wko.phase);
     let wdone=0;
     const rows=wko.days.map(d=>{ const wo=CATEGORIES[d.c].workouts[d.w]; const key='ft-w'+wko.week+'-d'+d.day; const on=HF.isDone(key); if(on) wdone++;
       return `<div class="klses" onclick="openFTSession(${d.c},${d.w},'${key}')"><div class="kday">D${d.day}</div><div class="kbody"><div class="kt">${wo.title}</div><div class="km">${wko.phase} · RPE ${wo.rpe} · ${totalMins(wo)} min · ▶ video</div></div><div class="ktick ${on?'on':''}" onclick="event.stopPropagation();toggleFT('${key}',${d.c},${d.w});">✓</div></div>`; }).join('');
     return `<div class="klwk ${wko.week===openWk?'open':''}"><div class="klwkh" onclick="this.parentNode.classList.toggle('open')"><span class="wn">WEEK ${wko.week}</span><span class="wp">${wko.phase}</span><span class="wd">${wdone}/${wko.days.length}</span><span class="wc">›</span></div><div class="klbody">${rows}</div></div>`;
   }).join('');
-  $('pgd-body').innerHTML=`<div class="hgroup"><div class="k">HYROX First Timer · OWNED</div><h2>4-WEEK STARTER</h2><p>Prepare for your first HYROX — hybrid basics → engine + strength → stations → mini simulation. Tap a session to start.</p></div>${weeks}`;
+  $('pgd-body').innerHTML=`<div class="hgroup"><div class="k">HYROX First Timer · ${previewKicker('first-timer')}</div><h2>4-WEEK STARTER</h2><p>Prepare for your first HYROX — hybrid basics → engine + strength → stations → mini simulation. Tap a session to start.</p></div>${previewNote('first-timer')}${weeks}`;
 }
 function toggleFT(key,c,w){ if(HF.isDone(key)) HF.undone(key); else HF.markDone(key,{name:CATEGORIES[c].workouts[w].title}); renderFirstTimer(); }
-function openFTSession(c,w,key){ window.fromFT=true; window.fromPlan=false; window.fromHome=false; window.fromKL=false; window.pendingKey=key; openDetail(c,w); }
+function openFTSession(c,w,key){
+  const wkNo=parseInt(String(key).replace(/^ft-w/,''),10);
+  if(!weekOpen('first-timer',wkNo)){ openProgramDetail('first-timer','store'); return; }
+  window.fromFT=true; window.fromPlan=false; window.fromHome=false; window.fromKL=false; window.pendingKey=key; openDetail(c,w); }
 
 /* ============================================================
    ████  RUN BETTER FOR HYROX (RM59) — 6 weeks × 4 days  ████
@@ -5542,6 +5590,7 @@ function renderRunBetter(){
   for(const wk of RUN_BETTER){ for(let d=1; d<=wk.days.length; d++){ if(!HF.isDone(rbKey(wk.week,d))){ openWk=wk.week; break; } } if(openWk) break; }
   if(openWk===null) openWk=RUN_BETTER.length;
   const weeks=RUN_BETTER.map(wk=>{
+    if(!weekOpen('run-better',wk.week)) return lockedWeek('run-better','WEEK '+wk.week, wk.phase);
     let wdone=0;
     const rows=wk.days.map((day,i)=>{
       const d=i+1, key=rbKey(wk.week,d), on=HF.isDone(key), w=day.mk();
@@ -5554,12 +5603,13 @@ function renderRunBetter(){
       <span class="wn">WEEK ${wk.week}</span><span class="wp">${wk.phase}</span><span class="wd">${wdone}/${wk.days.length}</span><span class="wc">›</span></div>
       <div class="klbody">${rows}</div></div>`;
   }).join('');
-  $('pgd-body').innerHTML=`<div class="hgroup"><div class="k">Run Better for HYROX · OWNED</div><h2>6-WEEK RUNNING BLOCK</h2>
+  $('pgd-body').innerHTML=`<div class="hgroup"><div class="k">Run Better for HYROX · ${previewKicker('run-better')}</div><h2>6-WEEK RUNNING BLOCK</h2>
     <p>Four sessions a week: speed, compromised running, threshold and an easy long run. Runs you log to Strava tick themselves off.</p></div>
-    ${rbPaceCard()}${weeks}`;
+    ${previewNote('run-better')}${rbPaceCard()}${weeks}`;
 }
 function toggleRB(key,w,d){ const s=rbSession(w,d); if(HF.isDone(key)) HF.undone(key); else HF.markDone(key,{name:s?s.title:'Run session', mins:s?totalMins(s):40}); renderRunBetter(); }
 function openRBSession(w,d){
+  if(!weekOpen('run-better',w)){ openProgramDetail('run-better','store'); return; }
   const s=rbSession(w,d); if(!s) return;
   openWorkoutObject(s, 'Run Better · Week '+w, rbKey(w,d), 'store');
 }
@@ -5638,7 +5688,9 @@ function renderLibProgram(id){
   for(let i=0;i<P.weeks.length;i++){ for(let d=1;d<=P.weeks[i].days.length;d++){ if(!HF.isDone(libKey(id,i+1,d))){ openWk=i+1; break; } } if(openWk) break; }
   if(openWk===null) openWk=P.weeks.length;
   const weeks=P.weeks.map((wk,wi)=>{
-    const w=wi+1; let wdone=0;
+    const w=wi+1;
+    if(!weekOpen(id,w)) return lockedWeek(id,'WEEK '+w, wk.phase);
+    let wdone=0;
     const rows=wk.days.map((ref,di)=>{
       const d=di+1, it=libItem(ref); if(!it) return '';
       const key=libKey(id,w,d), on=HF.isDone(key);
@@ -5651,7 +5703,7 @@ function renderLibProgram(id){
       <span class="wn">WEEK ${w}</span><span class="wp">${wk.phase}</span><span class="wd">${wdone}/${wk.days.length}</span><span class="wc">›</span></div>
       <div class="klbody">${rows}</div></div>`;
   }).join('');
-  $('pgd-body').innerHTML=`<div class="hgroup"><div class="k">${CATALOG[id].title} · OWNED</div><h2>${P.hero}</h2><p>${P.blurb}</p></div>${weeks}`;
+  $('pgd-body').innerHTML=`<div class="hgroup"><div class="k">${CATALOG[id].title} · ${previewKicker(id)}</div><h2>${P.hero}</h2><p>${P.blurb}</p></div>${previewNote(id)}${weeks}`;
 }
 function toggleLib(id,w,d){
   const key=libKey(id,w,d), it=libItem(LIB_PROGRAMS[id].weeks[w-1].days[d-1]);
@@ -5659,6 +5711,7 @@ function toggleLib(id,w,d){
   renderLibProgram(id);
 }
 function openLibSession(id,w,d){
+  if(!weekOpen(id,w)){ openProgramDetail(id,'store'); return; }
   const ref=LIB_PROGRAMS[id].weeks[w-1].days[d-1]; if(!ref) return;
   const key=libKey(id,w,d);
   window.fromLib=id; window.fromFT=false; window.fromPlan=false; window.fromHome=false; window.fromKL=false;
