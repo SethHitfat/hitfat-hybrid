@@ -8738,6 +8738,7 @@ async function pushEnable(){
   if(!ok){ cmFail('Could not save this device.'); return false; }
   try{ track('push_on',{}); }catch(e){}
   nfToast('Notifications on ✓');
+  pushTest();          // the switch proves itself rather than asking to be trusted
   return true;
 }
 async function pushDisable(){
@@ -8763,13 +8764,21 @@ async function renderPushRow(){
               : (Notification.permission==='denied') ? 'Blocked in settings'
               : (on ? 'On' : 'Off');
   el.innerHTML = '<button class="pflink" onclick="pushToggle()"><span>Notifications</span>'
-    + '<span class="arr" style="color:'+(state==='On'?'#2ec27e':'var(--dim)')+';font-weight:700;">'+state+'</span></button>';
+    + '<span class="arr" style="color:'+(state==='On'?'#2ec27e':'var(--dim)')+';font-weight:700;">'+state+'</span></button>'
+    + (on ? '<button class="pflink" onclick="pushTest();nfToast(\'Test sent — watch for it\')"><span style="color:var(--dim);">Send a test notification</span><span class="arr">›</span></button>' : '');
 }
 
 /* Tells the sender that a notification the athlete just caused should also be
    pushed. The client passes only who and what kind — never the words: the
    function writes the text itself from the notification row, so nobody can
    push arbitrary text at somebody they happen to be allowed to notify. */
+/* A test can only be sent to yourself — the function refuses any other target —
+   so this is a safe way to know the whole chain works without a second account. */
+async function pushTest(){
+  if(!pushConfigured()) return;
+  try{ await sb.functions.invoke('push', { body:{ to: HF.userId, type:'test' } }); }
+  catch(e){ console.warn('[push] test', e); }
+}
 async function pushNotify(toUserId, type){
   if(!pushConfigured() || !toUserId || toUserId===HF.userId) return;
   try{ await sb.functions.invoke('push', { body:{ to: toUserId, type: type } }); }
