@@ -15,13 +15,22 @@ self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 self.addEventListener('push', event => {
   let d = {};
   try { d = event.data ? event.data.json() : {}; } catch (e) { d = { body: event.data && event.data.text() }; }
-  /* iOS already prints "from Hitfat Hybrid" under every notification, taken from
-     the manifest. Repeating the brand as the title says the name twice and buries
-     what actually happened, so the event becomes the title and the brand is
-     dropped — including for messages sent by an older version of the sender. */
+  /* The bold line is the name, in the case the brand is actually written in, and
+     what happened sits beneath it. iOS adds its own "from" line from the
+     manifest's short_name, which is why that is set to HITFAT rather than the
+     same words again.
+
+     The sender has been through two shapes — brand as title with the event in
+     the body, and the event as title — so the message is worked out from
+     whichever arrives, and neither version needs redeploying to read correctly. */
   const brandish = t => !t || /^hitfat( hybrid)?$/i.test(String(t).trim());
-  const title = brandish(d.title) ? (d.body || 'HITFAT HYBRID') : d.title;
-  const body  = (d.body && d.body !== title) ? d.body : '';
+  const message = brandish(d.title)
+        ? (d.body || '')
+        : (d.body && d.body !== d.title
+             ? String(d.title).replace(/[.:;,\s]+$/, '') + '. ' + d.body
+             : d.title);
+  const title = 'Hitfat Hybrid';
+  const body  = message;
   const opts = {
     body: body,
     icon: '/icon-192.png',
