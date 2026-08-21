@@ -815,15 +815,26 @@
   .cmnb .tx b{color:#fff;font-weight:700;}
   .cmnb .tm{font-size:11px;color:var(--dim2);margin-top:3px;}
   .cmn .dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--hitfat);}
-  .cmc{border-left:2px solid var(--line);padding:0 0 0 12px;margin-bottom:14px;}
-  .cmc.reply{margin-left:22px;border-left-color:#1b1b1b;}
-  .cmch{display:flex;align-items:center;gap:9px;cursor:pointer;}
-  .cmcw .n{font-size:13.5px;font-weight:700;letter-spacing:-.15px;}
-  .cmcw .t{font-size:11px;color:var(--dim2);margin-top:1px;}
-  .cmcb{font-size:14px;color:#e6e6e6;line-height:1.5;margin-top:7px;}
-  .cmca{display:flex;gap:14px;margin-top:7px;}
-  .cmca button{background:none;border:0;color:var(--dim2);font:inherit;font-size:12px;font-weight:600;cursor:pointer;padding:2px 0;}
-  .cmca button:hover{color:var(--dim);}
+  .th{display:flex;gap:11px;padding-bottom:14px;}
+  .thl{flex:none;width:32px;display:flex;flex-direction:column;align-items:center;cursor:pointer;}
+  /* the connector: runs from under the avatar to the bottom of the row, so a
+     reply is visibly hanging off the comment above it */
+  .th.hasnext .thl::after{content:'';flex:1;width:2px;background:var(--line);border-radius:2px;margin-top:7px;}
+  .th.reply{margin-left:22px;}
+  .thc{flex:1;min-width:0;padding-top:1px;}
+  .thh{display:flex;align-items:center;gap:6px;}
+  .thh b{font-size:14px;font-weight:700;letter-spacing:-.2px;cursor:pointer;
+         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .thh .tm{font-size:11.5px;color:var(--dim2);white-space:nowrap;}
+  .thm{margin-left:auto;background:none;border:0;color:var(--dim2);font-size:17px;line-height:1;
+       padding:2px 4px;cursor:pointer;border-radius:6px;}
+  .thm:hover{color:var(--dim);}
+  .thb{font-size:14.5px;color:#e8e8e8;line-height:1.45;margin-top:3px;overflow-wrap:anywhere;}
+  .thimg{width:100%;max-height:280px;object-fit:cover;border-radius:12px;margin-top:8px;display:block;cursor:zoom-in;}
+  .tha{margin-top:6px;}
+  .tha button{background:none;border:0;color:var(--dim2);font:inherit;font-size:12.5px;font-weight:600;
+              cursor:pointer;padding:2px 0;}
+  .tha button:hover{color:var(--hitfat);}
   .cmcbar{position:sticky;bottom:0;background:var(--bg);padding:12px 0 4px;margin-top:18px;
           border-top:1px solid var(--line);display:flex;flex-direction:column;gap:9px;}
   .cmcbar textarea{width:100%;background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:11px 13px;
@@ -6301,18 +6312,27 @@ async function cmComments(postId){
   return rows.map(r=> Object.assign({}, r, { author: by[r.user_id] || null }));
 }
 
-function cmCommentRow(c, isReply){
+/* Threads' structure, HITFAT's skin. The vertical line running down from an
+   avatar answers "whose reply is this?" at a glance — the old left border and
+   indent made you read to work it out. Avatar in a fixed gutter, name and time
+   on one line, body directly under: a ten-reply discussion now fits on a screen
+   instead of needing three. */
+function cmThreadRow(c, isReply, hasNext){
   const a = c.author || {};
   const mine = c.user_id === HF.userId;
-  return '<div class="cmc'+(isReply?' reply':'')+'">'
-    + '<div class="cmch" onclick="openAthlete(\''+cmEsc(c.user_id)+'\')">'+cmAvatar(a,30)
-      + '<div class="cmcw"><div class="n">'+cmEsc(cmName(a))+cmTag(a.is_official,a.is_demo)+'</div>'
-      + '<div class="t">'+cmEsc(cmAgo(c.created_at))+'</div></div></div>'
-    + '<div class="cmcb">'+cmEsc(c.content)+'</div>'
-    + (c.image_url ? '<img class="cmcimg" src="'+cmEsc(c.image_url)+'" alt="" loading="lazy" onclick="cmZoom(\''+cmEsc(c.image_url)+'\')">' : '')
-    + '<div class="cmca">'
-      + (isReply ? '' : '<button onclick="cmSetReply(\''+cmEsc(c.id)+'\',\''+cmEsc(cmName(a)).replace(/'/g,"&#39;")+'\')">Reply</button>')
-      + '<button onclick="cmMenu(\'comment\',\''+cmEsc(c.id)+'\','+(mine?'true':'false')+')">\u22ef</button>'
+  const who = cmEsc(cmName(a));
+  return '<div class="th'+(isReply?' reply':'')+(hasNext?' hasnext':'')+'">'
+    + '<div class="thl" onclick="openAthlete(\''+cmEsc(c.user_id)+'\')">'+cmAvatar(a, isReply?26:32)+'</div>'
+    + '<div class="thc">'
+      + '<div class="thh">'
+        + '<b onclick="openAthlete(\''+cmEsc(c.user_id)+'\')">'+who+'</b>'
+        + cmTag(a.is_official, a.is_demo)
+        + '<span class="tm">'+cmEsc(cmAgo(c.created_at))+'</span>'
+        + '<button class="thm" onclick="cmMenu(\'comment\',\''+cmEsc(c.id)+'\','+(mine?'true':'false')+')">\u22ef</button>'
+      + '</div>'
+      + (c.content && c.content !== '\ud83d\udcf7' ? '<div class="thb">'+cmEsc(c.content)+'</div>' : '')
+      + (c.image_url ? '<img class="thimg" src="'+cmEsc(c.image_url)+'" alt="" loading="lazy" onclick="cmZoom(\''+cmEsc(c.image_url)+'\')">' : '')
+      + (isReply ? '' : '<div class="tha"><button onclick="cmSetReply(\''+cmEsc(c.id)+'\',\''+who.replace(/'/g,"&#39;")+'\')">Reply</button></div>')
     + '</div></div>';
 }
 
@@ -6349,7 +6369,11 @@ async function openThread(postId){
     + cmPostCard(post)
     + '<div class="sechead" style="margin:18px 0 10px;">'+comments.length+' comment'+(comments.length===1?'':'s')+'</div>'
     + (tops.length
-        ? tops.map(c=> cmCommentRow(c,false) + kids(c).map(k=> cmCommentRow(k,true)).join('')).join('')
+        ? tops.map(c=>{
+            const ks = kids(c);
+            return cmThreadRow(c, false, ks.length>0)
+                 + ks.map((k,i)=> cmThreadRow(k, true, i < ks.length-1)).join('');
+          }).join('')
         : '<div class="cmempty"><b>No comments yet</b><p>Be the first to reply.</p></div>')
     + '<div class="cmcbar">'
       + '<div id="cm-replybar" class="cmreply" style="display:none;"><span></span>'
