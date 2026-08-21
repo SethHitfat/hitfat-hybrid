@@ -215,7 +215,9 @@ async function createSession(){
     location:$('s-loc').value.trim()||null, focus:$('s-focus').value.trim()||null,
     starts_at: starts.toISOString(), duration_min: parseInt($('s-dur').value||'60',10) || 60,
     created_by: me.id
-  }).select());
+  // returning only granted columns: check_code is deliberately unreadable, and a
+  // bare .select() would ask for it and get the whole insert refused
+  }).select('id,title,starts_at'));
   if(!r) return;
   toast('Session created ✓'); viewSessions();
 }
