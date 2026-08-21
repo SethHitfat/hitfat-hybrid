@@ -1016,6 +1016,8 @@
   .klwk.locked .klwkh{opacity:.55;}
   .klwk.locked .wd{color:var(--dim);}
   .daycard.locked{opacity:.6;}
+  .ppchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:13px;}
+  .ppchip{background:#141414;border:1px solid var(--line);color:#c8c8c8;font-size:11px;font-weight:600;padding:6px 10px;border-radius:99px;white-space:nowrap;}
   .cstats{display:flex;gap:8px;margin-top:12px;}
   .cstats .cstat{flex:1;background:#141414;border:1px solid var(--line);border-radius:12px;padding:9px 6px;text-align:center;}
   .cstats .cstat b{display:block;font-family:'Oswald';font-size:19px;color:#fff;line-height:1.1;}
@@ -4294,6 +4296,27 @@ function pickAvatar(){
 }
 function removeAvatar(){ if(HF.data.prefs){ delete HF.data.prefs.avatar; HF.save(); nfToast('Photo removed'); try{ renderProfile(); }catch(e){} try{ if(curTab==='home') renderHome(); }catch(e){} } }
 /* identity card: avatar, name, track + the three headline numbers */
+/* ---- the passport line ----
+   The "Hybrid Athlete Profile" idea, kept to one row of chips on the card that
+   already exists rather than a new screen. Every chip is something the athlete
+   has actually told us or earned; a chip with nothing behind it is not drawn,
+   so a new account sees a clean card instead of a row of dashes. */
+function passportChipsHTML(){
+  const p=HF.data.prefs||{}, chips=[];
+  const place=(typeof cmMe!=='undefined' && cmMe) ? [cmMe.city, cmMe.state].filter(Boolean).join(', ') : '';
+  if(place) chips.push(['📍', place, "openAthleteEditor()"]);
+  else chips.push(['📍', 'Add your state', "openAthleteEditor()"]);
+  if(p.level) chips.push(['⚡', p.level, '']);
+  if(p.goal)  chips.push(['🎯', p.goal, '']);
+  if(HF.data.track==='race'){
+    const d=Math.max(0, Math.ceil((KL_DATE - new Date())/864e5));
+    chips.push(['🏁', 'HYROX KL · '+d+'d', "switchTab('pro');openEvent()"]);
+  }
+  const got=(typeof BADGES!=='undefined') ? BADGES.filter(b=>badgeEarned(b.slug)).length : 0;
+  if(got) chips.push(['🏅', got+' badge'+(got===1?'':'s'), "switchTab('profile')"]);
+  return '<div class="ppchips">'+chips.map(c=>
+    '<span class="ppchip"'+(c[2]?' style="cursor:pointer;" onclick="'+c[2]+'"':'')+'>'+c[0]+' '+cmEsc(String(c[1]))+'</span>').join('')+'</div>';
+}
 function profileIdentityHTML(cloud){
   const nm=((HF.data.prefs&&HF.data.prefs.name)||'').trim();
   const race=HF.data.track==='race', wk=weekStats();
@@ -4311,7 +4334,8 @@ function profileIdentityHTML(cloud){
       <div class="c"><b>${hybridScore()}</b><small>Hybrid Score</small></div>
       <div class="c"><b>${(HF.streak()||daysSinceLast()==null)?HF.streak():daysSinceLast()}</b><small>${(HF.streak()||daysSinceLast()==null)?'Day Streak':'Days Since'}</small></div>
       <div class="c"><b>${HF.totalDone()}</b><small>Sessions</small></div>
-    </div></div>`;
+    </div>
+    ${passportChipsHTML()}</div>`;
 }
 /* --- Profile screen --- */
 function renderProfile(){
