@@ -15,9 +15,15 @@ self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 self.addEventListener('push', event => {
   let d = {};
   try { d = event.data ? event.data.json() : {}; } catch (e) { d = { body: event.data && event.data.text() }; }
-  const title = d.title || 'HITFAT HYBRID';
+  /* iOS already prints "from Hitfat Hybrid" under every notification, taken from
+     the manifest. Repeating the brand as the title says the name twice and buries
+     what actually happened, so the event becomes the title and the brand is
+     dropped — including for messages sent by an older version of the sender. */
+  const brandish = t => !t || /^hitfat( hybrid)?$/i.test(String(t).trim());
+  const title = brandish(d.title) ? (d.body || 'HITFAT HYBRID') : d.title;
+  const body  = (d.body && d.body !== title) ? d.body : '';
   const opts = {
-    body: d.body || '',
+    body: body,
     icon: '/icon-192.png',
     badge: '/favicon-32.png',
     tag: d.tag || 'hitfat',
