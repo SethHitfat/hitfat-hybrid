@@ -1083,6 +1083,7 @@
         <div id="home-wod"></div>
         <div id="home-quick"></div>
         <div id="home-challenge"></div>
+        <div id="home-mchal"></div>
         <div id="home-community"></div>
         <div id="home-activity"></div>
         <div id="home-races"></div>
@@ -3241,6 +3242,7 @@ function renderHome(){
 
   try{ renderStartFree(); }catch(e){ console.error(e); }
   try{ renderChallenge(); }catch(e){ console.error(e); }
+  try{ renderHomeChallenge(); }catch(e){ console.error(e); }
   try{ renderRaces(); }catch(e){ console.error(e); }
   if(window.klTicker){ clearInterval(window.klTicker); window.klTicker=null; }
 
@@ -7382,16 +7384,75 @@ async function cmSharePost(key, title, mins, isPB){
 }
 
 /* ---------- small preview on Home (Home stays a training dashboard) ---------- */
+/* The monthly challenge is the growth engine, so it belongs on Home rather than
+   two taps inside Community. Numbers are real: participants come from the
+   challenge_board view, which excludes demo and official profiles in SQL, and
+   the card renders nothing at all until there is an active challenge. */
+async function renderHomeChallenge(){
+  const el = $('home-mchal'); if(!el) return;
+  if(!cmOn()){ el.innerHTML=''; return; }
+  try{
+  const ch = await cmLoadChallenge();
+  if(!ch){ el.innerHTML=''; return; }
+  const joined = !!cmChalMe;
+  const target = Number(ch.target_value||0);
+  const mine   = cmChalPoints(ch.start_date, ch.end_date);
+  const pct    = target ? Math.min(100, Math.round(mine.points/target*100)) : 0;
+  const rows   = await cmQ(()=> sb.from('challenge_board').select('user_id').eq('challenge_id',ch.id).limit(2000));
+  const n      = rows ? rows.length : 0;
+  const ends   = ch.end_date ? Math.max(0, Math.ceil((new Date(ch.end_date)-new Date())/86400000)) : null;
+  /* Sponsor fields are optional and read straight off the challenge row: a
+     challenge without a sponsor renders exactly as it does today. Nothing is
+     hardcoded to a brand. */
+  const sp = ch.sponsor_name ? `<div style="display:flex;align-items:center;gap:7px;margin-top:9px;">
+      ${ch.sponsor_logo_url?`<img src="${cmEsc(ch.sponsor_logo_url)}" alt="" style="height:18px;width:auto;border-radius:3px;">`:''}
+      <span style="font-size:11px;color:#8a8a8a;letter-spacing:.4px;">Presented by <b style="color:#ddd;">${cmEsc(ch.sponsor_name)}</b></span>
+    </div>` : '';
+  el.innerHTML = `<div class="sechead">Monthly Challenge <span style="font-size:11px;color:#2ec27e;font-weight:800;letter-spacing:1px;">FREE</span></div>
+    <div class="today" style="padding:15px 15px 14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div style="min-width:0;">
+          <div class="tt" style="font-size:19px;">${cmEsc(ch.title||'Monthly Challenge')}</div>
+          <div class="tm">${target?target.toLocaleString()+' points this month':''}${n?' · '+n.toLocaleString()+' athlete'+(n===1?'':'s')+' joined':''}${ends!==null?' · '+ends+'d left':''}</div>
+        </div>
+        ${joined?`<div style="text-align:right;flex:none;">
+          <div style="font-family:'Oswald';font-weight:700;font-size:22px;color:#FFE000;line-height:1;">${mine.points}<span style="color:#666;font-size:15px;">/${target}</span></div>
+          <div style="font-size:9px;color:#8a8a8a;font-weight:700;letter-spacing:.5px;margin-top:3px;">POINTS</div></div>`:''}
+      </div>
+      ${joined?`<div class="trkbar" style="margin:11px 0 0;"><i style="width:${pct}%"></i></div>`:''}
+      ${sp}
+      <div class="trow" style="margin-top:12px;">
+        ${joined?`<button class="go" onclick="switchTab('community');cmSetFeed('board')">View standings</button>`
+                :`<button class="go" onclick="cmJoinChallenge(this)">Join Challenge</button>`}
+        <button class="go sec" onclick="switchTab('community');cmSetFeed('board')">Community</button>
+      </div>
+    </div>`;
+  }catch(e){ console.warn('[challenge]',e); el.innerHTML=''; }   // a home card must never take the screen down
+}
+
 async function renderHomeCommunity(){
   const el = $('home-community'); if(!el) return;
   if(!cmOn()){ el.innerHTML=''; return; }
-  const posts = await cmQ(()=> sb.from('post_feed')
-      .select('name,display_name,username,workout_title,is_pb,created_at')
-      .order('created_at',{ascending:false}).limit(2));
+  /* Four lines rather than two: Home should show the community is alive, and a
+     single line reads as an accident. Demo athletes are labelled here exactly as
+     they are everywhere else — a seeded row must never pass for a customer. */
+  const [posts, stats] = await Promise.all([
+    cmQ(()=> sb.from('post_feed')
+      .select('name,display_name,username,workout_title,is_pb,is_demo,is_official,created_at')
+      .order('created_at',{ascending:false}).limit(4)),
+    cmStats ? Promise.resolve(cmStats)
+            : cmQ(()=> sb.from('community_stats').select('*').maybeSingle())
+  ]);
+  if(stats && !cmStats) cmStats = stats;
   if(!posts || !posts.length){ el.innerHTML=''; return; }
-  el.innerHTML = '<div class="sechead">Community</div><div class="cmcard">'
+  // only a number that is true: the view counts real athletes and excludes demo rows
+  const n = (cmStats && cmStats.real_athletes) || 0;
+  const count = n>1 ? '<span class="all" style="cursor:default;color:var(--dim);">'+n.toLocaleString()+' athletes</span>' : '';
+  el.innerHTML = '<div class="sechead" style="display:flex;align-items:baseline;justify-content:space-between;">Community Activity'+count+'</div><div class="cmcard">'
     + posts.map(p=>'<div class="cmline">'+cmEsc(cmName(p))+' '
-        + (p.is_pb ? 'set a new PB' : 'completed '+cmEsc(p.workout_title||'a session'))+'</div>').join('')
+        + (p.is_pb ? 'set a new PB' : 'completed '+cmEsc(p.workout_title||'a session'))
+        + ' <span style="color:var(--dim);">· '+cmAgo(p.created_at)+'</span> '
+        + cmTag(p.is_official, p.is_demo)+'</div>').join('')
     + '<button class="go sec" style="margin-top:11px;width:100%;" onclick="switchTab(\'community\')">View Community</button></div>';
 }
 
