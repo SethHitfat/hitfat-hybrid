@@ -8693,6 +8693,21 @@ function urlB64ToUint8(b64){
   for (let i=0;i<raw.length;i++) out[i] = raw.charCodeAt(i);
   return out;
 }
+/* A subscription is bound to the key it was created with. If the project key
+   changes, an old subscription still looks perfectly valid to the app and is
+   rejected by the push service with a bare 400 — so compare, and replace it
+   rather than reusing it. */
+function abToB64u(buf){
+  const b = btoa(String.fromCharCode.apply(null, new Uint8Array(buf)));
+  return b.replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function pushKeyMatches(sub){
+  try{
+    const k = sub && sub.options && sub.options.applicationServerKey;
+    if(!k) return null;                       // browser will not say — treat as unknown
+    return abToB64u(k) === PUSH_KEY;
+  }catch(e){ return null; }
+}
 let swReg = null;
 async function pushRegisterSW(){
   if(!pushSupported()) return null;
@@ -8720,6 +8735,12 @@ async function pushEnable(){
   if(perm !== 'granted'){ nfToast(perm==='denied' ? 'Notifications are blocked in your browser settings.' : 'Notifications not enabled.'); return false; }
   const reg = await pushRegisterSW(); if(!reg) return false;
   let sub = await reg.pushManager.getSubscription();
+  if(sub && pushKeyMatches(sub) === false){
+    // created with a previous project key — throw it away, here and in the database
+    try{ await cmWrite(()=> sb.from('push_subs').delete().eq('endpoint', sub.endpoint)); }catch(e){}
+    try{ await sub.unsubscribe(); }catch(e){}
+    sub = null;
+  }
   if(!sub){
     try{
       sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: urlB64ToUint8(PUSH_KEY) });
@@ -8798,7 +8819,11 @@ async function pushDiag(){
   out.push(row('Service worker', reg?'registered':'not registered', !reg));
   const sub=await pushCurrent();
   out.push(row('Device subscribed', sub?'yes':'no', !sub));
-  if(sub){ try{ out.push(row('Push service', new URL(sub.endpoint).host)); }catch(e){} }
+  if(sub){
+    try{ out.push(row('Push service', new URL(sub.endpoint).host)); }catch(e){}
+    const m = pushKeyMatches(sub);
+    out.push(row('Key matches device', m===null?'unknown':(m?'yes':'no — turn off and on again'), m===false));
+  }
   const saved=await cmQ(()=> sb.from('push_subs').select('endpoint').eq('user_id',HF.userId));
   out.push(row('Saved in database', saved?String(saved.length):'query failed', !saved || !saved.length));
   let res='—', bad=true;
