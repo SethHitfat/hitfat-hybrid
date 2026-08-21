@@ -8822,7 +8822,8 @@ async function pushDiag(){
   if(sub){
     try{ out.push(row('Push service', new URL(sub.endpoint).host)); }catch(e){}
     const m = pushKeyMatches(sub);
-    out.push(row('Key matches device', m===null?'unknown':(m?'yes':'no — turn off and on again'), m===false));
+    out.push(row('Key matches device', m===null?'unknown':(m?'yes':'no'), m===false));
+    if(m===false) window._pushNeedsFix = true;
   }
   const saved=await cmQ(()=> sb.from('push_subs').select('endpoint').eq('user_id',HF.userId));
   out.push(row('Saved in database', saved?String(saved.length):'query failed', !saved || !saved.length));
@@ -8836,11 +8837,22 @@ async function pushDiag(){
     } else { res=JSON.stringify(r&&r.data); bad=!(r&&r.data&&r.data.sent>0); }
   }catch(e){ res='threw: '+((e&&e.message)||e); }
   out.push(row('Sender replied', res, bad));
+  const needsFix = !!window._pushNeedsFix; window._pushNeedsFix = false;
   $('modal-sheet').innerHTML='<h3>Notification check</h3>'
     + '<p class="msub">Everything the app can see, in order. The first red line is where it stops.</p>'
     + out.join('')
+    // a problem the app knows how to solve should be a button, not an instruction
+    + (needsFix ? '<button class="ghostbtn" style="width:100%;margin-top:10px;" onclick="pushFix()">Fix this device</button>' : '')
     + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Close</button>'
     + '<button class="confirm" onclick="pushDiag()">Run again</button></div>';
+}
+/* Re-subscribes with the key this build carries, then reports back. */
+async function pushFix(){
+  nfToast('Re-registering this device…');
+  try{ await pushDisable(); }catch(e){}
+  const ok = await pushEnable();
+  await renderPushRow();
+  if(ok) setTimeout(pushDiag, 600);
 }
 async function pushNotify(toUserId, type){
   if(!pushConfigured() || !toUserId || toUserId===HF.userId) return;
