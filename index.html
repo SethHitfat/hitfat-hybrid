@@ -1016,6 +1016,17 @@
   .klwk.locked .klwkh{opacity:.55;}
   .klwk.locked .wd{color:var(--dim);}
   .daycard.locked{opacity:.6;}
+  .resrow{display:flex;gap:8px;margin-top:14px;}
+  .rescell{flex:1;background:#141414;border:1px solid var(--line);border-radius:13px;padding:11px 6px;text-align:center;}
+  .rescell b{display:block;font-family:'Oswald';font-size:23px;color:#fff;line-height:1.05;}
+  .rescell b i{font-style:normal;font-size:13px;color:#2ec27e;margin-left:3px;vertical-align:top;}
+  .rescell span{display:block;font-size:9.5px;color:var(--dim);font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-top:4px;}
+  .resnext{text-align:center;font-size:11.5px;color:var(--dim);margin-top:9px;}
+  .reslevel{margin-top:12px;padding:12px;border-radius:14px;text-align:center;border:1px solid rgba(255,224,0,.4);background:linear-gradient(160deg,#1c1a10 0%,#121212 100%);}
+  .reslevel b{display:block;font-family:'Oswald';font-size:26px;color:var(--hyrox);letter-spacing:.5px;}
+  .reslevel span{display:block;font-size:11.5px;color:var(--dim);margin-top:2px;}
+  .resbadges{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px;justify-content:center;}
+  .resbadges .rb{background:#141414;border:1px solid rgba(255,224,0,.35);color:#fff;font-size:11px;font-weight:700;padding:6px 10px;border-radius:99px;}
   .ppchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:13px;}
   .ppchip{background:#141414;border:1px solid var(--line);color:#c8c8c8;font-size:11px;font-weight:600;padding:6px 10px;border-radius:99px;white-space:nowrap;}
   .cstats{display:flex;gap:8px;margin-top:12px;}
@@ -1099,6 +1110,7 @@
         <div id="home-hdr"></div>
         <div id="home-week"></div>
         <div id="home-today"></div>
+        <div id="home-streak"></div>
         <div id="home-free"></div>
         <div id="home-wod"></div>
         <div id="home-quick"></div>
@@ -3175,7 +3187,7 @@ function renderHome(){
       <div class="w2"><div class="n">Hi${nm?', '+nm:''}</div><div class="s">${greetWord()} — ${race?'Race Ready':'Hybrid Starter'}</div></div>
       <div class="chip" onclick="switchTab('progress')">
         <b style="font-family:'Oswald';font-size:17px;color:var(--hyrox);line-height:1;">${hybridScore()}</b>
-        <span style="font-size:11px;color:#8a8a8a;font-weight:600;">Score</span>
+        <span style="font-size:11px;color:#8a8a8a;font-weight:600;">${hybridLevel(hybridScore()).name}</span>
       </div></div>`;
 
   // 2) WEEK STRIP — today highlighted, trained days in green
@@ -3263,6 +3275,7 @@ function renderHome(){
   })();
 
   try{ renderStartFree(); }catch(e){ console.error(e); }
+  try{ renderStreakGuard(); }catch(e){ console.error(e); }
   try{ renderChallenge(); }catch(e){ console.error(e); }
   try{ renderHomeChallenge(); }catch(e){ console.error(e); }
   try{ renderRaces(); }catch(e){ console.error(e); }
@@ -3770,23 +3783,18 @@ function pickRPE(n){ _cRPE=n; document.querySelectorAll('#cm-rpe button').forEac
 function saveComplete(){
   const run=($('cm-run')?$('cm-run').value:'').trim();
   const notes=($('cm-notes')?$('cm-notes').value:'').trim();
-  HF.markDone(_cKey, {rpe:_cRPE, run, notes, name:_cName});
+  const _before=(function(){ try{ return hybridScore(); }catch(e){ return 0; } })();   // read the score BEFORE the session lands
+  const _sk=_cKey, _sn=_cName, _sr=_cRPE;
+  const _sm=(cur && typeof totalMins==='function') ? (totalMins(cur)||0) : 0;
+  HF.markDone(_sk, {rpe:_sr, run, notes, name:_sn, mins:_sm||undefined});
   closeModal();
   if($('player').classList.contains('on')) closePlayer();
-  nfToast('Session logged ✓  RPE '+(_cRPE||'—'));
-  // Return to My Plan / Home after finishing
   switchTab('home');
-  // then offer — never auto-post — to share the session to Community
-  const _sk=_cKey, _sn=_cName, _sr=_cRPE;
-  const _sm=(cur && typeof totalMins==='function') ? (totalMins(cur)||0) : 0;   // the session being closed, when there is one
   const _fresh=(function(){ try{ return checkBadges(true); }catch(e){ return []; } })();
-  setTimeout(()=>{
-    try{
-      if(_fresh.length){ flushBadgeQueue(); return; }        // an unlock is the bigger moment; the feed can wait
-      if(cmOn() && cmUp) offerShare(_sk,_sn,_sm||null,false);
-      else offerWorkoutShare(_sk,_sn,_sm,_sr);               // signed out or Community off — still offer the card
-    }catch(e){}
-  }, 700);
+  _badgeQ=[];                       // folded into the result sheet instead of announced on top of it
+  const _after=(function(){ try{ return hybridScore(); }catch(e){ return _before; } })();
+  // the app answers with what the work moved before it asks the athlete for anything
+  setTimeout(()=>{ try{ openSessionResult({key:_sk, name:_sn, mins:_sm, rpe:_sr, before:_before, after:_after, fresh:_fresh}); }catch(e){ console.error(e); } }, 450);
 }
 function finishWorkout(){ openCompleteModal(window.curSessionKey, cur?cur.title:'Workout'); }
 function closeModal(){ $('modal').classList.remove('on'); }
@@ -4306,6 +4314,7 @@ function passportChipsHTML(){
   const place=(typeof cmMe!=='undefined' && cmMe) ? [cmMe.city, cmMe.state].filter(Boolean).join(', ') : '';
   if(place) chips.push(['📍', place, "openAthleteEditor()"]);
   else chips.push(['📍', 'Add your state', "openAthleteEditor()"]);
+  chips.push(['🏋️', hybridLevel(hybridScore()).name+' · '+hybridScore(), "switchTab('progress')"]);
   if(p.level) chips.push(['⚡', p.level, '']);
   if(p.goal)  chips.push(['🎯', p.goal, '']);
   if(HF.data.track==='race'){
@@ -5384,6 +5393,86 @@ function offerWorkoutShare(key, title, mins, rpe){
     + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Done</button>'
     + '<button class="confirm" onclick="shareWorkoutCard(\'' + t + '\',' + (mins||0) + ',' + (rpe||0) + ')">Share</button></div>';
   $('modal').classList.add('on');
+}
+
+/* ---- LEVELS ----
+   The Hybrid Score is a number out of 100, which is precise and says nothing.
+   A level gives the same number a name the athlete can hold on to, and a next
+   one to climb toward. The thresholds are the score's own, so a level can never
+   disagree with the ring on Progress. */
+const HYBRID_LEVELS=[
+  {min:0,  name:'Rookie',    blurb:'Getting the habit in'},
+  {min:20, name:'Builder',   blurb:'Base going down'},
+  {min:40, name:'Contender', blurb:'Training like a racer'},
+  {min:60, name:'Racer',     blurb:'Race-ready engine'},
+  {min:80, name:'Elite',     blurb:'Sharp end of the field'},
+];
+function hybridLevel(score){
+  const s=Math.max(0, Math.min(100, Number(score)||0));
+  let i=0; for(let k=0;k<HYBRID_LEVELS.length;k++){ if(s>=HYBRID_LEVELS[k].min) i=k; }
+  const cur=HYBRID_LEVELS[i], next=HYBRID_LEVELS[i+1]||null;
+  return {i:i, name:cur.name, blurb:cur.blurb, next:next?next.name:null,
+          toNext: next ? Math.max(0, next.min-s) : 0};
+}
+
+/* ---- THE MOMENT AFTER A SESSION ----
+   Logging a session used to produce a toast and a request to post about it. The
+   athlete did the work; the app should answer with what the work moved — score,
+   streak, the week — before it asks them for anything. Anything unlocked in the
+   same moment is folded into this one sheet rather than stacking a second modal
+   on top of it. */
+function sessionResultHTML(r){
+  const up = r.after - r.before;
+  const wk = weekStats();
+  const lvlNow = hybridLevel(r.after), lvlWas = hybridLevel(r.before);
+  const levelUp = lvlNow.i > lvlWas.i;
+  const cell=(v,l,c)=>'<div class="rescell"><b style="'+(c?'color:'+c+';':'')+'">'+v+'</b><span>'+l+'</span></div>';
+  return '<h3>'+(levelUp?'Level up 🎉':'Session logged 🔥')+'</h3>'
+    + '<p class="msub">'+cmEsc(r.name||'Session')+(r.mins?' · '+r.mins+' min':'')+(r.rpe?' · RPE '+r.rpe:'')+'</p>'
+    + (levelUp ? '<div class="reslevel"><b>'+lvlNow.name.toUpperCase()+'</b><span>'+lvlNow.blurb+'</span></div>' : '')
+    + '<div class="resrow">'
+      + cell(r.after + (up>0?'<i>+'+up+'</i>':''), 'Hybrid Score', up>0?'#FFE000':'')
+      + cell(HF.streak(), 'Day streak', HF.streak()>=3?'#FF6B35':'')
+      + cell(wk.done+'/'+wk.target, 'This week', wk.done>=wk.target?'#2ec27e':'')
+    + '</div>'
+    + (!levelUp && lvlNow.next ? '<div class="resnext">'+lvlNow.toNext+' points to '+lvlNow.next+'</div>' : '')
+    + (r.fresh && r.fresh.length
+        ? '<div class="resbadges">'+r.fresh.map(b=>'<span class="rb">'+b.icon+' '+b.name+'</span>').join('')+'</div>'
+        : '')
+    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Done</button>'
+      + '<button class="confirm" onclick="'+(r.fresh&&r.fresh.length
+          ? 'shareBadge(\'' + r.fresh[0].slug + '\')'
+          : 'shareWorkoutCard(\'' + String(r.name||'Session').replace(/'/g,"\\'") + '\',' + (r.mins||0) + ',' + (r.rpe||0) + ')')
+      + '">Share</button></div>'
+    + ((typeof cmOn==='function' && cmOn() && cmUp)
+        ? '<button class="ghostbtn" style="width:100%;margin-top:8px;" onclick="closeModal();offerShare(\'' + String(r.key||'').replace(/'/g,"\\'") + '\',\'' + String(r.name||'Session').replace(/'/g,"\\'") + '\',' + (r.mins||0) + ',false)">Post to Community</button>'
+        : '');
+}
+function openSessionResult(r){
+  $('modal-sheet').innerHTML = sessionResultHTML(r);
+  $('modal').classList.add('on');
+}
+
+/* ---- STREAK PROTECTION ----
+   A streak is the one number in the app that can be lost by doing nothing, so
+   it is the one worth defending — but only when there is really something at
+   stake, and only with a door small enough to walk through. */
+function renderStreakGuard(){
+  const el=$('home-streak'); if(!el) return;
+  el.innerHTML='';
+  const st=HF.streak(); if(st<3) return;                       // nothing to lose yet
+  const today=new Date(); today.setHours(0,0,0,0);
+  const trained=Object.values(HF.data.sessions).some(s=>{ if(!s||!s.date) return false;
+    const d=new Date(s.date); d.setHours(0,0,0,0); return d.getTime()===today.getTime(); });
+  if(trained) return;                                          // already safe today
+  const q=QUICK_WORKOUTS[0];
+  el.innerHTML='<div class="today" style="padding:14px 15px;border-color:rgba(255,107,53,.35);">'
+    + '<div style="display:flex;align-items:center;gap:11px;">'
+    + '<div style="font-size:26px;line-height:1;">🔥</div>'
+    + '<div style="min-width:0;flex:1;"><div class="tt" style="font-size:17px;">'+st+'-day streak</div>'
+    + '<div class="tm">Keep it alive — '+totalMins(q)+' minutes is enough today.</div></div></div>'
+    + '<div class="trow" style="margin-top:11px;"><button class="go" onclick="openQuickWorkout(0)">'+cmEsc(q.title)+'</button>'
+    + '<button class="go sec" onclick="switchTab(\'home\');document.getElementById(\'home-today\').scrollIntoView({behavior:\'smooth\',block:\'center\'})">Today’s session</button></div></div>';
 }
 
 /* ---- cards ---- */
