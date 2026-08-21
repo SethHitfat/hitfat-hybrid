@@ -6584,7 +6584,7 @@ async function cmJoinGroup(btn){
     cmJoined = true;
     track('community_join_group',{});
   }
-  cmStats = null; cmCache.group = null; cmCache.discover = null;
+  cmStats = null; cmStateBoard = null; cmCache.group = null; cmCache.discover = null;
   renderCommunity();
 }
 
@@ -6940,13 +6940,48 @@ function cmRankRow(r, rankField, me){
     + '<div class="sc">'+(r.hybrid_score||0)+'</div></div>';
 }
 
+/* State versus state lives INSIDE the State scope, not as a fifth chip: someone
+   thinking about their state is already here, and the scope bar has no room for
+   another pill at 320px. Rendered from the state_board view, which excludes demo
+   profiles and refuses to place a state with fewer than three ranked athletes —
+   a one-athlete "state average" is that athlete's score wearing a flag. */
+let cmStateBoard = null;
+async function cmStateStripHTML(myState){
+  const rows = cmStateBoard || (cmStateBoard = await cmQ(()=> sb.from('state_board').select('*')
+      .order('rank_state_board',{ascending:true, nullsFirst:false}).limit(20)));
+  if(!rows || !rows.length) return '';
+  const ranked = rows.filter(r=> r.rank_state_board);
+  if(!ranked.length){
+    return '<div class="sechead" style="margin:14px 0 8px;">Malaysia by state</div>'
+      + '<div class="cmnote" style="margin-top:0;">No state has three ranked athletes yet. The board opens as soon as one does.</div>';
+  }
+  const waiting = rows.filter(r=> !r.rank_state_board).length;
+  const row = r => {
+    const me = myState && r.state===myState;
+    const medal = r.rank_state_board===1?'🥇':r.rank_state_board===2?'🥈':r.rank_state_board===3?'🥉':r.rank_state_board;
+    return '<div class="cmlb'+(me?' me':'')+'" style="cursor:default;">'
+      + '<div class="rk">'+medal+'</div>'
+      + '<div class="lbn" style="margin-left:2px;"><div class="n">'+cmEsc(r.state)+(me?' <span class="you">You</span>':'')+'</div>'
+      + '<div class="t">'+r.athletes+' athlete'+(r.athletes===1?'':'s')+' · '+(r.sessions||0)+' sessions</div></div>'
+      + '<div class="sc">'+(r.avg_score||0)+'</div></div>';
+  };
+  const mine = myState ? ranked.filter(r=> r.state===myState) : [];
+  const top  = ranked.slice(0,5);
+  const tail = (mine.length && top.indexOf(mine[0])<0) ? '<div class="cmlbgap">···</div>'+row(mine[0]) : '';
+  return '<div class="sechead" style="margin:14px 0 8px;">Malaysia by state</div>'
+    + top.map(row).join('') + tail
+    + '<div class="cmnote">Average Hybrid Score of the state\u2019s ranked athletes. A state is placed once three of them are ranked'
+    + (waiting? ' \u2014 '+waiting+' state'+(waiting===1?' is':'s are')+' still waiting' : '') + '.</div>';
+}
+
 async function cmBuildBoard(){
   const field = cmScope==='state' ? 'rank_state' : (cmScope==='club' ? 'rank_club' : 'rank_my');
   const mine  = cmMe || {};
   let q = sb.from('leaderboard').select('*').order('hybrid_score',{ascending:false}).limit(50);
   if(cmScope==='state'){
     if(!mine.state) return cmScopeBar()
-      + '<div class="cmempty"><b>Set your state first</b><p>Add it in Profile → Athlete Profile, then you can see how you rank in your own state.</p>'
+      + (await cmStateStripHTML(null))
+      + '<div class="cmempty"><b>Set your state first</b><p>Add it in Profile → Athlete Profile to join your own state\u2019s ranking.</p>'
       + '<button class="go" onclick="openAthleteEditor()">Edit athlete profile</button></div>';
     q = q.eq('state', mine.state);
   }
@@ -6958,6 +6993,7 @@ async function cmBuildBoard(){
   const rows = await cmQ(()=> q) || [];
 
   if(!rows.length) return cmScopeBar()
+    + (cmScope==='state' ? await cmStateStripHTML(mine.state) : '')
     + '<div class="cmempty"><b>No rankings yet</b>'
     + '<p>Rankings count real athletes only — seeded demo profiles are excluded on purpose. '
     + 'Complete a few sessions and yours will appear here.</p></div>';
@@ -6971,7 +7007,8 @@ async function cmBuildBoard(){
   }
   const title = cmScope==='state' ? cmEsc(mine.state)+' ranking'
               : cmScope==='club'  ? 'Club ranking' : 'Malaysia ranking';
-  return cmScopeBar()
+  const strip = cmScope==='state' ? await cmStateStripHTML(mine.state) : '';
+  return cmScopeBar() + strip
     + '<div class="sechead" style="margin:16px 0 10px;">'+title+'</div>'
     + rows.map(r=> cmRankRow(r, field, r.id===HF.userId)).join('') + tail
     + '<div class="cmnote">Ranked on Hybrid Score, then sessions completed. Real athletes only.</div>';
