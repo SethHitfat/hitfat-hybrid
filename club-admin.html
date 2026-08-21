@@ -75,6 +75,12 @@ function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('on'
 async function q(fn){ try{ const r=await fn(); if(r&&r.error){ console.warn(r.error); toast(r.error.message||'Request failed'); return null; } return r?r.data:null; }catch(e){ console.warn(e); return null; } }
 function fmtTime(iso){ const d=new Date(iso); let h=d.getHours(); const m=d.getMinutes(); const ap=h>=12?'PM':'AM'; h=h%12||12; return h+':'+(m<10?'0':'')+m+' '+ap; }
 function fmtDay(iso){ const d=new Date(iso); return d.toDateString().slice(0,10); }
+const BENCH_LABEL = {run_1k:'1KM', run_5k:'5KM', ski_1000:'Ski 1000', full_sim:'Full Sim'};
+function fmtSecs(sec){
+  sec=Math.round(Number(sec)||0);
+  const h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60), s=sec%60, pad=n=>(n<10?'0':'')+n;
+  return h ? h+':'+pad(m)+':'+pad(s) : m+':'+pad(s);
+}
 function daysAgo(iso){ if(!iso) return null; return Math.floor((Date.now()-new Date(iso).getTime())/864e5); }
 
 /* ---------- auth ---------- */
@@ -253,6 +259,20 @@ async function viewMembers(){
   const members = await q(()=> sb.from('club_physical_members').select('*').eq('club_id',staff.club_id).order('created_at')) || [];
   const names = await namesFor(members.map(m=>m.user_id));
   const att = await q(()=> sb.from('club_attendance').select('user_id,checked_in_at').eq('club_id',staff.club_id).order('checked_in_at',{ascending:false}).limit(2000)) || [];
+  /* one query for everyone's benchmarks, best time per test — the policy on
+     club_performance already limits this to athletes in a club you staff */
+  const perf = members.length
+    ? (await q(()=> sb.from('club_performance').select('user_id,metric,seconds')
+        .in('user_id', members.map(m=>m.user_id)).limit(2000)) || [])
+    : [];
+  const best = {};
+  perf.forEach(p=>{ const k=p.user_id+'|'+p.metric; if(!(k in best) || p.seconds<best[k]) best[k]=p.seconds; });
+  const benchLine = uid => {
+    const bits = Object.keys(BENCH_LABEL)
+      .filter(m => (uid+'|'+m) in best)
+      .map(m => BENCH_LABEL[m]+' '+fmtSecs(best[uid+'|'+m]));
+    return bits.length ? `<div class="m">${bits.join(' · ')}</div>` : '';
+  };
   const last={}, total={};
   att.forEach(a=>{ if(!last[a.user_id]) last[a.user_id]=a.checked_in_at; total[a.user_id]=(total[a.user_id]||0)+1; });
   $('body').innerHTML = `<div class="card">
@@ -271,6 +291,7 @@ async function viewMembers(){
         <div class="row"><div class="g">
           <div class="t">${esc(names[m.user_id]||'Athlete')} ${m.role!=='member'?`<span class="pill ok">${esc(m.role)}</span>`:''}</div>
           <div class="m">${total[m.user_id]||0} sessions · ${d===null?'no check-ins':'last '+(d===0?'today':d+'d ago')} · ${esc(m.status)}</div>
+          ${benchLine(m.user_id)}
           <div style="margin-top:6px;">${flag}</div>
         </div></div>
         <div class="row" style="margin-top:10px;gap:6px;flex-wrap:wrap;">

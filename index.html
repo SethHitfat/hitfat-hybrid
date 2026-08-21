@@ -1296,6 +1296,7 @@
         <div id="prog-predict"></div>
         <div id="prog-pace"></div>
 
+        <div id="prog-bench"></div>
         <div id="prog-sim"></div>
         <div id="prog-wb"></div>
 
@@ -4200,6 +4201,7 @@ function renderProgress(){
     <div class="trkbar" style="margin-top:6px;"><i style="width:${wk.pct}%"></i></div>
     <div class="trkmeta"><b>${wk.done}</b> / ${wk.target} planned sessions this week</div>`;
   try{ renderLoad(); renderTrend(); renderPB(); renderPredictor(); renderPaceMe(); renderSim(); renderWallBall(); }catch(e){ console.error(e); }
+  try{ renderBench(); }catch(e){ console.error(e); }
   const bm=nextBenchmark();
   $('prog-bench').innerHTML=`<div class="benchcard"><div class="bt">${bm.name}</div><div class="bm">${bm.when}</div></div>
     <div class="benchcard"><div class="bt">Weekly Consistency</div><div class="bm">${wk.done} done this week · ${HF.totalDone()} all-time</div></div>`;
@@ -8502,6 +8504,159 @@ async function renderHomeClub(){
         ? '<button class="go sec" disabled>Checked in ✓</button>'
         : '<button class="go" onclick="openCheckIn()">Check in</button>')
     + '<button class="go sec" onclick="switchTab(\'hclub\')">Open Club</button></div></div>';
+}
+
+
+/* ============================================================
+   ████  BENCHMARKS  ████
+   Four tests, all times, so one unit and one input format. Every result is
+   kept: "you were 4:11, now you are 3:58" is the point, and that needs the old
+   row to still exist. A result that beats the previous best runs through the
+   same personal-best moment as everything else in the app.
+   ============================================================ */
+const BENCH = [
+  {k:'run_1k',   name:'1 KM Run',        hint:'mm:ss',   ph:'3:58'},
+  {k:'run_5k',   name:'5 KM Run',        hint:'mm:ss',   ph:'22:40'},
+  {k:'ski_1000', name:'SkiErg 1000 m',   hint:'mm:ss',   ph:'3:51'},
+  {k:'full_sim', name:'Full Simulation', hint:'h:mm:ss', ph:'1:15:00'},
+];
+const BENCH_BY = {}; BENCH.forEach(b=>{ BENCH_BY[b.k]=b; });
+let benchRows = null;
+
+/* "3:58" → 238, "1:15:00" → 4500. Anything else → null, so a typo never
+   becomes a personal best. */
+function benchParse(txt){
+  const t = String(txt||'').trim();
+  if(!/^\d{1,2}(:[0-5]?\d){1,2}$/.test(t)) return null;
+  const p = t.split(':').map(Number);
+  const s = p.length===3 ? p[0]*3600+p[1]*60+p[2] : p[0]*60+p[1];
+  return (s>0 && s<86400) ? s : null;
+}
+function benchFmt(sec){
+  sec = Math.round(Number(sec)||0);
+  const h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60), s=sec%60;
+  const pad=n=>(n<10?'0':'')+n;
+  return h ? h+':'+pad(m)+':'+pad(s) : m+':'+pad(s);
+}
+function benchGap(sec){ const a=Math.abs(Math.round(sec)); return a<60 ? a+' sec' : benchFmt(a); }
+function benchDelta(sec){   // negative is faster, which is better
+  const d = Math.round(sec), a = Math.abs(d);
+  return (d<0?'−':'+') + (a<60 ? a+' sec' : benchFmt(a));
+}
+
+async function benchLoad(force){
+  if(typeof cmOn!=='function' || !cmOn()) return null;
+  if(benchRows && !force) return benchRows;
+  benchRows = await cmQ(()=> sb.from('club_performance')
+      .select('id,metric,seconds,note,recorded_at')
+      .eq('user_id', HF.userId)
+      .order('recorded_at',{ascending:false})
+      .order('created_at',{ascending:false})
+      .limit(200)) || [];
+  return benchRows;
+}
+
+async function renderBench(){
+  const el = $('prog-bench'); if(!el) return;
+  el.innerHTML='';
+  if(typeof cmOn!=='function' || !cmOn()) return;      // benchmarks live in the account, not on the device
+  const rows = await benchLoad();
+  const byMetric = {};
+  (rows||[]).forEach(r=>{ (byMetric[r.metric]=byMetric[r.metric]||[]).push(r); });
+
+  const card = b => {
+    const list = byMetric[b.k] || [];
+    const latest = list[0] || null;
+    const prev   = list[1] || null;
+    const best   = list.length ? list.reduce((a,r)=> r.seconds<a.seconds?r:a) : null;
+    const isPB   = latest && best && latest.id===best.id && list.length>1;
+    let sub;
+    if(!latest) sub = '<div class="bm">Not tested yet</div>';
+    else {
+      const bits = [];
+      if(prev) bits.push('previous '+benchFmt(prev.seconds));
+      if(prev) bits.push('<b style="color:'+(latest.seconds<prev.seconds?'#2ec27e':'var(--dim)')+'">'+benchDelta(latest.seconds-prev.seconds)+'</b>');
+      if(best && !isPB && best.seconds!==latest.seconds) bits.push('best '+benchFmt(best.seconds));
+      sub = '<div class="bm">'+(bits.join(' · ')||new Date(latest.recorded_at+'T00:00:00').toDateString().slice(4))+'</div>';
+    }
+    return '<div class="benchcard" style="cursor:pointer;" onclick="openBench(\''+b.k+'\')">'
+      + '<div style="display:flex;align-items:baseline;gap:8px;">'
+      + '<div class="bt" style="flex:1;">'+b.name+'</div>'
+      + (latest ? '<div style="font-family:\'Oswald\';font-size:22px;color:'+(isPB?'var(--hyrox)':'#fff')+';">'+benchFmt(latest.seconds)+'</div>' : '<div style="color:var(--dim);font-size:13px;">Add ›</div>')
+      + '</div>' + sub
+      + (isPB ? '<div style="font-size:10.5px;font-weight:800;letter-spacing:1px;color:var(--hyrox);margin-top:5px;">PERSONAL BEST</div>' : '')
+      + '</div>';
+  };
+  el.innerHTML = '<div class="sechead">Benchmarks</div>'
+    + BENCH.map(card).join('')
+    + '<div class="cmnote">Four tests, retested whenever you like. Every result is kept, so the app can show you the change rather than only the number.</div>';
+}
+
+function openBench(k){
+  const b = BENCH_BY[k]; if(!b) return;
+  const list = (benchRows||[]).filter(r=>r.metric===k);
+  const hist = list.slice(0,6).map(r=>
+      '<div class="pfrow"><span class="l">'+new Date(r.recorded_at+'T00:00:00').toDateString().slice(4)+'</span>'
+    + '<span class="v" style="color:#fff;">'+benchFmt(r.seconds)+'</span></div>').join('');
+  $('modal-sheet').innerHTML = '<h3>'+b.name+'</h3>'
+    + '<p class="msub">Enter your time as '+b.hint+'.</p>'
+    + '<div class="field"><label>Time</label>'
+    + '<input class="textinput" id="bench-t" inputmode="numeric" placeholder="'+b.ph+'" '
+    + 'style="text-align:center;font-family:\'Oswald\';font-size:26px;letter-spacing:3px;"></div>'
+    + '<div class="field"><label>Note (optional)</label><input class="textinput" id="bench-n" placeholder="Conditions, kit, how it felt"></div>'
+    + (hist ? '<div class="sechead" style="margin:14px 0 6px;">History</div>'+hist : '')
+    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Cancel</button>'
+    + '<button class="confirm" onclick="benchSave(\''+k+'\')">Save result</button></div>';
+  $('modal').classList.add('on');
+  setTimeout(()=>{ const i=$('bench-t'); if(i) i.focus(); },80);
+}
+
+async function benchSave(k){
+  const b=BENCH_BY[k]; if(!b) return;
+  const secs = benchParse($('bench-t') ? $('bench-t').value : '');
+  if(secs===null){ nfToast('Enter the time as '+b.hint); return; }
+  const note = ($('bench-n') ? $('bench-n').value.trim() : '') || null;
+  const prevBest = (benchRows||[]).filter(r=>r.metric===k).reduce((a,r)=> (a===null||r.seconds<a)?r.seconds:a, null);
+  const ok = await cmWrite(()=> sb.from('club_performance').insert({
+    user_id: HF.userId, metric:k, seconds:secs, note:note,
+    recorded_at: new Date().toISOString().slice(0,10)
+  }));
+  closeModal();
+  if(!ok){ cmFail('Could not save that result.'); return; }
+  try{ track('benchmark',{metric:k}); }catch(e){}
+  await benchLoad(true);
+  try{ renderBench(); }catch(e){}
+  // a first result is a starting point, not a record — same rule as the rest of the app
+  if(prevBest!==null && secs<prevBest) benchPB(b, secs, prevBest);
+  else nfToast('Result saved ✓');
+}
+
+function benchPB(b, secs, prevBest){
+  const gain = prevBest - secs;
+  $('modal-sheet').innerHTML = '<h3>New personal best 🔥</h3>'
+    + '<div style="text-align:center;padding:8px 0 2px;">'
+    + '<div style="font-family:\'Oswald\';font-size:52px;color:var(--hyrox);line-height:1;">'+benchFmt(secs)+'</div>'
+    + '<div style="color:var(--dim);font-size:13px;margin-top:6px;">'+b.name+' · '+benchGap(gain)+' faster than '+benchFmt(prevBest)+'</div></div>'
+    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Done</button>'
+    + '<button class="confirm" onclick="shareBench(\''+b.k+'\','+secs+','+gain+')">Share</button></div>';
+  $('modal').classList.add('on');
+}
+function buildBenchCard(name, secs, gain){
+  const o=_cardBase('PERSONAL BEST');
+  const x=o.x;
+  x.textAlign='center';
+  x.fillStyle='#6a6a6a'; x.font='700 24px Inter, sans-serif'; x.fillText('NEW PB', 540, 330);
+  x.fillStyle='#fff'; x.font='700 60px Oswald, sans-serif'; _cardWrap(x, String(name).toUpperCase(), 540, 420, 900, 68, 2);
+  x.fillStyle='#FFE000'; x.font='700 190px Oswald, sans-serif'; x.fillText(benchFmt(secs), 540, 640);
+  _cardStats(x, [[benchGap(gain),'FASTER'],[String(HF.streak()),'DAY STREAK'],[String(hybridScore()),'HYBRID SCORE']]);
+  _cardFoot(x);
+  return o.c;
+}
+function shareBench(k, secs, gain){
+  const b=BENCH_BY[k]||{name:'Benchmark'};
+  closeModal();
+  hfShareCanvas(buildBenchCard(b.name, secs, gain), 'hitfat-pb.png', 'HITFAT HYBRID',
+    'New PB — '+b.name+' '+benchFmt(secs)+' on HITFAT HYBRID 🔥 Train free → hybrid.hitfat.io');
 }
 
 </script>
