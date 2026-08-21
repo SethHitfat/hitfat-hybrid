@@ -8250,9 +8250,12 @@ async function openClubSession(id){
 
 /* ---- attendance ---- */
 async function clbAttendance(){
-  const [months, rows] = await Promise.all([
+  const thisMonth=new Date(); thisMonth.setDate(1); thisMonth.setHours(0,0,0,0);
+  const [months, rows, board] = await Promise.all([
     cmQ(()=> sb.from('club_month_attendance').select('*').eq('user_id',HF.userId).order('month',{ascending:false}).limit(12)),
-    cmQ(()=> sb.from('club_attendance').select('checked_in_at').eq('user_id',HF.userId).order('checked_in_at',{ascending:false}).limit(400))
+    cmQ(()=> sb.from('club_attendance').select('checked_in_at').eq('user_id',HF.userId).order('checked_in_at',{ascending:false}).limit(400)),
+    cmQ(()=> sb.from('club_consistency').select('*').eq('club_id',clbMe.club_id)
+        .eq('month', thisMonth.toISOString().slice(0,10)).order('rank_in_club').limit(100))
   ]);
   const list=rows||[];
   if(!list.length) return '<div class="cmempty"><b>No check-ins yet</b><p>Scan the code at the gym and your first club session lands here — and in your streak and Hybrid Score.</p></div>';
@@ -8284,8 +8287,35 @@ async function clbAttendance(){
           return '<div class="pfrow"><span class="l">'+d.toLocaleString(undefined,{month:'long',year:'numeric'})+'</span>'
                + '<span class="v">'+m.sessions+' session'+(m.sessions===1?'':'s')+'</span></div>'; }).join('');
   }
+  h+= await clbBoardHTML(board);
   h+='<div class="cmnote">Club check-ins count as sessions everywhere else in the app — streak, Hybrid Score, challenge points and badges.</div>';
   return h;
+}
+
+/* ---- consistency board ----
+   Ranked on sessions attended, because turning up is the thing a club rewards.
+   Hybrid Score already has its own board in Community, and copying it here
+   would just be the same ranking twice. */
+async function clbBoardHTML(board){
+  if(!board || !board.length) return '';
+  const ids=board.map(r=>r.user_id);
+  const people = await cmQ(()=> sb.from('profiles').select('id,name,display_name,username,avatar_url').in('id', ids)) || [];
+  const by={}; people.forEach(p=>{ by[p.id]=p; });
+  const top=board.slice(0,10);
+  const mine=board.filter(r=> r.user_id===HF.userId)[0];
+  const row=r=>{
+    const p=by[r.user_id]||{}, me=r.user_id===HF.userId;
+    const medal=r.rank_in_club===1?'🥇':r.rank_in_club===2?'🥈':r.rank_in_club===3?'🥉':r.rank_in_club;
+    return '<div class="cmlb'+(me?' me':'')+'" style="cursor:default;">'
+      + '<div class="rk">'+medal+'</div>'+cmAvatar(p,36)
+      + '<div class="lbn"><div class="n">'+cmEsc(cmName(p))+(me?' <span class="you">You</span>':'')+'</div>'
+      + '<div class="t">last '+cmAgo(r.last_at)+'</div></div>'
+      + '<div class="sc">'+r.sessions+'</div></div>';
+  };
+  const tail = (mine && top.indexOf(mine)<0) ? '<div class="cmlbgap">···</div>'+row(mine) : '';
+  return '<div class="sechead">Club this month</div>'
+    + top.map(row).join('') + tail
+    + '<div class="cmnote">Sessions attended at the club, this calendar month. Members of this club only.</div>';
 }
 
 /* ---- my club ---- */
