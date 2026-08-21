@@ -1016,6 +1016,15 @@
   .klwk.locked .klwkh{opacity:.55;}
   .klwk.locked .wd{color:var(--dim);}
   .daycard.locked{opacity:.6;}
+  .bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:9px;}
+  .bchip{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 9px 11px;text-align:center;cursor:pointer;opacity:.5;}
+  .bchip.on{opacity:1;border-color:rgba(255,224,0,.45);background:linear-gradient(160deg,#1b1a12 0%,#121212 100%);}
+  .bchip .bi{font-size:26px;line-height:1.1;filter:grayscale(1);}
+  .bchip.on .bi{filter:none;}
+  .bchip .bn{font-size:11.5px;font-weight:700;color:#fff;margin-top:6px;line-height:1.25;}
+  .bchip .bs{font-size:10px;color:var(--dim);margin-top:3px;font-weight:600;}
+  .bchip .bbar{height:3px;border-radius:2px;background:#242424;margin-top:7px;overflow:hidden;}
+  .bchip .bbar i{display:block;height:100%;background:var(--hyrox);}
   .joinbar .wish{flex:0 0 auto;width:54px;height:54px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--dim);font-size:20px;cursor:pointer;}
   .joinbar .wish.on{color:var(--hyrox);border-color:var(--hyrox);}
   .phaselist2 .ph2{display:flex;align-items:center;gap:13px;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:13px 14px;margin-bottom:9px;}
@@ -1257,6 +1266,8 @@
       <div id="profile" style="display:none;">
         <div class="hgroup"><div class="k">Account</div><h2>PROFILE</h2><p>Your account, programs, plan and settings.</p></div>
         <div id="pf-account"></div>
+        <div class="sechead">Achievements <span id="pf-badge-count" style="font-size:11px;color:var(--dim);font-weight:600;letter-spacing:.5px;"></span></div>
+        <div id="pf-badges"></div>
         <div class="sechead">My Programs</div>
         <div id="pf-programs"></div>
         <div class="sechead">Purchases</div>
@@ -3248,6 +3259,7 @@ function renderHome(){
 
   // 7) QUICK WORKOUTS
   renderHomeCommunity();          // small preview only — Home stays a training dashboard
+  try{ checkBadges(true); flushBadgeQueue(); }catch(e){}
   $('home-quick').innerHTML=`<div class="sechead">Quick Workouts <span style="font-size:11px;color:#2ec27e;font-weight:800;letter-spacing:1px;">FREE</span></div>
     <div class="hscroll">${QUICK_WORKOUTS.map((_,i)=>quickCard(i)).join('')}</div>`;
 }
@@ -3604,8 +3616,8 @@ const HF = {
   KEY:'hitfat_hybrid_v1',
   userId:null, email:null,
   // owned: {programId:{date}}  scores: {engine,strength,stations,running}  wishlist: {programId:1}  purchases: [{id,title,price,date}]
-  data:{ track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[], races:{}, raceGoal:'' },
-  _defaults(){ return { track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[], races:{}, raceGoal:'', wallball:[] }; },
+  data:{ track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[], races:{}, raceGoal:'', badges:{} },
+  _defaults(){ return { track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[], races:{}, raceGoal:'', wallball:[], badges:{} }; },
   cacheKey(){ return this.KEY + (this.userId ? '_'+this.userId : ''); },
   setUser(id, email){ this.userId=id||null; this.email=email||null; },
   apply(obj){ // replace working data from a plain object (cloud or cache)
@@ -3617,6 +3629,7 @@ const HF = {
       d.wishlist=Object.assign({},obj.wishlist||{}); d.purchases=Array.isArray(obj.purchases)?obj.purchases.slice():[];
       d.strava=obj.strava||null; d.sims=Array.isArray(obj.sims)?obj.sims.slice():[]; d.races=Object.assign({},obj.races||{}); d.raceGoal=obj.raceGoal||'';
       d.wallball=Array.isArray(obj.wallball)?obj.wallball.slice():[];
+      d.badges=Object.assign({},obj.badges||{});   // an unlisted key is dropped here — badges must be listed or they vanish on reload
     }
     this.data=d;
   },
@@ -3642,7 +3655,9 @@ const HF = {
       else { this.load(); this.pushCloud(); } // new user → seed their row from local/default
     }catch(e){ console.warn(e); this.load(); }
   },
-  markDone(key, extra){ if(!key) return; this.data.sessions[key]=Object.assign({date:new Date().toISOString()}, this.data.sessions[key]||{}, extra||{}); this.save(); },
+  markDone(key, extra){ if(!key) return; this.data.sessions[key]=Object.assign({date:new Date().toISOString()}, this.data.sessions[key]||{}, extra||{}); this.save();
+    try{ checkBadges(true); }catch(e){}   // silent: the screen announces it when nothing else is open
+  },
   undone(key){ if(this.data.sessions[key]){ delete this.data.sessions[key]; this.save(); } },
   isDone(key){ return !!this.data.sessions[key]; },
   totalDone(){ return Object.keys(this.data.sessions).length; },
@@ -3751,8 +3766,16 @@ function saveComplete(){
   // Return to My Plan / Home after finishing
   switchTab('home');
   // then offer — never auto-post — to share the session to Community
-  const _sk=_cKey, _sn=_cName;
-  setTimeout(()=>{ try{ offerShare(_sk,_sn,null,false); }catch(e){} }, 700);
+  const _sk=_cKey, _sn=_cName, _sr=_cRPE;
+  const _sm=(cur && typeof totalMins==='function') ? (totalMins(cur)||0) : 0;   // the session being closed, when there is one
+  const _fresh=(function(){ try{ return checkBadges(true); }catch(e){ return []; } })();
+  setTimeout(()=>{
+    try{
+      if(_fresh.length){ flushBadgeQueue(); return; }        // an unlock is the bigger moment; the feed can wait
+      if(cmOn() && cmUp) offerShare(_sk,_sn,_sm||null,false);
+      else offerWorkoutShare(_sk,_sn,_sm,_sr);               // signed out or Community off — still offer the card
+    }catch(e){}
+  }, 700);
 }
 function finishWorkout(){ openCompleteModal(window.curSessionKey, cur?cur.title:'Workout'); }
 function closeModal(){ $('modal').classList.remove('on'); }
@@ -4325,6 +4348,8 @@ function renderProfile(){
     <div class="pfrow"><span class="l">Training days</span><span class="v">${p.days?p.days+' days/week':'—'}</span></div>
     <div class="pfrow"><span class="l">Equipment</span><span class="v">${p.equip||'—'}</span></div>
     <div class="pfrow"><span class="l">Current week</span><span class="v">Week ${currentWeek()}</span></div>`;
+  try{ renderBadges(); }catch(e){ console.error(e); }
+  try{ checkBadges(true); flushBadgeQueue(); }catch(e){}
 }
 function confirmReset(){
   $('modal-sheet').innerHTML=`<h3>Reset Progress?</h3>
@@ -5102,6 +5127,212 @@ function shareChallenge(){
       nfToast('Card saved — share it to your story 📲');
     },'image/png');
   }catch(e){ console.error(e); nfToast('Could not build share card.'); }
+}
+
+/* ---- ACHIEVEMENTS ---------------------------------------------------------
+   Earned from data the athlete already has on this device, so a badge works
+   signed out, offline, and without Strava — with one exception that says so on
+   its own card. The slugs are the ones already seeded in the `badges` table by
+   the community schema, so an unlock can be mirrored into user_badges rather
+   than invented client-side; two of them are decided by the community layer and
+   only recorded here.
+
+   Nothing here claims anything the data does not support: no "HYROX Finisher",
+   because the app has no way to verify that someone raced. */
+function bgKm(){   // Strava is the only source of distance today
+  let m=0; Object.values(HF.data.sessions).forEach(s=>{ if(s&&s.dist) m+=Number(s.dist)||0; });
+  return m/1000;
+}
+function bgWallBalls(){ return (HF.data.wallball||[]).reduce((n,x)=>n+(Number(x&&x.t)||0),0); }
+function bgMonthMins(){
+  const now=new Date(), y=now.getFullYear(), mo=now.getMonth(); let t=0;
+  Object.values(HF.data.sessions).forEach(s=>{ if(!s||!s.date) return; const d=new Date(s.date);
+    if(d.getFullYear()===y && d.getMonth()===mo) t+=Math.min(180, Number(s.mins)||45); });   // same 180 cap as the challenge: a stuck timer cannot buy a badge
+  return t;
+}
+const BADGES=[
+  {slug:'hybrid-rookie',      icon:'🌱', name:'Hybrid Rookie',      how:'Log your first session',                     goal:1,    at:()=>HF.totalDone()},
+  {slug:'streak-7',           icon:'🔥', name:'7-Day Streak',       how:'Train seven days in a row',                  goal:7,    at:()=>HF.streak()},
+  {slug:'seven-day-finisher', icon:'🏆', name:'7-Day Challenge',    how:'Finish the free 7-Day Hybrid Challenge',     goal:7,    at:()=>challengeDone()},
+  {slug:'hybrid-grinder',     icon:'⚙️', name:'Hybrid Grinder',     how:'Log 30 sessions',                            goal:30,   at:()=>HF.totalDone()},
+  {slug:'engine-builder',     icon:'🫀', name:'Engine Builder',     how:'600 minutes of training in one month',       goal:600,  at:()=>bgMonthMins()},
+  {slug:'race-ready',         icon:'🏁', name:'Race Ready',         how:'Complete a full race simulation',            goal:1,    at:()=>(HF.data.sims||[]).length},
+  {slug:'wall-ball-warrior',  icon:'🧱', name:'Wall Ball Warrior',  how:'1,000 wall balls in the Lab',                goal:1000, at:()=>bgWallBalls()},
+  {slug:'100km-club',         icon:'🏃', name:'100 KM Club',        how:'100 km logged — connect Strava so distance counts', goal:100, at:()=>bgKm()},
+  {slug:'first-challenge',    icon:'🎯', name:'First Challenge',    how:'Join a monthly HITFAT challenge',            server:true},
+  {slug:'challenge-finisher', icon:'🥇', name:'Challenge Finisher', how:'Finish a monthly challenge',                 server:true},
+];
+const BADGE_BY={}; BADGES.forEach(b=>{ BADGE_BY[b.slug]=b; });
+function badgeEarned(slug){ return !!(HF.data.badges && HF.data.badges[slug]); }
+function badgeAt(b){ if(b.server||!b.at) return null; let v=0; try{ v=Number(b.at())||0; }catch(e){ v=0; }
+  return {v:v, goal:b.goal, pct:Math.min(100,Math.round(v/b.goal*100))}; }
+
+let _badgeQ=[];
+function checkBadges(silent){
+  if(!HF.data.badges) HF.data.badges={};
+  const fresh=[];
+  BADGES.forEach(b=>{
+    if(b.server || badgeEarned(b.slug)) return;
+    const p=badgeAt(b);
+    if(p && p.v>=b.goal){ HF.data.badges[b.slug]=new Date().toISOString(); fresh.push(b); }
+  });
+  if(!fresh.length) return [];
+  HF.save();
+  fresh.forEach(b=>{ try{ syncBadge(b.slug); }catch(e){} try{ track('badge_unlocked',{slug:b.slug}); }catch(e){} });
+  if(silent) _badgeQ=_badgeQ.concat(fresh); else announceBadge(fresh[0], fresh.length-1);
+  return fresh;
+}
+/* Some badges are decided in Community, not here — this records them the same way. */
+function awardBadge(slug){
+  const b=BADGE_BY[slug]; if(!b || badgeEarned(slug)) return;
+  if(!HF.data.badges) HF.data.badges={};
+  HF.data.badges[slug]=new Date().toISOString(); HF.save();
+  try{ syncBadge(slug); }catch(e){}
+  announceBadge(b,0);
+}
+async function syncBadge(slug){
+  if(typeof cmOn!=='function' || !cmOn()) return;      // signed out → the local unlock is the whole story
+  const row = await cmQ(()=> sb.from('badges').select('id').eq('slug',slug).maybeSingle());
+  if(!row || !row.id) return;                          // slug not in the catalogue yet → nothing to mirror
+  await cmWrite(()=> sb.from('user_badges').insert({user_id:HF.userId, badge_id:row.id}));
+}
+/* An unlock that happens while a modal is open would be talked over, so it waits
+   for a screen with nothing else on it. */
+function flushBadgeQueue(){
+  if(!_badgeQ.length) return;
+  const m=$('modal'); if(m && m.classList.contains('on')) return;
+  const b=_badgeQ[0], more=_badgeQ.length-1; _badgeQ=[];
+  announceBadge(b, more);
+}
+function announceBadge(b, more){
+  if(!b) return;
+  $('modal-sheet').innerHTML = '<h3>Achievement unlocked</h3>'
+    + '<div style="text-align:center;padding:6px 0 2px;"><div style="font-size:56px;line-height:1.1;">'+b.icon+'</div>'
+    + '<div style="font-family:\'Oswald\';font-size:26px;font-weight:700;text-transform:uppercase;margin-top:6px;">'+b.name+'</div>'
+    + '<div style="color:var(--dim);font-size:13px;margin-top:4px;">'+b.how+'</div>'
+    + (more>0?'<div style="color:var(--acc);font-size:12px;font-weight:700;margin-top:8px;">+'+more+' more unlocked</div>':'')
+    + '</div>'
+    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Nice</button>'
+    + '<button class="confirm" onclick="shareBadge(\'' + b.slug + '\')">Share</button></div>';
+  $('modal').classList.add('on');
+}
+function openBadge(slug){
+  const b=BADGE_BY[slug]; if(!b) return;
+  const got=badgeEarned(slug), p=badgeAt(b);
+  $('modal-sheet').innerHTML = '<h3>'+b.icon+' '+b.name+'</h3>'
+    + '<p class="msub">'+b.how+'</p>'
+    + (got ? '<p class="msub" style="color:#2ec27e;">Unlocked '+new Date(HF.data.badges[slug]).toLocaleDateString()+'</p>'
+           : (p ? '<p class="msub">'+Math.min(p.v,p.goal).toLocaleString()+' / '+p.goal.toLocaleString()+'</p>' : ''))
+    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Close</button>'
+    + (got?'<button class="confirm" onclick="shareBadge(\'' + slug + '\')">Share</button>':'')+'</div>';
+  $('modal').classList.add('on');
+}
+function renderBadges(){
+  const el=$('pf-badges'); if(!el) return;
+  const got=BADGES.filter(b=>badgeEarned(b.slug)), rest=BADGES.filter(b=>!badgeEarned(b.slug));
+  const c=$('pf-badge-count'); if(c) c.textContent=got.length+' of '+BADGES.length+' earned';
+  el.innerHTML='<div class="bgrid">'+got.concat(rest).map(b=>{
+    const on=badgeEarned(b.slug), p=badgeAt(b);
+    const sub = on ? 'Unlocked'
+              : (p ? Math.min(p.v,p.goal).toLocaleString()+'/'+p.goal.toLocaleString() : 'In Community');
+    return '<div class="bchip'+(on?' on':'')+'" onclick="openBadge(\'' + b.slug + '\')">'
+         + '<div class="bi">'+b.icon+'</div><div class="bn">'+b.name+'</div><div class="bs">'+sub+'</div>'
+         + (!on&&p?'<div class="bbar"><i style="width:'+p.pct+'%"></i></div>':'')+'</div>';
+  }).join('')+'</div>';
+}
+
+/* ---- share cards ----
+   One path for every card: build a canvas, hand it to the share sheet, fall back
+   to a download when the browser has no share sheet. */
+function hfShareCanvas(canvas, file, title, text){
+  try{
+    canvas.toBlob(async (blob)=>{
+      if(!blob){ nfToast('Could not build the card.'); return; }
+      const f=new File([blob], file, {type:'image/png'});
+      if(navigator.canShare && navigator.canShare({files:[f]})){
+        try{ await navigator.share({files:[f], title:title, text:text}); return; }
+        catch(e){ if(e && e.name==='AbortError') return; }
+      }
+      const url=URL.createObjectURL(blob); const a=document.createElement('a');
+      a.href=url; a.download=file; a.click(); URL.revokeObjectURL(url);
+      nfToast('Card saved — share it to your story 📲');
+    },'image/png');
+  }catch(e){ console.error(e); nfToast('Could not build share card.'); }
+}
+function _cardBase(kicker){
+  const c=document.createElement('canvas'); c.width=1080; c.height=1350; const x=c.getContext('2d');
+  x.fillStyle='#000'; x.fillRect(0,0,1080,1350);
+  const g=x.createRadialGradient(860,120,50,860,120,760); g.addColorStop(0,'rgba(255,224,0,.18)'); g.addColorStop(1,'transparent');
+  x.fillStyle=g; x.fillRect(0,0,1080,1350);
+  x.fillStyle='#FFE000'; x.fillRect(0,0,10,1350);
+  x.textAlign='left'; x.fillStyle='#fff'; x.font='700 40px Oswald, sans-serif'; x.fillText('HITFAT', 70, 130);
+  x.fillStyle='#FFE000'; x.fillText('HYBRID', 250, 130);
+  x.fillStyle='#9a9a9a'; x.font='600 22px Inter, sans-serif'; x.fillText(kicker, 72, 168);
+  return {c:c, x:x};
+}
+function _cardFoot(x, line){
+  x.textAlign='center';
+  x.fillStyle='#6a6a6a'; x.font='600 24px Inter, sans-serif'; x.fillText(line||'Free hybrid & HYROX training', 540, 1130);
+  x.fillStyle='#fff'; x.font='700 34px Oswald, sans-serif'; x.fillText('TRAIN · BUILD · RACE', 540, 1205);
+  x.fillStyle='#FFE000'; x.font='700 28px Inter, sans-serif'; x.fillText('hybrid.hitfat.io', 540, 1255);
+}
+function _cardStats(x, stats){
+  stats.forEach((s,i)=>{ const cx=200+i*340;
+    x.fillStyle='#141414'; _roundRectC(x,cx-150,780,300,180,20); x.fill();
+    x.strokeStyle='#262626'; x.lineWidth=2; x.stroke();
+    x.textAlign='center';
+    x.fillStyle='#fff'; x.font='700 56px Oswald, sans-serif'; x.fillText(String(s[0]),cx,878);
+    x.fillStyle='#9a9a9a'; x.font='700 20px Inter, sans-serif'; x.fillText(s[1],cx,925); });
+}
+/* long workout titles have to wrap or they run off a 1080px card */
+function _cardWrap(x, text, cx, y, maxW, lh, lines){
+  const words=String(text||'').split(/\s+/); let line='', n=0;
+  for(let i=0;i<words.length && n<lines;i++){
+    const t=line?line+' '+words[i]:words[i];
+    if(x.measureText(t).width>maxW && line){ x.fillText(line,cx,y+n*lh); n++; line=words[i]; }
+    else line=t;
+  }
+  if(line && n<lines) x.fillText(line,cx,y+n*lh);
+}
+function buildBadgeCard(slug){
+  const b=BADGE_BY[slug]||{icon:'🏅',name:'Achievement',how:''};
+  const {c,x}=_cardBase('ACHIEVEMENT UNLOCKED');
+  x.textAlign='center';
+  x.font='240px sans-serif'; x.fillText(b.icon, 540, 520);
+  x.fillStyle='#fff'; x.font='700 78px Oswald, sans-serif'; _cardWrap(x, b.name.toUpperCase(), 540, 640, 900, 84, 2);
+  x.fillStyle='#9a9a9a'; x.font='600 26px Inter, sans-serif'; _cardWrap(x, b.how, 540, 710, 860, 36, 2);
+  _cardStats(x, [[String(HF.totalDone()),'SESSIONS'],[String(HF.streak()),'DAY STREAK'],[String(hybridScore()),'HYBRID SCORE']]);
+  _cardFoot(x);
+  return c;
+}
+function shareBadge(slug){
+  const b=BADGE_BY[slug];
+  closeModal();
+  hfShareCanvas(buildBadgeCard(slug), 'hitfat-badge.png', 'HITFAT HYBRID',
+    (b?b.name:'Achievement')+' unlocked on HITFAT HYBRID 🏅 Train free → hybrid.hitfat.io');
+}
+function buildWorkoutCard(title, mins, rpe){
+  const {c,x}=_cardBase('WORKOUT COMPLETE');
+  x.textAlign='center';
+  x.fillStyle='#6a6a6a'; x.font='700 24px Inter, sans-serif'; x.fillText('SESSION LOGGED', 540, 330);
+  x.fillStyle='#fff'; x.font='700 76px Oswald, sans-serif'; _cardWrap(x, String(title||'Training session').toUpperCase(), 540, 470, 900, 84, 3);
+  _cardStats(x, [[mins?String(mins):'—','MINUTES'],[rpe?String(rpe):'—','RPE'],[String(HF.streak()),'DAY STREAK']]);
+  _cardFoot(x);
+  return c;
+}
+function shareWorkoutCard(title, mins, rpe){
+  closeModal();
+  hfShareCanvas(buildWorkoutCard(title, mins, rpe), 'hitfat-workout.png', 'HITFAT HYBRID',
+    'Just finished '+(title||'a session')+' on HITFAT HYBRID 💪 Train free → hybrid.hitfat.io');
+}
+/* Every athlete gets a share moment, whether or not Community is switched on. */
+function offerWorkoutShare(key, title, mins, rpe){
+  const t=String(title||'Workout').replace(/'/g,"\\'");
+  $('modal-sheet').innerHTML = '<h3>Workout complete 🔥</h3>'
+    + '<p class="msub">'+cmEsc(title||'Session')+(mins?' · '+mins+' min':'')+(rpe?' · RPE '+rpe:'')+'</p>'
+    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Done</button>'
+    + '<button class="confirm" onclick="shareWorkoutCard(\'' + t + '\',' + (mins||0) + ',' + (rpe||0) + ')">Share</button></div>';
+  $('modal').classList.add('on');
 }
 
 /* ---- cards ---- */
@@ -6798,6 +7029,7 @@ async function cmJoinChallenge(btn){
       .insert({challenge_id:cmChal.id, user_id:HF.userId, points:p.points, progress:p.points}));
   if(!ok){ cmFail('Could not join the challenge.'); if(btn) btn.disabled=false; return; }
   track('challenge_join',{});
+  try{ awardBadge('first-challenge'); }catch(e){}
   cmChalMe = null; cmCache.chal = null;
   renderCommunity();
 }
@@ -6812,6 +7044,7 @@ async function cmSyncChallenge(){
   if(done && !cmChalMe.completed_at) patch.completed_at = new Date().toISOString();
   await cmWrite(()=> sb.from('challenge_participants').update(patch)
       .eq('challenge_id',cmChal.id).eq('user_id',HF.userId));
+  if(done && !cmChalMe.completed_at){ try{ awardBadge('challenge-finisher'); }catch(e){} }
   if(done && !cmChalMe.completed_at && cmChal.badge_id){
     await cmWrite(()=> sb.from('user_badges').insert({user_id:HF.userId, badge_id:cmChal.badge_id}));
     nfToast('Challenge complete — badge unlocked 🏁');
@@ -7362,7 +7595,8 @@ function offerShare(key, title, mins, isPB){
     + '<textarea id="cm-cap" rows="3" maxlength="240" placeholder="Say something about this session…" '
     + 'style="width:100%;background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:11px 13px;color:#fff;font:inherit;font-size:14px;resize:none;"></textarea>'
     + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Not now</button>'
-    + '<button class="confirm" onclick="cmSharePost(\''+cmEsc(key||'')+'\',\''+safe+'\','+(mins||0)+','+(isPB?'true':'false')+')">Share</button></div>';
+    + '<button class="confirm" onclick="cmSharePost(\''+cmEsc(key||'')+'\',\''+safe+'\','+(mins||0)+','+(isPB?'true':'false')+')">Post</button></div>'
+    + '<button class="ghostbtn" style="width:100%;margin-top:8px;" onclick="shareWorkoutCard(\''+safe+'\','+(mins||0)+',0)">Share as image</button>';
   $('modal').classList.add('on');
 }
 
