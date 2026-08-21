@@ -8300,6 +8300,11 @@ async function clbMyClub(){
     + '<div class="tm">'+cmEsc(clbMe.role==='member'?'Member':(clbMe.role.charAt(0).toUpperCase()+clbMe.role.slice(1)))
     + (since?' · since '+since.toLocaleString(undefined,{month:'long',year:'numeric'}):'')+'</div></div>';
   h+= clbRaceCardHTML(race);
+  if(clbStaff()){
+    h+= '<div class="sechead">Coaching</div>'
+      + '<button class="go sec" style="width:100%;" onclick="location.href=\'club-admin.html\'">Open coach console ↗</button>'
+      + '<div class="cmnote">Sessions, the check-in code, members and announcements live there — a separate page so the training app stays light.</div>';
+  }
   h+= '<div class="sechead">Coach notes</div>';
   h+= (notes && notes.length)
     ? notes.map(n=>'<div class="today" style="padding:13px 15px;"><div class="tm" style="color:#ddd;">'+cmEsc(n.body)+'</div>'
