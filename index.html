@@ -8348,7 +8348,7 @@ async function clbSaveRace(){
 function clbCanScan(){ return typeof window.BarcodeDetector !== 'undefined' && !!navigator.mediaDevices; }
 function openCheckIn(){
   $('modal-sheet').innerHTML='<h3>Check in</h3>'
-    + '<p class="msub">Enter the 6-character code on the screen at the gym. It changes every few seconds.</p>'
+    + '<p class="msub">Enter the 6-character code on the screen at the gym. It changes every few seconds, and your phone must be at the gym.</p>'
     + '<input class="textinput" id="clb-code" maxlength="6" autocapitalize="characters" autocomplete="off" '
     + 'placeholder="A7K2QD" style="text-align:center;font-family:\'Oswald\';font-size:26px;letter-spacing:6px;text-transform:uppercase;">'
     + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Cancel</button>'
@@ -8357,13 +8357,37 @@ function openCheckIn(){
   $('modal').classList.add('on');
   setTimeout(()=>{ const i=$('clb-code'); if(i) i.focus(); },80);
 }
+/* The phone's position, asked for once and never stored. A refusal or a slow
+   fix resolves to null rather than hanging the check-in — the server decides
+   what to do about a missing position, not the client. */
+function clbGetPos(){
+  return new Promise(resolve=>{
+    if(!navigator.geolocation) return resolve(null);
+    let done=false;
+    const finish=v=>{ if(!done){ done=true; resolve(v); } };
+    navigator.geolocation.getCurrentPosition(
+      p=> finish({lat:p.coords.latitude, lng:p.coords.longitude, acc:p.coords.accuracy}),
+      ()=> finish(null),
+      {enableHighAccuracy:true, timeout:9000, maximumAge:30000});
+    setTimeout(()=>finish(null), 10000);
+  });
+}
 async function clbSubmitCode(code){
   const c = (code || (($('clb-code')&&$('clb-code').value)||'')).trim().toUpperCase();
   if(c.length<4){ nfToast('Enter the code from the screen'); return; }
-  const r = await cmQ(()=> sb.rpc('club_check_in',{ p_code:c }));
+  const btn=document.querySelector('#modal-sheet .confirm');
+  if(btn){ btn.disabled=true; btn.textContent='Checking…'; }
+  const pos = await clbGetPos();
+  const r = await cmQ(()=> sb.rpc('club_check_in', pos
+      ? { p_code:c, p_lat:pos.lat, p_lng:pos.lng, p_acc:pos.acc }
+      : { p_code:c }));
+  if(btn){ btn.disabled=false; btn.textContent='Check in'; }
   if(!r || r.ok!==true){
-    const why = r && r.reason==='not_a_member' ? 'Your club membership is not active.'
-              : 'That code is not valid right now — it may have already changed.';
+    const why = !r ? 'Could not reach the club right now.'
+      : r.reason==='not_a_member' ? 'Your club membership is not active.'
+      : r.reason==='need_location' ? 'Turn on location for this site to check in — or ask the coach to mark you in.'
+      : r.reason==='too_far'      ? 'You need to be at the gym to check in — ask the coach to mark you in if your phone has you in the wrong place.'
+      : 'That code is not valid right now — it may have already changed.';
     nfToast(why); return;
   }
   clbAfterCheckIn(r);
