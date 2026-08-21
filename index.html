@@ -1319,6 +1319,7 @@
         <div class="sechead">Connected Apps</div>
         <div id="pf-strava"></div>
         <div class="sechead">Settings</div>
+        <div id="pf-push"></div>
         <button class="pflink" onclick="openNameEditor()"><span>Name &amp; photo</span><span class="arr">›</span></button>
         <button class="pflink" onclick="openAthleteEditor()"><span>Athlete Profile (Community)</span><span class="arr">›</span></button>
         <button class="pflink" onclick="openTrackSelect(true)"><span>Change Track</span><span class="arr">›</span></button>
@@ -4418,6 +4419,7 @@ function renderProfile(){
     <div class="pfrow"><span class="l">Equipment</span><span class="v">${p.equip||'—'}</span></div>
     <div class="pfrow"><span class="l">Current week</span><span class="v">Week ${currentWeek()}</span></div>`;
   try{ renderBadges(); }catch(e){ console.error(e); }
+  try{ renderPushRow(); }catch(e){ console.error(e); }
   try{ checkBadges(true); flushBadgeQueue(); }catch(e){}
 }
 function confirmReset(){
@@ -6703,6 +6705,7 @@ async function cmFollow(id, btn){
       // RLS forces actor_id to be me, so a notification cannot be forged
       cmWrite(()=> sb.from('notifications').insert({user_id:id, actor_id:HF.userId, type:'follow',
                                                   entity_type:'profile', entity_id:HF.userId}));
+      pushNotify(id, 'follow');
       track('community_follow',{});
     }
   }
@@ -6792,6 +6795,7 @@ async function cmReact(postId, btn){
       if(post && post.user_id && post.user_id !== HF.userId)
         cmWrite(()=> sb.from('notifications').insert({ user_id:post.user_id, actor_id:HF.userId,
           type:'reaction', entity_type:'post', entity_id:postId }));
+        pushNotify(post.user_id, 'reaction');
     }
   }
   // counts changed, so the cached feeds are stale — but do not redraw underfoot
@@ -7022,6 +7026,7 @@ async function cmAddComment(postId){
   if(post && post.user_id && post.user_id !== HF.userId){
     cmWrite(()=> sb.from('notifications').insert({ user_id:post.user_id, actor_id:HF.userId,
       type: cmReplyTo ? 'reply' : 'comment', entity_type:'post', entity_id:postId }));
+    pushNotify(post.user_id, cmReplyTo ? 'reply' : 'comment');
   }
   cmCache.discover=null; cmCache.following=null; cmCache.group=null;   // counts changed
   cmClearReply();
@@ -8657,6 +8662,118 @@ function shareBench(k, secs, gain){
   closeModal();
   hfShareCanvas(buildBenchCard(b.name, secs, gain), 'hitfat-pb.png', 'HITFAT HYBRID',
     'New PB — '+b.name+' '+benchFmt(secs)+' on HITFAT HYBRID 🔥 Train free → hybrid.hitfat.io');
+}
+
+
+/* ============================================================
+   ████  PUSH NOTIFICATIONS  ████
+   Off until the athlete turns it on, in Profile, by name. Never asked for on
+   load: a permission prompt before the app has earned anything is how an app
+   gets refused once and forever.
+
+   iOS only delivers push to a PWA that has been added to the Home Screen, so
+   the toggle says that rather than failing silently in Safari.
+   ============================================================ */
+const PUSH_KEY = '';   // VAPID public key — filled in once the keypair is generated
+
+function pushConfigured(){ return !!PUSH_KEY; }
+function pushSupported(){ return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
+/* iOS: an installed PWA reports standalone; Safari itself cannot receive push */
+function pushIOSNeedsInstall(){
+  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const standalone = window.navigator.standalone === true ||
+                     (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  return ios && !standalone;
+}
+function urlB64ToUint8(b64){
+  const pad = '='.repeat((4 - b64.length % 4) % 4);
+  const raw = atob((b64 + pad).replace(/-/g,'+').replace(/_/g,'/'));
+  const out = new Uint8Array(raw.length);
+  for (let i=0;i<raw.length;i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+let swReg = null;
+async function pushRegisterSW(){
+  if(!pushSupported()) return null;
+  if(swReg) return swReg;
+  try{ swReg = await navigator.serviceWorker.register('/sw.js'); }
+  catch(e){ console.warn('[push] sw', e); swReg = null; }
+  return swReg;
+}
+async function pushCurrent(){
+  const reg = await pushRegisterSW(); if(!reg) return null;
+  try{ return await reg.pushManager.getSubscription(); }catch(e){ return null; }
+}
+async function pushEnable(){
+  if(!pushConfigured()){ nfToast('Notifications are not switched on for this app yet.'); return false; }
+  if(!pushSupported()){ nfToast('This browser cannot receive notifications.'); return false; }
+  if(pushIOSNeedsInstall()){
+    $('modal-sheet').innerHTML = '<h3>Add HITFAT to your Home Screen</h3>'
+      + '<p class="msub">On iPhone, notifications only reach an app that has been added to the Home Screen. '
+      + 'Tap the Share button in Safari, choose <b>Add to Home Screen</b>, then open HITFAT from there and turn notifications on again.</p>'
+      + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Close</button></div>';
+    $('modal').classList.add('on');
+    return false;
+  }
+  const perm = await Notification.requestPermission();
+  if(perm !== 'granted'){ nfToast(perm==='denied' ? 'Notifications are blocked in your browser settings.' : 'Notifications not enabled.'); return false; }
+  const reg = await pushRegisterSW(); if(!reg) return false;
+  let sub = await reg.pushManager.getSubscription();
+  if(!sub){
+    try{
+      sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: urlB64ToUint8(PUSH_KEY) });
+    }catch(e){ console.warn('[push] subscribe', e); nfToast('Could not turn notifications on.'); return false; }
+  }
+  const j = sub.toJSON ? sub.toJSON() : {};
+  const ok = await cmWrite(()=> sb.from('push_subs').upsert({
+    user_id: HF.userId,
+    endpoint: sub.endpoint,
+    p256dh: (j.keys && j.keys.p256dh) || '',
+    auth:   (j.keys && j.keys.auth)   || '',
+    ua: navigator.userAgent.slice(0,180),
+    last_ok_at: new Date().toISOString(),
+    fails: 0
+  }, { onConflict:'endpoint' }));
+  if(!ok){ cmFail('Could not save this device.'); return false; }
+  try{ track('push_on',{}); }catch(e){}
+  nfToast('Notifications on ✓');
+  return true;
+}
+async function pushDisable(){
+  const sub = await pushCurrent();
+  if(sub){
+    await cmWrite(()=> sb.from('push_subs').delete().eq('endpoint', sub.endpoint));
+    try{ await sub.unsubscribe(); }catch(e){}
+  }
+  try{ track('push_off',{}); }catch(e){}
+  nfToast('Notifications off');
+}
+async function pushToggle(){
+  const on = !!(await pushCurrent());
+  if(on) await pushDisable(); else await pushEnable();
+  renderPushRow();
+}
+async function renderPushRow(){
+  const el = $('pf-push'); if(!el) return;
+  if(!pushSupported() || typeof cmOn!=='function' || !cmOn()){ el.innerHTML=''; return; }
+  const on = !!(await pushCurrent());
+  const state = !pushConfigured() ? 'Coming soon'
+              : pushIOSNeedsInstall() ? 'Add to Home Screen first'
+              : (Notification.permission==='denied') ? 'Blocked in settings'
+              : (on ? 'On' : 'Off');
+  el.innerHTML = '<button class="pflink" onclick="pushToggle()"><span>Notifications</span>'
+    + '<span class="arr" style="color:'+(state==='On'?'#2ec27e':'var(--dim)')+';font-weight:700;">'+state+'</span></button>';
+}
+
+/* Tells the sender that a notification the athlete just caused should also be
+   pushed. The client passes only who and what kind — never the words: the
+   function writes the text itself from the notification row, so nobody can
+   push arbitrary text at somebody they happen to be allowed to notify. */
+async function pushNotify(toUserId, type){
+  if(!pushConfigured() || !toUserId || toUserId===HF.userId) return;
+  try{ await sb.functions.invoke('push', { body:{ to: toUserId, type: type } }); }
+  catch(e){ console.warn('[push] notify', e); }
 }
 
 </script>
