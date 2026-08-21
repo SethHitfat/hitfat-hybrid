@@ -1021,6 +1021,8 @@
   .rescell b{display:block;font-family:'Oswald';font-size:23px;color:#fff;line-height:1.05;}
   .rescell b i{font-style:normal;font-size:13px;color:#2ec27e;margin-left:3px;vertical-align:top;}
   .rescell span{display:block;font-size:9.5px;color:var(--dim);font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-top:4px;}
+  .respr{margin-top:11px;padding:9px 11px;border-radius:11px;background:rgba(255,107,53,.10);border:1px solid rgba(255,107,53,.35);font-size:12px;color:#ffb599;text-align:center;line-height:1.45;}
+  .respr i{font-style:normal;color:#8a8a8a;}
   .resnext{text-align:center;font-size:11.5px;color:var(--dim);margin-top:9px;}
   .reslevel{margin-top:12px;padding:12px;border-radius:14px;text-align:center;border:1px solid rgba(255,224,0,.4);background:linear-gradient(160deg,#1c1a10 0%,#121212 100%);}
   .reslevel b{display:block;font-family:'Oswald';font-size:26px;color:var(--hyrox);letter-spacing:.5px;}
@@ -1111,6 +1113,7 @@
         <div id="home-week"></div>
         <div id="home-today"></div>
         <div id="home-streak"></div>
+        <div id="home-recap"></div>
         <div id="home-free"></div>
         <div id="home-wod"></div>
         <div id="home-quick"></div>
@@ -3276,6 +3279,7 @@ function renderHome(){
 
   try{ renderStartFree(); }catch(e){ console.error(e); }
   try{ renderStreakGuard(); }catch(e){ console.error(e); }
+  try{ renderRecap(); }catch(e){ console.error(e); }
   try{ renderChallenge(); }catch(e){ console.error(e); }
   try{ renderHomeChallenge(); }catch(e){ console.error(e); }
   try{ renderRaces(); }catch(e){ console.error(e); }
@@ -3640,8 +3644,8 @@ const HF = {
   KEY:'hitfat_hybrid_v1',
   userId:null, email:null,
   // owned: {programId:{date}}  scores: {engine,strength,stations,running}  wishlist: {programId:1}  purchases: [{id,title,price,date}]
-  data:{ track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[], races:{}, raceGoal:'', badges:{} },
-  _defaults(){ return { track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[], races:{}, raceGoal:'', wallball:[], badges:{} }; },
+  data:{ track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[], races:{}, raceGoal:'', badges:{}, prs:{} },
+  _defaults(){ return { track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[], races:{}, raceGoal:'', wallball:[], badges:{}, prs:{} }; },
   cacheKey(){ return this.KEY + (this.userId ? '_'+this.userId : ''); },
   setUser(id, email){ this.userId=id||null; this.email=email||null; },
   apply(obj){ // replace working data from a plain object (cloud or cache)
@@ -3654,6 +3658,7 @@ const HF = {
       d.strava=obj.strava||null; d.sims=Array.isArray(obj.sims)?obj.sims.slice():[]; d.races=Object.assign({},obj.races||{}); d.raceGoal=obj.raceGoal||'';
       d.wallball=Array.isArray(obj.wallball)?obj.wallball.slice():[];
       d.badges=Object.assign({},obj.badges||{});   // an unlisted key is dropped here — badges must be listed or they vanish on reload
+      d.prs=Object.assign({},obj.prs||{});
     }
     this.data=d;
   },
@@ -3791,10 +3796,11 @@ function saveComplete(){
   if($('player').classList.contains('on')) closePlayer();
   switchTab('home');
   const _fresh=(function(){ try{ return checkBadges(true); }catch(e){ return []; } })();
+  const _prs=(function(){ try{ return checkPRs(); }catch(e){ return []; } })();
   _badgeQ=[];                       // folded into the result sheet instead of announced on top of it
   const _after=(function(){ try{ return hybridScore(); }catch(e){ return _before; } })();
   // the app answers with what the work moved before it asks the athlete for anything
-  setTimeout(()=>{ try{ openSessionResult({key:_sk, name:_sn, mins:_sm, rpe:_sr, before:_before, after:_after, fresh:_fresh}); }catch(e){ console.error(e); } }, 450);
+  setTimeout(()=>{ try{ openSessionResult({key:_sk, name:_sn, mins:_sm, rpe:_sr, before:_before, after:_after, fresh:_fresh, prs:_prs}); }catch(e){ console.error(e); } }, 450);
 }
 function finishWorkout(){ openCompleteModal(window.curSessionKey, cur?cur.title:'Workout'); }
 function closeModal(){ $('modal').classList.remove('on'); }
@@ -5436,6 +5442,9 @@ function sessionResultHTML(r){
       + cell(wk.done+'/'+wk.target, 'This week', wk.done>=wk.target?'#2ec27e':'')
     + '</div>'
     + (!levelUp && lvlNow.next ? '<div class="resnext">'+lvlNow.toNext+' points to '+lvlNow.next+'</div>' : '')
+    + (r.prs && r.prs.length
+        ? '<div class="respr">🔥 New personal best — '+r.prs.map(p=>p.value+' '+p.label+' <i>(was '+p.prev+')</i>').join(' · ')+'</div>'
+        : '')
     + (r.fresh && r.fresh.length
         ? '<div class="resbadges">'+r.fresh.map(b=>'<span class="rb">'+b.icon+' '+b.name+'</span>').join('')+'</div>'
         : '')
@@ -5445,7 +5454,7 @@ function sessionResultHTML(r){
           : 'shareWorkoutCard(\'' + String(r.name||'Session').replace(/'/g,"\\'") + '\',' + (r.mins||0) + ',' + (r.rpe||0) + ')')
       + '">Share</button></div>'
     + ((typeof cmOn==='function' && cmOn() && cmUp)
-        ? '<button class="ghostbtn" style="width:100%;margin-top:8px;" onclick="closeModal();offerShare(\'' + String(r.key||'').replace(/'/g,"\\'") + '\',\'' + String(r.name||'Session').replace(/'/g,"\\'") + '\',' + (r.mins||0) + ',false)">Post to Community</button>'
+        ? '<button class="ghostbtn" style="width:100%;margin-top:8px;" onclick="closeModal();offerShare(\'' + String(r.key||'').replace(/'/g,"\\'") + '\',\'' + String(r.name||'Session').replace(/'/g,"\\'") + '\',' + (r.mins||0) + ',' + ((r.prs&&r.prs.length)?'true':'false') + ')">Post to Community</button>'
         : '');
 }
 function openSessionResult(r){
@@ -5473,6 +5482,106 @@ function renderStreakGuard(){
     + '<div class="tm">Keep it alive — '+totalMins(q)+' minutes is enough today.</div></div></div>'
     + '<div class="trow" style="margin-top:11px;"><button class="go" onclick="openQuickWorkout(0)">'+cmEsc(q.title)+'</button>'
     + '<button class="go sec" onclick="switchTab(\'home\');document.getElementById(\'home-today\').scrollIntoView({behavior:\'smooth\',block:\'center\'})">Today’s session</button></div></div>';
+}
+
+/* ---- PERSONAL BESTS ----
+   Measured from sessions the athlete already logged, so nothing has to be typed
+   in and nothing can be claimed that did not happen. A best is only announced
+   once there is a previous best to beat — the first session of a life is a
+   beginning, not a record, and calling it one cheapens the next twenty. */
+function prWeekSessions(){
+  const byWeek={};
+  Object.values(HF.data.sessions).forEach(s=>{ if(!s||!s.date) return;
+    const d=new Date(s.date); if(isNaN(d)) return;
+    const t=new Date(d); t.setHours(0,0,0,0); t.setDate(t.getDate()-((d.getDay()+6)%7));
+    const k=t.toDateString(); byWeek[k]=(byWeek[k]||0)+1; });
+  return byWeek;
+}
+function prThisWeek(){
+  const now=new Date(), t=new Date(now); t.setHours(0,0,0,0); t.setDate(t.getDate()-((now.getDay()+6)%7));
+  return (prWeekSessions()[t.toDateString()]||0);
+}
+function prMonthMins(){ return bgMonthMins(); }
+const PR_DEFS=[
+  {k:'weekSessions', label:'sessions in a week', at:()=>prThisWeek()},
+  {k:'streak',       label:'day streak',        at:()=>HF.streak()},
+  {k:'monthMins',    label:'minutes in a month', at:()=>prMonthMins()},
+];
+/* returns the bests broken by whatever just happened */
+function checkPRs(){
+  if(!HF.data.prs) HF.data.prs={};
+  const beaten=[];
+  PR_DEFS.forEach(d=>{
+    let v=0; try{ v=Number(d.at())||0; }catch(e){ return; }
+    const prev=Number(HF.data.prs[d.k]||0);
+    if(v>prev){
+      HF.data.prs[d.k]=v;
+      if(prev>0) beaten.push({k:d.k, label:d.label, value:v, prev:prev});   // no previous best → no record to break
+    }
+  });
+  if(beaten.length) HF.save();
+  return beaten;
+}
+
+/* ---- WEEKLY RECAP ----
+   Shown at the start of a new week, once, for the week that just finished — and
+   only when that week had something in it. A recap of nothing is a reminder of
+   nothing. */
+function weekKeyOf(d){ const t=new Date(d); t.setHours(0,0,0,0); t.setDate(t.getDate()-((new Date(d).getDay()+6)%7)); return t; }
+function lastWeekStats(){
+  const mon=weekKeyOf(new Date()); const prevMon=new Date(mon); prevMon.setDate(mon.getDate()-7);
+  let n=0, mins=0, best=null;
+  const byDay={};
+  Object.values(HF.data.sessions).forEach(s=>{ if(!s||!s.date) return;
+    const d=new Date(s.date); if(isNaN(d)||d<prevMon||d>=mon) return;
+    n++; mins+=Math.min(180, Number(s.mins)||45);
+    const k=d.toDateString(); byDay[k]=(byDay[k]||0)+1; });
+  // the week before that, for an honest comparison
+  const prev2=new Date(prevMon); prev2.setDate(prevMon.getDate()-7);
+  let n2=0;
+  Object.values(HF.data.sessions).forEach(s=>{ if(!s||!s.date) return;
+    const d=new Date(s.date); if(isNaN(d)||d<prev2||d>=prevMon) return; n2++; });
+  Object.keys(byDay).forEach(k=>{ if(!best||byDay[k]>byDay[best]) best=k; });
+  return {n:n, mins:mins, prevN:n2, days:Object.keys(byDay).length, start:prevMon};
+}
+function recapKey(){ const m=weekKeyOf(new Date()); return 'recap-'+m.getFullYear()+'-'+m.getMonth()+'-'+m.getDate(); }
+function dismissRecap(){ HF.data.prefs.recapSeen=recapKey(); HF.save(); const el=$('home-recap'); if(el) el.innerHTML=''; }
+function renderRecap(){
+  const el=$('home-recap'); if(!el) return;
+  el.innerHTML='';
+  if(HF.data.prefs.recapSeen===recapKey()) return;
+  const now=new Date(), dow=(now.getDay()+6)%7;
+  if(dow>2) return;                                  // Mon–Wed: after that it is not news any more
+  const w=lastWeekStats();
+  if(!w.n) return;                                   // nothing happened; say nothing
+  const diff=w.n-w.prevN;
+  const cmp = w.prevN ? (diff>0? '+'+diff+' vs the week before' : (diff<0? diff+' vs the week before' : 'same as the week before'))
+                      : 'your first full week of training';
+  el.innerHTML='<div class="sechead">Last week</div>'
+    + '<div class="today" style="padding:15px;">'
+    + '<div class="resrow" style="margin-top:0;">'
+    + '<div class="rescell"><b>'+w.n+'</b><span>sessions</span></div>'
+    + '<div class="rescell"><b>'+w.mins+'</b><span>minutes</span></div>'
+    + '<div class="rescell"><b>'+w.days+'</b><span>days trained</span></div></div>'
+    + '<div class="resnext">'+cmp+'</div>'
+    + '<div class="trow" style="margin-top:12px;"><button class="go" onclick="shareRecap()">Share week</button>'
+    + '<button class="go sec" onclick="dismissRecap()">Dismiss</button></div></div>';
+}
+function buildRecapCard(){
+  const w=lastWeekStats();
+  const {c,x}=_cardBase('LAST WEEK');
+  x.textAlign='center';
+  x.fillStyle='#6a6a6a'; x.font='700 24px Inter, sans-serif'; x.fillText('WEEK OF TRAINING', 540, 330);
+  x.fillStyle='#FFE000'; x.font='700 300px Oswald, sans-serif'; x.fillText(String(w.n), 540, 640);
+  x.fillStyle='#9a9a9a'; x.font='700 30px Inter, sans-serif'; x.fillText(w.n===1?'SESSION':'SESSIONS', 540, 700);
+  _cardStats(x, [[String(w.mins),'MINUTES'],[String(w.days),'DAYS'],[String(HF.streak()),'DAY STREAK']]);
+  _cardFoot(x);
+  return c;
+}
+function shareRecap(){
+  const w=lastWeekStats();
+  hfShareCanvas(buildRecapCard(), 'hitfat-week.png', 'HITFAT HYBRID',
+    w.n+' session'+(w.n===1?'':'s')+' last week on HITFAT HYBRID 💪 Train free → hybrid.hitfat.io');
 }
 
 /* ---- cards ---- */
