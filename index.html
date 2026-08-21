@@ -1016,6 +1016,15 @@
   .klwk.locked .klwkh{opacity:.55;}
   .klwk.locked .wd{color:var(--dim);}
   .daycard.locked{opacity:.6;}
+  .cstats{display:flex;gap:8px;margin-top:12px;}
+  .cstats .cstat{flex:1;background:#141414;border:1px solid var(--line);border-radius:12px;padding:9px 6px;text-align:center;}
+  .cstats .cstat b{display:block;font-family:'Oswald';font-size:19px;color:#fff;line-height:1.1;}
+  .cstats .cstat span{display:block;font-size:9.5px;color:var(--dim);font-weight:700;letter-spacing:.6px;text-transform:uppercase;margin-top:3px;}
+  .csponsor{display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:13px;border-top:1px solid var(--line);}
+  .csponsor img{height:26px;width:auto;border-radius:4px;}
+  .csponsor .sl{font-size:10px;color:var(--dim);font-weight:700;letter-spacing:.6px;text-transform:uppercase;}
+  .csponsor .sn{font-size:14px;color:#fff;font-weight:700;}
+  .cbanner{width:100%;height:auto;border-radius:14px;border:1px solid var(--line);margin-bottom:12px;display:block;}
   .bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:9px;}
   .bchip{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 9px 11px;text-align:center;cursor:pointer;opacity:.5;}
   .bchip.on{opacity:1;border-color:rgba(255,224,0,.45);background:linear-gradient(160deg,#1b1a12 0%,#121212 100%);}
@@ -5311,6 +5320,24 @@ function shareBadge(slug){
   hfShareCanvas(buildBadgeCard(slug), 'hitfat-badge.png', 'HITFAT HYBRID',
     (b?b.name:'Achievement')+' unlocked on HITFAT HYBRID 🏅 Train free → hybrid.hitfat.io');
 }
+function buildChallengeProgressCard(){
+  const ch=cmChal||{}, target=Number(ch.target_value||0);
+  const pts = cmChalMe ? Number(cmChalMe.points||0)
+            : (ch.start_date? cmChalPoints(ch.start_date, ch.end_date).points : 0);
+  const days = ch.end_date ? Math.max(0, Math.ceil((new Date(ch.end_date+'T23:59:59') - Date.now())/864e5)) : 0;
+  const {c,x}=_cardBase('MONTHLY CHALLENGE');
+  x.textAlign='center';
+  x.fillStyle='#fff'; x.font='700 60px Oswald, sans-serif'; _cardWrap(x, String(ch.title||'Monthly Challenge').toUpperCase(), 540, 330, 900, 68, 2);
+  x.fillStyle='#FFE000'; x.font='700 220px Oswald, sans-serif'; x.fillText(pts.toLocaleString(), 540, 620);
+  x.fillStyle='#9a9a9a'; x.font='700 30px Inter, sans-serif'; x.fillText(target? 'OF '+target.toLocaleString()+' POINTS' : 'POINTS', 540, 680);
+  _cardStats(x, [[String(days),'DAYS LEFT'],[String(HF.streak()),'DAY STREAK'],['FREE','TO JOIN']]);
+  _cardFoot(x);
+  return c;
+}
+function shareChallengeProgress(){
+  hfShareCanvas(buildChallengeProgressCard(), 'hitfat-challenge.png', 'HITFAT HYBRID',
+    'I am in the '+((cmChal&&cmChal.title)||'HITFAT monthly challenge')+' 💪 Join free → hybrid.hitfat.io');
+}
 function buildWorkoutCard(title, mins, rpe){
   const {c,x}=_cardBase('WORKOUT COMPLETE');
   x.textAlign='center';
@@ -7100,10 +7127,35 @@ async function cmBuildChallenge(){
   const mine   = cmChalMe ? Number(cmChalMe.points||0) : cmChalPoints(cmChal.start_date, cmChal.end_date).points;
   const pct    = target ? Math.min(100, Math.round(mine/target*100)) : 0;
   const days   = Math.max(0, Math.ceil((new Date(cmChal.end_date+'T23:59:59') - Date.now())/864e5));
-  const board  = await cmQ(()=> sb.from('challenge_board').select('*')
-      .eq('challenge_id',cmChal.id).order('points',{ascending:false}).limit(25)) || [];
+  /* One query, then counted in JS: a board capped at 25 cannot answer "how many
+     joined", and that number is the one a sponsor asks about. The view already
+     excludes demo and official profiles. */
+  const all    = await cmQ(()=> sb.from('challenge_board').select('*')
+      .eq('challenge_id',cmChal.id).order('points',{ascending:false}).limit(2000)) || [];
+  const board  = all.slice(0,25);
+  const joined = all.length;
+  const finished = all.filter(r=> r.completed_at).length;
+  const meRow  = all.filter(r=> r.user_id===HF.userId)[0];
+  const stat = (v,l)=> '<div class="cstat"><b>'+v+'</b><span>'+l+'</span></div>';
+  const stats = '<div class="cstats">'
+      + stat(joined.toLocaleString(), 'joined')
+      + stat(finished.toLocaleString(), 'finished')
+      + stat(meRow&&meRow.rank_in_challenge?('#'+meRow.rank_in_challenge):'—', 'your rank')
+      + '</div>';
+  /* Sponsor fields are optional columns on the challenge row. No sponsor, no
+     block — and no brand is named anywhere in this file. */
+  const sp = cmChal.sponsor_name
+    ? '<div class="csponsor">'
+      + (cmChal.sponsor_logo_url? '<img src="'+cmEsc(cmChal.sponsor_logo_url)+'" alt="">':'')
+      + '<div><div class="sl">Presented by</div><div class="sn">'+cmEsc(cmChal.sponsor_name)+'</div></div>'
+      + (cmChal.sponsor_url? '<button class="go sec" style="margin-left:auto;padding:8px 14px;" onclick="window.open(\''+cmEsc(cmChal.sponsor_url)+'\',\'_blank\')">Visit</button>':'')
+      + '</div>'
+      + (cmChal.reward_text? '<div class="cmnote" style="margin-top:8px;">'+cmEsc(cmChal.reward_text)+'</div>':'')
+    : '';
+  const banner = cmChal.sponsor_banner_url
+    ? '<img class="cbanner" src="'+cmEsc(cmChal.sponsor_banner_url)+'" alt="">' : '';
 
-  return '<div class="cmchal">'
+  return banner + '<div class="cmchal">'
     + '<div class="ct">'+cmEsc(cmChal.title)+'</div>'
     + '<div class="cd">'+cmEsc(cmChal.description||'')+'</div>'
     + '<div class="cbar"><i style="width:'+pct+'%"></i></div>'
@@ -7114,6 +7166,9 @@ async function cmBuildChallenge(){
             ? '<div class="cdone">🏁 Completed — badge unlocked</div>'
             : '<div class="cnote">You are in. Every minute you train this month counts.</div>')
         : '<button class="go" style="width:100%;margin-top:12px;" onclick="cmJoinChallenge(this)">Join Challenge</button>')
+    + stats
+    + (cmChalMe? '<button class="go sec" style="width:100%;margin-top:10px;" onclick="shareChallengeProgress()">Share progress</button>':'')
+    + sp
     + '</div>'
     + (board.length
         ? '<div class="sechead" style="margin:22px 0 10px;">Challenge standings</div>'
