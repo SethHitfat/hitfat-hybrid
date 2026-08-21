@@ -1009,7 +1009,7 @@
   .chip{background:var(--surface);border:1px solid var(--line);color:#ddd;font-size:11px;font-weight:600;padding:6px 11px;border-radius:99px;}
   .chip b{color:var(--hyrox);}
   .joinbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0 6px;}
-  .joinbar .buy.sec{flex:1 0 100%;background:transparent;color:#fff !important;border:1px solid var(--line);}
+  .joinbar .buy.sec{flex:1 0 100%;order:2;background:transparent;color:#fff !important;border:1px solid var(--line);}
   .joinbar .buy{flex:1;background:var(--hyrox);color:var(--hyrox-ink) !important;border:none;border-radius:99px;padding:16px;font-family:'Oswald';font-weight:700;font-size:15px;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;}
   .joinbar .buy.owned{background:#0e6b8c;color:#fff !important;}
   .joinbar .buy.soon{background:#2a2a2a;color:var(--dim) !important;}
@@ -1036,7 +1036,7 @@
   .bchip .bs{font-size:10px;color:var(--dim);margin-top:3px;font-weight:600;}
   .bchip .bbar{height:3px;border-radius:2px;background:#242424;margin-top:7px;overflow:hidden;}
   .bchip .bbar i{display:block;height:100%;background:var(--hyrox);}
-  .joinbar .wish{flex:0 0 auto;width:54px;height:54px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--dim);font-size:20px;cursor:pointer;}
+  .joinbar .wish{flex:0 0 auto;order:1;width:54px;height:54px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--dim);font-size:20px;cursor:pointer;}
   .joinbar .wish.on{color:var(--hyrox);border-color:var(--hyrox);}
   .phaselist2 .ph2{display:flex;align-items:center;gap:13px;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:13px 14px;margin-bottom:9px;}
   .phaselist2 .ph2 .n{font-family:'Oswald';font-size:20px;color:var(--hyrox);font-weight:700;min-width:30px;text-align:center;}
@@ -5634,7 +5634,7 @@ function openProgramDetail(id,backTab){ const p=CATALOG[id]; if(!p) return; trac
   const cta = soon ? `<button class="buy soon" disabled>Coming Soon</button>`
     : paySoon ? `<button class="buy soon" onclick="toggleWishlist('${id}');openProgramDetail('${id}')">${inWishlist(id)?'✓ We’ll notify you':'🔔 Notify me when it opens'}</button>`
     : ((owned||p.access==='free') ? `<button class="buy ${owned&&p.access!=='free'?'owned':''}" onclick="openProgramContent('${id}')">${p.access==='free'?'Start Program ▸':'Open Program ▸'}</button>`
-             : hasPreview(id) ? `<button class="buy" onclick="openProgramContent('${id}')">Preview Week ${PREVIEW_WEEKS} — Free ▸</button>
+             : hasPreview(id) ? `<button class="buy" onclick="openProgramContent('${id}')">Try Week ${PREVIEW_WEEKS} free ▸</button>
                                  <button class="buy sec" onclick="joinProgram('${id}')">Unlock Full Program — ${fmtPrice(p.price)}</button>`
              : `<button class="buy" onclick="joinProgram('${id}')">Unlock Full Program — ${fmtPrice(p.price)}</button>`);
   const wish = (soon||paySoon)?'':`<button class="wish ${inWishlist(id)?'on':''}" onclick="toggleWishlist('${id}');openProgramDetail('${id}')">♥</button>`;
