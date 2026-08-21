@@ -1029,6 +1029,19 @@
   .reslevel span{display:block;font-size:11.5px;color:var(--dim);margin-top:2px;}
   .resbadges{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px;justify-content:center;}
   .resbadges .rb{background:#141414;border:1px solid rgba(255,224,0,.35);color:#fff;font-size:11px;font-weight:700;padding:6px 10px;border-radius:99px;}
+  .clbperks{display:flex;flex-direction:column;gap:9px;margin-top:6px;}
+  .clbperk{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;}
+  .clbperk b{display:block;font-size:14px;color:#fff;}
+  .clbperk span{display:block;font-size:12px;color:var(--dim);margin-top:3px;line-height:1.45;}
+  .clbstat{font-family:'Inter',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--dim);border:1px solid var(--line);border-radius:99px;padding:3px 8px;margin-left:8px;vertical-align:middle;}
+  .clbcal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:4px;}
+  .clbcal span{aspect-ratio:1;display:grid;place-items:center;font-size:11px;color:var(--dim);background:#141414;border:1px solid var(--line);border-radius:9px;}
+  .clbcal span.dh{background:transparent;border:none;color:#6a6a6a;font-weight:700;font-size:10px;}
+  .clbcal span.on{background:rgba(255,224,0,.16);border-color:rgba(255,224,0,.45);color:#fff;font-weight:700;}
+  .clbcal span.now{outline:1px solid var(--dim);}
+  .clbscan{position:fixed;inset:0;z-index:9999;background:#000;display:grid;place-items:center;}
+  .clbscan video{width:100%;height:100%;object-fit:cover;}
+  .clbscan .frame{position:absolute;width:70vw;max-width:280px;aspect-ratio:1;border:2px solid var(--hyrox);border-radius:20px;box-shadow:0 0 0 100vmax rgba(0,0,0,.55);}
   .ppchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:13px;}
   .ppchip{background:#141414;border:1px solid var(--line);color:#c8c8c8;font-size:11px;font-weight:600;padding:6px 10px;border-radius:99px;white-space:nowrap;}
   .cstats{display:flex;gap:8px;margin-top:12px;}
@@ -1114,6 +1127,7 @@
         <div id="home-today"></div>
         <div id="home-streak"></div>
         <div id="home-recap"></div>
+        <div id="home-club"></div>
         <div id="home-free"></div>
         <div id="home-wod"></div>
         <div id="home-quick"></div>
@@ -1260,6 +1274,7 @@
       <div id="thread" style="display:none;"></div>
       <div id="notifs" style="display:none;"></div>
       <div id="club" style="display:none;"></div>
+      <div id="hclub" style="display:none;"></div>
 
       <div id="progress" style="display:none;">
         <div class="hgroup"><div class="k">Your Training</div><h2>PROGRESS</h2><p>Your Hybrid Score, streak and history — all saved to your account.</p></div>
@@ -1377,6 +1392,7 @@
     <button class="tab" id="tab-plans" style="display:none" onclick="switchTab('plans')"></button>
     <button class="tab" id="tab-coaches" style="display:none" onclick="switchTab('coaches')"></button>
     <button class="tab" id="tab-kl" style="display:none" onclick="goKL()"></button>
+    <button class="tab" id="tab-hclub" style="display:none" onclick="switchTab('hclub')"></button>
   </div>
 
   <div id="player">
@@ -2710,7 +2726,7 @@ function showCategories(){ $('list').style.display='none'; $('detail').style.dis
 /* ============ TAB NAVIGATION ============ */
 /* every full-screen panel — openers must hide them ALL, otherwise the panel they came
    from stays visible underneath and the new screen looks like it never opened. */
-const PANELS=['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail','store','tsess','tmhome','community','athlete','thread','notifs','club'];
+const PANELS=['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail','store','tsess','tmhome','community','athlete','thread','notifs','club','hclub'];
 function hidePanels(){ PANELS.forEach(id=>{ const e=$(id); if(e) e.style.display='none'; }); }
 function switchTab(tab){
   track('tab',{tab});
@@ -2723,7 +2739,7 @@ function switchTab(tab){
   const setActive=id=>{ const b=$(id); if(b&&b.classList) b.classList.add('active'); };
   // everything reached through the centre button lights the centre button, so the
   // athlete is never on a screen with nothing selected
-  if(['explore','store','programs','target','pro','plans','coaches','tsess','tmhome'].indexOf(tab)>-1) setActive('tab-hub');
+  if(['explore','store','programs','target','pro','plans','coaches','tsess','tmhome','hclub'].indexOf(tab)>-1) setActive('tab-hub');
   paintTrainChips(tab);
   if(tab==='home'){
     $('home').style.display='block'; setActive('tab-home'); renderHome();
@@ -2741,6 +2757,8 @@ function switchTab(tab){
     $('pro').style.display='block'; setActive('tab-explore'); showCatalog();
   } else if(tab==='target'){
     $('target').style.display='block'; setActive('tab-explore'); showTargetGrid();
+  } else if(tab==='hclub'){
+    $('hclub').style.display='block'; renderHClub();
   } else if(tab==='community'){
     $('community').style.display='block'; setActive('tab-community'); renderCommunity();
   } else if(tab==='progress'){
@@ -3280,6 +3298,7 @@ function renderHome(){
   try{ renderStartFree(); }catch(e){ console.error(e); }
   try{ renderStreakGuard(); }catch(e){ console.error(e); }
   try{ renderRecap(); }catch(e){ console.error(e); }
+  try{ renderHomeClub(); }catch(e){ console.error(e); }
   try{ renderChallenge(); }catch(e){ console.error(e); }
   try{ renderHomeChallenge(); }catch(e){ console.error(e); }
   try{ renderRaces(); }catch(e){ console.error(e); }
@@ -7449,7 +7468,8 @@ const TRAIN_TABS = [
   {k:'store',    l:'Programs'},
   {k:'programs', l:'Library'},
   {k:'target',   l:'Targets'},
-  {k:'timer',    l:'Timer'}
+  {k:'timer',    l:'Timer'},
+  {k:'hclub',    l:'Club'}          // visible to everyone; non-members meet the locked page
 ];
 
 function paintTrainChips(tab){
@@ -8002,6 +8022,427 @@ async function renderHomeCommunity(){
         + ' <span style="color:var(--dim);">· '+cmAgo(p.created_at)+'</span> '
         + cmTag(p.is_official, p.is_demo)+'</div>').join('')
     + '<button class="go sec" style="margin-top:11px;width:100%;" onclick="switchTab(\'community\')">View Community</button></div>';
+}
+
+
+/* ============================================================
+   ████  HITFAT HYBRID CLUB — the physical training club  ████
+
+   The club is a source of data, not a second app. A check-in writes an ordinary
+   session into the same store every other session goes into, so it flows
+   straight through the streak, the Hybrid Score, challenge points, badges and
+   the share sheet that already exist. Nothing here is a parallel copy of
+   something the app already does.
+
+   Membership is granted by a coach and lives in club_physical_members, which no
+   ordinary member may write. The social clubs in Discover are a different thing
+   and are untouched.
+   ============================================================ */
+let clbMe=null, clbClub=null, clbProbed=false, clbTab='overview', clbCache={};
+
+function clbOn(){ return typeof cmOn==='function' && cmOn(); }
+function clbActive(){ return !!(clbMe && clbMe.status==='active'); }
+function clbStaff(){ return clbActive() && (clbMe.role==='coach' || clbMe.role==='admin'); }
+
+async function clbLoad(force){
+  if(!clbOn()) return null;
+  if(clbProbed && !force) return clbMe;
+  clbProbed = true;
+  const rows = await cmQ(()=> sb.from('club_physical_members').select('*').eq('user_id', HF.userId));
+  clbMe = (rows && rows.length) ? (rows.filter(r=>r.status==='active')[0] || rows[0]) : null;
+  if(clbMe && !clbClub){
+    clbClub = await cmQ(()=> sb.from('club_list').select('id,name,city,state').eq('id', clbMe.club_id).maybeSingle());
+  }
+  return clbMe;
+}
+
+/* ---- small helpers ---- */
+const CLB_DAY=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function clbTime(iso){
+  const d=new Date(iso); let h=d.getHours(); const m=d.getMinutes();
+  const ap=h>=12?'PM':'AM'; h=h%12||12;
+  return h+(m?':'+(m<10?'0':'')+m:':00')+' '+ap;
+}
+function clbWhen(iso){
+  const d=new Date(iso), now=new Date();
+  const a=new Date(d); a.setHours(0,0,0,0); const b=new Date(now); b.setHours(0,0,0,0);
+  const diff=Math.round((a-b)/864e5);
+  const day = diff===0?'Today' : diff===1?'Tomorrow' : (diff>1&&diff<7? CLB_DAY[d.getDay()] : d.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]);
+  return day+' · '+clbTime(iso);
+}
+/* the check-in window the SQL enforces, mirrored so the button can explain itself */
+function clbOpenNow(s){
+  if(!s || s.status!=='scheduled') return false;
+  const start=new Date(s.starts_at).getTime(), now=Date.now();
+  return now >= start - 45*60000 && now <= start + ((s.duration_min||60)+120)*60000;
+}
+/* consecutive weeks with at least one club session, counting back from this one */
+function clbWeekStreak(dates){
+  if(!dates || !dates.length) return 0;
+  const weekOf=d=>{ const t=new Date(d); t.setHours(0,0,0,0); t.setDate(t.getDate()-((t.getDay()+6)%7)); return t.getTime(); };
+  const set={}; dates.forEach(x=>{ set[weekOf(x)]=1; });
+  let cur=weekOf(new Date()), n=0;
+  if(!set[cur]) cur-=7*864e5;                 // the current week may simply not have happened yet
+  while(set[cur]){ n++; cur-=7*864e5; }
+  return n;
+}
+
+/* ---- the locked page ---- */
+function clbLockedHTML(){
+  const li=(t,d)=>'<div class="clbperk"><b>'+t+'</b><span>'+d+'</span></div>';
+  return '<div class="hgroup"><div class="k">HITFAT Hybrid</div><h2>TRAINING CLUB 🔒</h2>'
+    + '<p>Train physically with the HITFAT Hybrid community. The app stays yours either way — this is the part that happens in the room.</p></div>'
+    + '<div class="clbperks">'
+    + li('Coach-led sessions', 'Hybrid strength, engine and station work, programmed and coached')
+    + li('QR check-in', 'Your attendance, streak and score update the moment you scan')
+    + li('Race preparation', 'Simulations and race-day strategy for HYROX')
+    + li('Club challenges', 'Monthly targets alongside people training in the same room')
+    + li('Coach notes', 'What to work on next, written by the coach who watched you train')
+    + '</div>'
+    + '<button class="buy" style="width:100%;margin-top:16px;" onclick="clbAsk()">Join the training club</button>'
+    + '<div class="cmnote">Members are added by a HITFAT coach. Everything else in the app — programs, community, tracking — stays open to you.</div>';
+}
+function clbAsk(){
+  $('modal-sheet').innerHTML='<h3>Join the training club</h3>'
+    + '<p class="msub">Club membership is set up by a HITFAT coach, in person. Train with us at HITFAT and ask a coach to add your account — the Club section unlocks itself the next time you open the app.</p>'
+    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Close</button>'
+    + '<button class="confirm" onclick="closeModal();switchTab(\'community\')">See the community</button></div>';
+  $('modal').classList.add('on');
+}
+
+/* ---- shell ---- */
+function clbShell(body){
+  const tab=(k,l)=>'<button class="cmtab'+(clbTab===k?' on':'')+'" id="clbtab-'+k+'" onclick="clbSetTab(\''+k+'\')">'+l+'</button>';
+  const st = clbMe && clbMe.status!=='active' ? '<span class="clbstat">'+cmEsc(clbMe.status)+'</span>' : '';
+  return '<div class="cmtop"><div class="hgroup" style="flex:1;"><div class="k">'+cmEsc((clbClub&&clbClub.name)||'HITFAT')+'</div>'
+       + '<h2>HYBRID CLUB'+st+'</h2><p>Your physical training — sessions, attendance and what the coach sees.</p></div></div>'
+       + '<div class="cmtabs">'+tab('overview','Overview')+tab('schedule','Schedule')+tab('progress','Attendance')+tab('my','My Club')+'</div>'
+       + '<div id="clbbody">'+(body||'')+'</div>';
+}
+function clbSetTab(k){ clbTab=k; renderHClub(); }
+function clbBody(html){ const el=$('clbbody'); if(el) el.innerHTML=html; }
+
+async function renderHClub(){
+  const el=$('hclub'); if(!el) return;
+  if(!clbOn()){ el.innerHTML=clbLockedHTML(); return; }
+  if(!clbProbed){ el.innerHTML=cmSkeleton(3); await clbLoad(); }
+  if(!clbMe){ el.innerHTML=clbLockedHTML(); return; }
+  if(!clbActive()){
+    el.innerHTML=clbShell('<div class="cmempty"><b>Membership '+cmEsc(clbMe.status)+'</b>'
+      + '<p>Your club access is paused. Speak to a coach at HITFAT to reactivate it — the rest of the app is unaffected.</p></div>');
+    return;
+  }
+  el.innerHTML=clbShell(clbCache[clbTab] || cmSkeleton(3));
+  let html='';
+  try{
+    if(clbTab==='schedule')      html=await clbSchedule();
+    else if(clbTab==='progress') html=await clbAttendance();
+    else if(clbTab==='my')       html=await clbMyClub();
+    else                         html=await clbOverview();
+  }catch(e){ console.warn('[club]',e); html='<div class="cmempty"><b>Could not load the club</b><p>Check your connection and try again.</p></div>'; }
+  clbCache[clbTab]=html;
+  clbBody(html);
+}
+
+/* ---- overview ---- */
+async function clbOverview(){
+  const since=new Date(Date.now()-4*3600e3).toISOString();
+  const monthStart=new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+  const [sessions, att, anns, race] = await Promise.all([
+    cmQ(()=> sb.from('club_schedule').select('*').eq('club_id',clbMe.club_id).gte('starts_at',since).order('starts_at').limit(6)),
+    cmQ(()=> sb.from('club_attendance').select('checked_in_at,session_id').eq('user_id',HF.userId).order('checked_in_at',{ascending:false}).limit(400)),
+    cmQ(()=> sb.from('club_announcements').select('*').eq('club_id',clbMe.club_id).order('created_at',{ascending:false}).limit(2)),
+    cmQ(()=> sb.from('club_races').select('*').eq('user_id',HF.userId).maybeSingle())
+  ]);
+  const list=sessions||[], rows=att||[];
+  const next=list.filter(s=>s.status==='scheduled')[0]||null;
+  const thisMonth=rows.filter(r=> new Date(r.checked_in_at)>=monthStart).length;
+  const streak=clbWeekStreak(rows.map(r=>r.checked_in_at));
+  const open = next && clbOpenNow(next);
+
+  let h='';
+  h+= '<div class="sechead" style="margin-top:14px;">Next training</div>';
+  h+= next
+    ? '<div class="today" style="padding:15px;"><div class="tt" style="font-size:20px;">'+cmEsc(next.title)+'</div>'
+      + '<div class="tm">'+clbWhen(next.starts_at)+(next.coach_name?' · '+cmEsc(next.coach_name):'')+(next.location?' · '+cmEsc(next.location):'')+'</div>'
+      + (next.focus?'<div class="cmnote" style="margin-top:6px;">'+cmEsc(next.focus)+'</div>':'')
+      + '<div class="trow" style="margin-top:12px;">'
+      + (next.i_attended
+          ? '<button class="go sec" disabled>Checked in ✓</button>'
+          : '<button class="go" onclick="openCheckIn()">'+(open?'Check in':'Check in')+'</button>')
+      + '<button class="go sec" onclick="clbSetTab(\'schedule\')">Schedule</button></div></div>'
+    : '<div class="cmempty"><b>No sessions scheduled</b><p>When a coach adds this week’s classes they appear here.</p></div>';
+
+  h+= '<button class="buy" style="width:100%;margin-top:14px;" onclick="openCheckIn()">Check in to a session</button>';
+
+  h+= '<div class="sechead">This month</div>'
+    + '<div class="resrow" style="margin-top:0;">'
+    + '<div class="rescell"><b>'+thisMonth+'</b><span>club sessions</span></div>'
+    + '<div class="rescell"><b>'+streak+'</b><span>week streak</span></div>'
+    + '<div class="rescell"><b>'+rows.length+'</b><span>all time</span></div></div>';
+
+  if(anns && anns.length){
+    h+= '<div class="sechead">Club news</div>'
+      + anns.map(a=>'<div class="today" style="padding:13px 15px;"><div class="tt" style="font-size:15px;">'+cmEsc(a.title)+'</div>'
+        + (a.body?'<div class="tm">'+cmEsc(a.body)+'</div>':'')
+        + '<div class="cmnote" style="margin-top:6px;">'+cmAgo(a.created_at)+'</div></div>').join('');
+  }
+
+  h+= clbRaceCardHTML(race);
+  return h;
+}
+
+function clbRaceCardHTML(race){
+  if(!race || !race.race_name){
+    return '<div class="sechead">My race</div>'
+      + '<div class="cmempty"><b>No race set</b><p>Add the race you are training for and the club dashboard counts down to it.</p>'
+      + '<button class="go" onclick="openClubRace()">Add race</button></div>';
+  }
+  const d=race.race_date?new Date(race.race_date+'T08:00:00'):null;
+  const days=d?Math.max(0,Math.ceil((d-new Date())/864e5)):null;
+  return '<div class="sechead">My race</div>'
+    + '<div class="today" style="padding:15px;cursor:pointer;" onclick="openClubRace()">'
+    + '<div class="tt" style="font-size:19px;">'+cmEsc(race.race_name)+'</div>'
+    + '<div class="tm">'+[race.race_date?new Date(race.race_date+'T08:00:00').toDateString().slice(4):'', race.division, race.partner_name?('with '+race.partner_name):''].filter(Boolean).map(cmEsc).join(' · ')+'</div>'
+    + '<div class="resrow" style="margin-top:12px;">'
+    + (days!==null?'<div class="rescell"><b>'+days+'</b><span>days to race</span></div>':'')
+    + (race.target_time?'<div class="rescell"><b>'+cmEsc(race.target_time)+'</b><span>target</span></div>':'')
+    + '</div>'
+    + (race.goal_note?'<div class="cmnote" style="margin-top:8px;">'+cmEsc(race.goal_note)+'</div>':'')
+    + '</div>';
+}
+
+/* ---- schedule ---- */
+async function clbSchedule(){
+  const since=new Date(Date.now()-4*3600e3).toISOString();
+  const rows = await cmQ(()=> sb.from('club_schedule').select('*').eq('club_id',clbMe.club_id)
+      .gte('starts_at',since).order('starts_at').limit(40)) || [];
+  if(!rows.length) return '<div class="cmempty"><b>Nothing scheduled yet</b><p>Classes added by a coach show up here, newest first.</p></div>';
+  let day='', h='';
+  rows.forEach(s=>{
+    const d=new Date(s.starts_at).toDateString();
+    if(d!==day){ day=d; h+='<div class="sechead" style="margin:18px 0 8px;">'+clbWhen(s.starts_at).split(' · ')[0]+' <span style="color:var(--dim);font-size:11px;">'+d.slice(4,10)+'</span></div>'; }
+    h+='<div class="klses" onclick="openClubSession(\''+cmEsc(s.id)+'\')">'
+      + '<div class="kday">'+clbTime(s.starts_at).replace(' ','')+'</div>'
+      + '<div class="kbody"><div class="kt">'+cmEsc(s.title)+(s.status==='cancelled'?' · cancelled':'')+'</div>'
+      + '<div class="km">'+[s.coach_name, s.location, (s.duration_min||60)+' min'].filter(Boolean).map(cmEsc).join(' · ')+'</div></div>'
+      + '<div class="ktick '+(s.i_attended?'on':'')+'">✓</div></div>';
+  });
+  return h;
+}
+async function openClubSession(id){
+  const s = await cmQ(()=> sb.from('club_schedule').select('*').eq('id',id).maybeSingle());
+  if(!s) return;
+  $('modal-sheet').innerHTML='<h3>'+cmEsc(s.title)+'</h3>'
+    + '<p class="msub">'+clbWhen(s.starts_at)+(s.coach_name?' · '+cmEsc(s.coach_name):'')+'</p>'
+    + '<div class="resrow" style="margin-top:4px;">'
+    + '<div class="rescell"><b>'+(s.duration_min||60)+'</b><span>minutes</span></div>'
+    + '<div class="rescell"><b>'+(s.checked_in||0)+'</b><span>checked in</span></div>'
+    + (s.location?'<div class="rescell"><b>'+cmEsc(String(s.location).slice(0,8))+'</b><span>where</span></div>':'')
+    + '</div>'
+    + (s.focus?'<div class="cmnote" style="margin-top:10px;">'+cmEsc(s.focus)+'</div>':'')
+    + (s.description?'<div class="cmnote">'+cmEsc(s.description)+'</div>':'')
+    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Close</button>'
+    + (s.i_attended?'<button class="confirm" disabled>Checked in ✓</button>'
+                   :'<button class="confirm" onclick="closeModal();openCheckIn()">Check in</button>')+'</div>';
+  $('modal').classList.add('on');
+}
+
+/* ---- attendance ---- */
+async function clbAttendance(){
+  const [months, rows] = await Promise.all([
+    cmQ(()=> sb.from('club_month_attendance').select('*').eq('user_id',HF.userId).order('month',{ascending:false}).limit(12)),
+    cmQ(()=> sb.from('club_attendance').select('checked_in_at').eq('user_id',HF.userId).order('checked_in_at',{ascending:false}).limit(400))
+  ]);
+  const list=rows||[];
+  if(!list.length) return '<div class="cmempty"><b>No check-ins yet</b><p>Scan the code at the gym and your first club session lands here — and in your streak and Hybrid Score.</p></div>';
+  const streak=clbWeekStreak(list.map(r=>r.checked_in_at));
+  // longest run of weeks, computed over everything logged
+  const weekOf=d=>{ const t=new Date(d); t.setHours(0,0,0,0); t.setDate(t.getDate()-((t.getDay()+6)%7)); return t.getTime(); };
+  const weeks=Object.keys(list.reduce((a,r)=>{ a[weekOf(r.checked_in_at)]=1; return a; },{})).map(Number).sort((a,b)=>a-b);
+  let best=0, run=0, prev=null;
+  weeks.forEach(w=>{ run = (prev!==null && w-prev===7*864e5) ? run+1 : 1; prev=w; if(run>best) best=run; });
+
+  let h='<div class="resrow" style="margin-top:14px;">'
+    + '<div class="rescell"><b>'+list.length+'</b><span>total sessions</span></div>'
+    + '<div class="rescell"><b>'+streak+'</b><span>week streak</span></div>'
+    + '<div class="rescell"><b>'+best+'</b><span>longest run</span></div></div>';
+
+  // this month, as a calendar the eye can read in one go
+  const now=new Date(), y=now.getFullYear(), mo=now.getMonth();
+  const first=new Date(y,mo,1), days=new Date(y,mo+1,0).getDate(), lead=(first.getDay()+6)%7;
+  const hit={}; list.forEach(r=>{ const d=new Date(r.checked_in_at); if(d.getFullYear()===y&&d.getMonth()===mo) hit[d.getDate()]=1; });
+  h+='<div class="sechead">'+first.toLocaleString(undefined,{month:'long'})+'</div><div class="clbcal">'
+    + ['M','T','W','T','F','S','S'].map(d=>'<span class="dh">'+d+'</span>').join('')
+    + new Array(lead).fill('<span></span>').join('');
+  for(let i=1;i<=days;i++) h+='<span class="'+(hit[i]?'on':'')+(i===now.getDate()?' now':'')+'">'+i+'</span>';
+  h+='</div>';
+
+  if(months && months.length){
+    h+='<div class="sechead">By month</div>'
+      + months.map(m=>{ const d=new Date(m.month+'T00:00:00');
+          return '<div class="pfrow"><span class="l">'+d.toLocaleString(undefined,{month:'long',year:'numeric'})+'</span>'
+               + '<span class="v">'+m.sessions+' session'+(m.sessions===1?'':'s')+'</span></div>'; }).join('');
+  }
+  h+='<div class="cmnote">Club check-ins count as sessions everywhere else in the app — streak, Hybrid Score, challenge points and badges.</div>';
+  return h;
+}
+
+/* ---- my club ---- */
+async function clbMyClub(){
+  const [race, notes] = await Promise.all([
+    cmQ(()=> sb.from('club_races').select('*').eq('user_id',HF.userId).maybeSingle()),
+    cmQ(()=> sb.from('club_notes').select('*').eq('user_id',HF.userId).order('created_at',{ascending:false}).limit(10))
+  ]);
+  const since=clbMe.member_since?new Date(clbMe.member_since+'T00:00:00'):null;
+  let h='<div class="today" style="padding:15px;margin-top:14px;">'
+    + '<div class="tt" style="font-size:18px;">'+cmEsc((clbClub&&clbClub.name)||'HITFAT')+'</div>'
+    + '<div class="tm">'+cmEsc(clbMe.role==='member'?'Member':(clbMe.role.charAt(0).toUpperCase()+clbMe.role.slice(1)))
+    + (since?' · since '+since.toLocaleString(undefined,{month:'long',year:'numeric'}):'')+'</div></div>';
+  h+= clbRaceCardHTML(race);
+  h+= '<div class="sechead">Coach notes</div>';
+  h+= (notes && notes.length)
+    ? notes.map(n=>'<div class="today" style="padding:13px 15px;"><div class="tm" style="color:#ddd;">'+cmEsc(n.body)+'</div>'
+        + '<div class="cmnote" style="margin-top:6px;">'+cmEsc(n.coach_name||'Coach')+' · '+new Date(n.created_at).toDateString().slice(4)+'</div></div>').join('')
+    : '<div class="cmnote">No notes yet. A coach can leave one after a session.</div>';
+  return h;
+}
+
+/* ---- race goal ---- */
+async function openClubRace(){
+  const r = await cmQ(()=> sb.from('club_races').select('*').eq('user_id',HF.userId).maybeSingle()) || {};
+  const f=(id,label,val,ph,type)=>'<div class="field"><label>'+label+'</label>'
+    + '<input class="textinput" id="'+id+'" type="'+(type||'text')+'" placeholder="'+(ph||'')+'" value="'+String(val||'').replace(/"/g,'&quot;')+'"></div>';
+  $('modal-sheet').innerHTML='<h3>My race</h3>'
+    + f('clbr-name','Race','','AirAsia HYROX Kuala Lumpur')
+    + f('clbr-date','Date', r.race_date||'', '', 'date')
+    + f('clbr-div','Division', r.division||'', 'Men’s Doubles')
+    + f('clbr-partner','Partner (doubles)', r.partner_name||'', 'Name')
+    + f('clbr-target','Target time', r.target_time||'', '1:15:00')
+    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Cancel</button>'
+    + '<button class="confirm" onclick="clbSaveRace()">Save</button></div>';
+  const n=$('clbr-name'); if(n) n.value=r.race_name||'';
+  $('modal').classList.add('on');
+}
+async function clbSaveRace(){
+  const v=id=>{ const e=$(id); return e?e.value.trim():''; };
+  const row={ user_id:HF.userId, race_name:v('clbr-name')||null, race_date:v('clbr-date')||null,
+              division:v('clbr-div')||null, partner_name:v('clbr-partner')||null,
+              target_time:v('clbr-target')||null, updated_at:new Date().toISOString() };
+  const ok = await cmWrite(()=> sb.from('club_races').upsert(row, {onConflict:'user_id'}));
+  closeModal();
+  if(!ok){ cmFail('Could not save the race.'); return; }
+  nfToast('Race saved ✓');
+  clbCache={}; renderHClub();
+}
+
+/* ---- check-in ----
+   The code is the reliable path: it works on every phone, in bad light, with a
+   cracked lens. QR is the fast path where the browser can decode one — which on
+   iOS Safari it currently cannot, so it is offered only when it exists. */
+function clbCanScan(){ return typeof window.BarcodeDetector !== 'undefined' && !!navigator.mediaDevices; }
+function openCheckIn(){
+  $('modal-sheet').innerHTML='<h3>Check in</h3>'
+    + '<p class="msub">Enter the 6-character code on the screen at the gym. It changes every few seconds.</p>'
+    + '<input class="textinput" id="clb-code" maxlength="6" autocapitalize="characters" autocomplete="off" '
+    + 'placeholder="A7K2QD" style="text-align:center;font-family:\'Oswald\';font-size:26px;letter-spacing:6px;text-transform:uppercase;">'
+    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Cancel</button>'
+    + '<button class="confirm" onclick="clbSubmitCode()">Check in</button></div>'
+    + (clbCanScan()?'<button class="ghostbtn" style="width:100%;margin-top:8px;" onclick="clbScan()">Scan QR instead</button>':'');
+  $('modal').classList.add('on');
+  setTimeout(()=>{ const i=$('clb-code'); if(i) i.focus(); },80);
+}
+async function clbSubmitCode(code){
+  const c = (code || (($('clb-code')&&$('clb-code').value)||'')).trim().toUpperCase();
+  if(c.length<4){ nfToast('Enter the code from the screen'); return; }
+  const r = await cmQ(()=> sb.rpc('club_check_in',{ p_code:c }));
+  if(!r || r.ok!==true){
+    const why = r && r.reason==='not_a_member' ? 'Your club membership is not active.'
+              : 'That code is not valid right now — it may have already changed.';
+    nfToast(why); return;
+  }
+  clbAfterCheckIn(r);
+}
+/* a club session lands in the same store as every other session, which is the
+   whole point: streak, score, challenge points and badges all move on their own */
+function clbAfterCheckIn(r){
+  closeModal();
+  const key='club-'+r.session_id, title=r.title||'Club session', mins=r.duration_min||60;
+  const before=(function(){ try{ return hybridScore(); }catch(e){ return 0; } })();
+  const isNew=!HF.isDone(key);
+  if(isNew) HF.markDone(key,{ name:title, mins:mins, club:true });
+  const fresh=isNew?(function(){ try{ return checkBadges(true); }catch(e){ return []; } })():[];
+  const prs=isNew?(function(){ try{ return checkPRs(); }catch(e){ return []; } })():[];
+  _badgeQ=[];
+  const after=(function(){ try{ return hybridScore(); }catch(e){ return before; } })();
+  clbCache={};
+  try{ track('club_checkin',{}); }catch(e){}
+  if(!isNew){ nfToast('Already checked in ✓'); renderHClub(); return; }
+  setTimeout(()=>{ try{
+    openSessionResult({key:key, name:title, mins:mins, rpe:0, before:before, after:after, fresh:fresh, prs:prs});
+  }catch(e){ console.error(e); } }, 350);
+  renderHClub();
+}
+async function clbScan(){
+  if(!clbCanScan()){ nfToast('This browser cannot scan — type the code instead'); return; }
+  let stream=null, stop=false;
+  const ov=document.createElement('div');
+  ov.className='clbscan';
+  ov.innerHTML='<video playsinline muted></video><div class="frame"></div>'
+    + '<button class="go sec" style="position:absolute;bottom:26px;left:50%;transform:translateX(-50%);">Cancel</button>';
+  document.body.appendChild(ov);
+  const done=()=>{ stop=true; if(stream) stream.getTracks().forEach(t=>t.stop()); ov.remove(); };
+  ov.querySelector('button').onclick=done;
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    const v=ov.querySelector('video'); v.srcObject=stream; await v.play();
+    const det=new BarcodeDetector({formats:['qr_code']});
+    const tick=async()=>{
+      if(stop) return;
+      try{
+        const codes=await det.detect(v);
+        if(codes && codes.length){
+          let raw=String(codes[0].rawValue||'').trim();
+          const m=raw.match(/[?&]c=([A-Za-z0-9]{4,10})/);   // a URL or the bare code, both work
+          done(); clbSubmitCode(m?m[1]:raw); return;
+        }
+      }catch(e){}
+      requestAnimationFrame(tick);
+    };
+    tick();
+  }catch(e){ done(); nfToast('Camera not available — type the code instead'); }
+}
+
+/* ---- home ---- */
+async function renderHomeClub(){
+  const el=$('home-club'); if(!el) return;
+  el.innerHTML='';
+  if(!clbOn()) return;
+  await clbLoad();
+  if(!clbActive()){
+    // one quiet line for everyone else — visible, never in the way
+    el.innerHTML='<div class="today" style="padding:13px 15px;margin-top:6px;cursor:pointer;" onclick="switchTab(\'hclub\')">'
+      + '<div style="display:flex;align-items:center;gap:11px;"><div style="font-size:20px;">🔒</div>'
+      + '<div style="flex:1;min-width:0;"><div class="tt" style="font-size:15px;">HITFAT Hybrid Training Club</div>'
+      + '<div class="tm">Train physically with us — coach-led sessions and check-in</div></div>'
+      + '<div style="color:var(--dim);">›</div></div></div>';
+    return;
+  }
+  const since=new Date(Date.now()-4*3600e3).toISOString();
+  const rows=await cmQ(()=> sb.from('club_schedule').select('*').eq('club_id',clbMe.club_id)
+      .gte('starts_at',since).eq('status','scheduled').order('starts_at').limit(1)) || [];
+  const next=rows[0];
+  el.innerHTML='<div class="sechead">Hybrid Club</div>'
+    + '<div class="today" style="padding:15px;">'
+    + (next
+        ? '<div class="tt" style="font-size:18px;">'+cmEsc(next.title)+'</div>'
+          + '<div class="tm">'+clbWhen(next.starts_at)+(next.coach_name?' · '+cmEsc(next.coach_name):'')+'</div>'
+        : '<div class="tt" style="font-size:18px;">No session scheduled</div><div class="tm">Check the schedule for what is next.</div>')
+    + '<div class="trow" style="margin-top:12px;">'
+    + (next && next.i_attended
+        ? '<button class="go sec" disabled>Checked in ✓</button>'
+        : '<button class="go" onclick="openCheckIn()">Check in</button>')
+    + '<button class="go sec" onclick="switchTab(\'hclub\')">Open Club</button></div></div>';
 }
 
 </script>
