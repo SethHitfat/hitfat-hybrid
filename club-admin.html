@@ -7,6 +7,7 @@
 <link rel="icon" href="favicon-32.png">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="qr.js"></script>
 <style>
   :root{ --bg:#0b0b0b; --surface:#141414; --line:#262626; --dim:#8a8a8a; --dim2:#5f5f5f; --hyrox:#FFE000; --ink:#111; }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -33,6 +34,8 @@
   .tabs::-webkit-scrollbar{display:none;}
   .tabs button{white-space:nowrap;}
   .tabs button.on{background:var(--hyrox);color:var(--ink);border-color:transparent;font-weight:700;}
+  .codewrap{display:flex;align-items:center;justify-content:center;gap:22px;flex-wrap:wrap;margin-bottom:6px;}
+  .codewrap canvas{background:#fff;border-radius:12px;padding:6px;width:220px;height:220px;image-rendering:pixelated;}
   .code{font-family:'Oswald';font-size:64px;letter-spacing:14px;text-align:center;color:var(--hyrox);margin:6px 0 2px;padding-left:14px;}
   .codesub{text-align:center;color:var(--dim);font-size:12px;margin-bottom:10px;}
   .pill{display:inline-block;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 8px;border-radius:99px;border:1px solid var(--line);color:var(--dim);}
@@ -145,13 +148,18 @@ async function viewToday(){
 async function openRun(id){
   curSession = id;
   $('run').innerHTML = `<div class="card">
-    <div class="code" id="thecode">------</div>
-    <div class="codesub" id="codesub">generating…</div>
+    <div class="codewrap">
+      <canvas id="theqr" width="260" height="260"></canvas>
+      <div>
+        <div class="code" id="thecode">------</div>
+        <div class="codesub" id="codesub">generating…</div>
+      </div>
+    </div>
     <div class="row" style="justify-content:center;gap:8px;">
       <button class="sm" onclick="rotate()">New code now</button>
       <button class="sm" onclick="loadCheckedIn()">Refresh list</button>
     </div>
-    <div class="note">Show this screen at the door. The code changes every 45 seconds, so a photograph of it is worthless a minute later. An athlete types it into Check in.</div>
+    <div class="note">Show this screen at the door. Both halves are the same code: scan the square, or type the letters. It changes every 45 seconds, so a photograph of it is worthless a minute later.</div>
   </div>
   <h2>Checked in</h2><div id="inlist" class="card"><div class="m">Loading…</div></div>`;
   await rotate();
@@ -165,6 +173,8 @@ async function rotate(){
   if(!row){ $('codesub').textContent='could not generate a code'; return; }
   $('thecode').textContent = row.code;
   $('codesub').textContent = 'valid until ' + fmtTime(row.expires_at) + ' · changes automatically';
+  try{ if(window.HFQR) HFQR.toCanvas(row.code, 260, $('theqr')); }
+  catch(e){ console.warn('qr', e); const c=$('theqr'); if(c) c.style.display='none'; }   // the letters alone still work
 }
 async function loadCheckedIn(){
   const rows = await q(()=> sb.from('club_attendance').select('user_id,checked_in_at,method')
