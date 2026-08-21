@@ -8674,7 +8674,7 @@ function shareBench(k, secs, gain){
    iOS only delivers push to a PWA that has been added to the Home Screen, so
    the toggle says that rather than failing silently in Safari.
    ============================================================ */
-const PUSH_KEY = '';   // VAPID public key — filled in once the keypair is generated
+const PUSH_KEY = 'BOZYEg9zrc8TR3A5uGt0RF5C_FT2Spo3cO03A0qCqUAKA3Z6GFeKKWGqB9d5Z8egXccWkbHAnHhUePMJUgOWVu0';   // VAPID public key — public by design, the private half lives in Supabase Secrets
 
 function pushConfigured(){ return !!PUSH_KEY; }
 function pushSupported(){ return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; }
