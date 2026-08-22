@@ -1056,6 +1056,11 @@
   .bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:9px;}
   .bchip{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 9px 11px;text-align:center;cursor:pointer;opacity:.5;}
   .bchip.on{opacity:1;border-color:rgba(255,224,0,.45);background:linear-gradient(160deg,#1b1a12 0%,#121212 100%);}
+  /* the rare ones look rare, so the grid has a hierarchy rather than thirteen identical circles */
+  .bchip.t3.on{border-color:rgba(255,224,0,.85);box-shadow:0 0 0 1px rgba(255,224,0,.18), 0 6px 18px rgba(255,224,0,.10);
+               background:linear-gradient(160deg,#241f0d 0%,#141414 100%);}
+  .bchip.t3 .bn{color:var(--hyrox);}
+  .bchip.t3:not(.on) .bn{color:#cfcfcf;}
   .bchip .bi{font-size:26px;line-height:1.1;filter:grayscale(1);}
   .bchip.on .bi{filter:none;}
   .bchip .bn{font-size:11.5px;font-weight:700;color:#fff;margin-top:6px;line-height:1.25;}
@@ -1238,6 +1243,7 @@
           <div class="pd-type" id="td-tag">—</div>
           <div class="pd-section"><div class="pd-h">Workout</div><div class="pd-body" id="td-workout">—</div></div>
           <div class="pd-section"><div class="pd-h">Coaching Notes</div><div class="pd-body" id="td-notes">—</div></div>
+          <div id="td-done" style="margin-top:14px;"></div>
         </div>
       </div>
       <!-- SKRIN EXPLORE (V3 discovery) -->
@@ -3142,7 +3148,26 @@ function openTargetWorkout(k,i){
   $('td-tag').textContent=`${w.focus} · ${w.mins} min`;
   $('td-workout').textContent=w.workout;
   $('td-notes').textContent=w.notes;
+  renderTargetDone(k,i);
   $('screen').scrollTop=0;
+}
+/* Target sessions were read-only, so the app could not tell which stations an
+   athlete had actually trained. One button fixes that, and it is what makes
+   Station Master a real achievement rather than a guess. */
+function tgtKey(k,i){ return 'tgt-'+k+'-'+i; }
+function renderTargetDone(k,i){
+  const el=$('td-done'); if(!el) return;
+  const on=HF.isDone(tgtKey(k,i));
+  el.innerHTML='<button class="go '+(on?'sec':'')+'" style="width:100%;" onclick="toggleTargetDone(\''+k+'\','+i+')">'
+    + (on?'✓ Completed — tap to undo':'Mark as done')+'</button>';
+}
+function toggleTargetDone(k,i){
+  const t=TARGETS[k], w=t&&t.workouts[i]; if(!w) return;
+  const key=tgtKey(k,i);
+  if(HF.isDone(key)) HF.undone(key);
+  else HF.markDone(key,{ name:t.name+' · '+w.title, mins:w.mins, target:k });
+  renderTargetDone(k,i);
+  try{ flushBadgeQueue(); }catch(e){}
 }
 function backToTargetList(){ openTarget(curTarget); }
 
@@ -5215,23 +5240,53 @@ function bgKm(){   // Strava is the only source of distance today
   return m/1000;
 }
 function bgWallBalls(){ return (HF.data.wallball||[]).reduce((n,x)=>n+(Number(x&&x.t)||0),0); }
+/* The eight HYROX stations as Target keys — the simulation screen already has a
+   HYROX_STATIONS of its own with names and units, so this one is named for what
+   it is: the target list. grip, run and engine are targets too, but they are
+   qualities rather than stations. */
+const STATION_TARGETS = ['wallball','sledpush','sledpull','farmers','lunge','ski','row','burpee'];
+function bgStationsTrained(){
+  return STATION_TARGETS.filter(k =>
+    (TARGETS[k]?TARGETS[k].workouts:[]).some((_,i)=> HF.isDone('tgt-'+k+'-'+i))).length;
+}
+function bgRunSessions(){
+  const t=TARGETS.run; if(!t) return 0;
+  return t.workouts.filter((_,i)=> HF.isDone('tgt-run-'+i)).length;
+}
+function bgClubCheckins(){
+  return Object.keys(HF.data.sessions).filter(k=> k.indexOf('club-')===0).length;
+}
 function bgMonthMins(){
   const now=new Date(), y=now.getFullYear(), mo=now.getMonth(); let t=0;
   Object.values(HF.data.sessions).forEach(s=>{ if(!s||!s.date) return; const d=new Date(s.date);
     if(d.getFullYear()===y && d.getMonth()===mo) t+=Math.min(180, Number(s.mins)||45); });   // same 180 cap as the challenge: a stuck timer cannot buy a badge
   return t;
 }
+/* Thirteen badges in four groups, and a tier that says how hard each one is —
+   tier 3 are the ones worth chasing for months.
+
+   The set is built around what this sport is: eight stations and running on
+   tired legs. A badge for joining something was removed — anything earned by
+   tapping a button cheapens the twelve beside it. */
 const BADGES=[
-  {slug:'hybrid-rookie',      icon:'🌱', name:'Hybrid Rookie',      how:'Log your first session',                     goal:1,    at:()=>HF.totalDone()},
-  {slug:'streak-7',           icon:'🔥', name:'7-Day Streak',       how:'Train seven days in a row',                  goal:7,    at:()=>HF.streak()},
-  {slug:'seven-day-finisher', icon:'🏆', name:'7-Day Challenge',    how:'Finish the free 7-Day Hybrid Challenge',     goal:7,    at:()=>challengeDone()},
-  {slug:'hybrid-grinder',     icon:'⚙️', name:'Hybrid Grinder',     how:'Log 30 sessions',                            goal:30,   at:()=>HF.totalDone()},
-  {slug:'engine-builder',     icon:'🫀', name:'Engine Builder',     how:'600 minutes of training in one month',       goal:600,  at:()=>bgMonthMins()},
-  {slug:'race-ready',         icon:'🏁', name:'Race Ready',         how:'Complete a full race simulation',            goal:1,    at:()=>(HF.data.sims||[]).length},
-  {slug:'wall-ball-warrior',  icon:'🧱', name:'Wall Ball Warrior',  how:'1,000 wall balls in the Lab',                goal:1000, at:()=>bgWallBalls()},
-  {slug:'100km-club',         icon:'🏃', name:'100 KM Club',        how:'100 km logged — connect Strava so distance counts', goal:100, at:()=>bgKm()},
-  {slug:'first-challenge',    icon:'🎯', name:'First Challenge',    how:'Join a monthly HITFAT challenge',            server:true},
-  {slug:'challenge-finisher', icon:'🥇', name:'Challenge Finisher', how:'Finish a monthly challenge',                 server:true},
+  // start
+  {slug:'hybrid-rookie',      tier:1, group:'Start',   icon:'🌱', name:'Hybrid Rookie',      how:'Log your first session',                     goal:1,    at:()=>HF.totalDone()},
+  {slug:'streak-7',           tier:1, group:'Start',   icon:'🔥', name:'7-Day Streak',       how:'Train seven days in a row — mobility counts', goal:7,   at:()=>HF.streak()},
+  {slug:'seven-day-finisher', tier:1, group:'Start',   icon:'🏆', name:'7-Day Challenge',    how:'Finish the free 7-Day Hybrid Challenge',     goal:7,    at:()=>challengeDone()},
+  // consistency
+  {slug:'hybrid-grinder',     tier:2, group:'Consistency', icon:'⚙️', name:'Hybrid Grinder', how:'Log 30 sessions',                            goal:30,   at:()=>HF.totalDone()},
+  {slug:'engine-builder',     tier:2, group:'Consistency', icon:'🫀', name:'Engine Builder', how:'600 minutes of training in one month',       goal:600,  at:()=>bgMonthMins()},
+  {slug:'club-regular',       tier:2, group:'Consistency', icon:'🏋️', name:'Club Regular',  how:'20 check-ins at the club',                   goal:20,   at:()=>bgClubCheckins()},
+  // the stations — what the sport actually is
+  {slug:'station-master',     tier:3, group:'Stations', icon:'🎖️', name:'Station Master',   how:'Train all eight HYROX stations',             goal:8,    at:()=>bgStationsTrained()},
+  {slug:'compromised-runner', tier:2, group:'Stations', icon:'👟', name:'Compromised Runner',how:'Finish all three Compromised Running sessions', goal:3, at:()=>bgRunSessions()},
+  {slug:'wall-ball-warrior',  tier:2, group:'Stations', icon:'🧱', name:'Wall Ball Warrior', how:'1,000 wall balls in the Lab',                goal:1000, at:()=>bgWallBalls()},
+  // race
+  {slug:'race-ready',         tier:3, group:'Race',    icon:'🏁', name:'Race Ready',         how:'Complete a full race simulation',            goal:1,    at:()=>(HF.data.sims||[]).length},
+  {slug:'pb-breaker',         tier:3, group:'Race',    icon:'⏱️', name:'PB Breaker',         how:'Beat one of your own benchmark times',       server:true, when:'In Progress'},
+  {slug:'100km-club',         tier:2, group:'Race',    icon:'🏃', name:'100 KM Club',        how:'100 km logged — connect Strava so distance counts', goal:100, at:()=>bgKm()},
+  // decided in Community
+  {slug:'challenge-finisher', tier:3, group:'Club',    icon:'🥇', name:'Challenge Finisher', how:'Finish a monthly challenge',                 server:true, when:'In Community'},
 ];
 const BADGE_BY={}; BADGES.forEach(b=>{ BADGE_BY[b.slug]=b; });
 function badgeEarned(slug){ return !!(HF.data.badges && HF.data.badges[slug]); }
@@ -5305,8 +5360,8 @@ function renderBadges(){
   el.innerHTML='<div class="bgrid">'+got.concat(rest).map(b=>{
     const on=badgeEarned(b.slug), p=badgeAt(b);
     const sub = on ? 'Unlocked'
-              : (p ? Math.min(p.v,p.goal).toLocaleString()+'/'+p.goal.toLocaleString() : 'In Community');
-    return '<div class="bchip'+(on?' on':'')+'" onclick="openBadge(\'' + b.slug + '\')">'
+              : (p ? Math.min(p.v,p.goal).toLocaleString()+'/'+p.goal.toLocaleString() : (b.when||'Not yet'));
+    return '<div class="bchip t'+(b.tier||1)+(on?' on':'')+'" onclick="openBadge(\'' + b.slug + '\')">'
          + '<div class="bi">'+b.icon+'</div><div class="bn">'+b.name+'</div><div class="bs">'+sub+'</div>'
          + (!on&&p?'<div class="bbar"><i style="width:'+p.pct+'%"></i></div>':'')+'</div>';
   }).join('')+'</div>';
@@ -8644,7 +8699,7 @@ async function benchSave(k){
   await benchLoad(true);
   try{ renderBench(); }catch(e){}
   // a first result is a starting point, not a record — same rule as the rest of the app
-  if(prevBest!==null && secs<prevBest) benchPB(b, secs, prevBest);
+  if(prevBest!==null && secs<prevBest){ try{ awardBadge('pb-breaker'); }catch(e){} benchPB(b, secs, prevBest); }
   else nfToast('Result saved ✓');
 }
 
