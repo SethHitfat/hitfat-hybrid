@@ -8779,14 +8779,23 @@ async function pushToggle(){
 async function renderPushRow(){
   const el = $('pf-push'); if(!el) return;
   if(!pushSupported() || typeof cmOn!=='function' || !cmOn()){ el.innerHTML=''; return; }
-  const on = !!(await pushCurrent());
+  const sub = await pushCurrent();
+  const on = !!sub;
   const state = !pushConfigured() ? 'Coming soon'
               : pushIOSNeedsInstall() ? 'Add to Home Screen first'
               : (Notification.permission==='denied') ? 'Blocked in settings'
               : (on ? 'On' : 'Off');
+  /* The check screen is a mechanic's tool, not something an athlete should be
+     asked to reason about. It appears only when this device is genuinely broken
+     — switched on but registered against a different key — and then it offers
+     the repair rather than a diagnosis. ?diag=1 opens it deliberately, the same
+     way the pose lab does. */
+  const broken = on && pushKeyMatches(sub) === false;
+  const wanted = /[?&]diag=1/.test(location.search);
   el.innerHTML = '<button class="pflink" onclick="pushToggle()"><span>Notifications</span>'
     + '<span class="arr" style="color:'+(state==='On'?'#2ec27e':'var(--dim)')+';font-weight:700;">'+state+'</span></button>'
-    + '<button class="pflink" onclick="pushDiag()"><span style="color:var(--dim);">Check notifications</span><span class="arr">›</span></button>';
+    + (broken ? '<button class="pflink" onclick="pushFix()"><span style="color:#ffb599;">Fix notifications on this device</span><span class="arr">›</span></button>' : '')
+    + (wanted ? '<button class="pflink" onclick="pushDiag()"><span style="color:var(--dim);">Check notifications</span><span class="arr">›</span></button>' : '');
 }
 
 /* Tells the sender that a notification the athlete just caused should also be
