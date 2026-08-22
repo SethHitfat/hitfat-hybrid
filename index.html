@@ -7195,10 +7195,22 @@ async function cmPublishScore(){
     if(typeof hybridScore !== 'function') return;
     const score = hybridScore();
     if(score == null || isNaN(score)) return;
+    /* The date of the last session, published the same way the score is: the
+       sessions themselves stay in user_data where the server has no business
+       reading them, but the streak nudge needs to know whether today is empty.
+       Local date, not UTC — a session at 9pm in Malaysia is today, not tomorrow. */
+    let last = null;
+    Object.values(HF.data.sessions).forEach(x=>{
+      if(!x || !x.date) return;
+      const d = new Date(x.date); if(isNaN(d)) return;
+      const iso = d.toLocaleDateString('en-CA');
+      if(!last || iso > last) last = iso;
+    });
     await cmWrite(()=> sb.from('profiles').update({
       hybrid_score: Math.round(score),
       total_sessions: (HF.totalDone && HF.totalDone()) || 0,
       streak_days: (HF.streak && HF.streak()) || 0,
+      last_session_at: last,
       score_updated_at: new Date().toISOString()
     }).eq('id', HF.userId));
   }catch(e){ console.warn('[community] score publish', e); }
