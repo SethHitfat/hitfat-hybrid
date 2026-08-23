@@ -9083,7 +9083,12 @@ function netLogo(c, size){
 
 async function netLoad(force){
   if(netClubs && !force) return netClubs;
-  netClubs = await cmQ(()=> sb.from('club_list').select('*').order('active_count',{ascending:false})) || [];
+  // club_board carries the ranking as well as the counts; club_list is still
+  // what a single club's profile reads, for its photo and description
+  netClubs = await cmQ(()=> sb.from('club_board').select('*')
+      .order('rank_club',{ascending:true, nullsFirst:false})
+      .order('active',{ascending:false})) || [];
+  netClubs = netClubs.map(c=> Object.assign({ id:c.club_id, member_count:c.members, active_count:c.active }, c));
   return netClubs;
 }
 
@@ -9099,6 +9104,7 @@ async function renderClubs(){
     + '<p>Independent gyms training hybrid across Malaysia. Each keeps its own name — the network is what they share.</p></div>'
     + '<input class="textinput" id="net-q" placeholder="Search a club or a city" oninput="netSearch(this.value)" '
     + 'value="'+cmEsc(netQ)+'" style="margin-bottom:10px;">'
+    + '<div id="net-rank"></div>'
     + '<div class="cmscopes" id="net-states"></div>'
     + '<div id="net-list">'+cmSkeleton(3)+'</div>'
     + '<div class="netapply">'
@@ -9108,7 +9114,30 @@ async function renderClubs(){
     + '</div>';
   netPaintStates();
   await netLoad();
+  netPaintRank();
   netPaintList();
+}
+
+/* The ranking is a public statement about somebody else's gym, so it says what
+   it measures and refuses to place a club on too little evidence. */
+function netPaintRank(){
+  const el = $('net-rank'); if(!el) return;
+  const ranked = (netClubs||[]).filter(c=> c.rank_club).slice(0,5);
+  if(!ranked.length){ el.innerHTML=''; return; }
+  const waiting = (netClubs||[]).filter(c=> !c.rank_club).length;
+  el.innerHTML = '<div class="sechead" style="margin:4px 0 10px;">Malaysia ranking</div>'
+    + ranked.map(c=>{
+        const medal = c.rank_club===1?'🥇':c.rank_club===2?'🥈':c.rank_club===3?'🥉':c.rank_club;
+        return '<div class="cmlb" onclick="openClub(\''+cmEsc(c.club_id)+'\')">'
+          + '<div class="rk">'+medal+'</div>'
+          + netLogo(c, 36)
+          + '<div class="lbn" style="margin-left:10px;"><div class="n">'+cmEsc(c.name)+'</div>'
+          + '<div class="t">'+cmEsc([c.city,c.state].filter(Boolean).join(', '))+'</div></div>'
+          + '<div class="sc">'+c.active+'</div></div>';
+      }).join('')
+    + '<div class="cmnote">Ranked on athletes training this month, not on how many have signed up. '
+    + 'A club is placed once five of its athletes are training'
+    + (waiting ? ' — '+waiting+' club'+(waiting===1?' is':'s are')+' still below that.' : '.')+'</div>';
 }
 
 function netPaintStates(){
@@ -9142,7 +9171,8 @@ function netPaintList(){
       + '<div class="nc-place">'+cmEsc([c.city, c.state].filter(Boolean).join(', ') || 'Malaysia')+'</div>'
       + '<div class="nc-sub">HITFAT Hybrid Training Club</div>'
       + '<div class="nc-stats">'+(c.member_count||0)+' athlete'+((c.member_count||0)===1?'':'s')
-      + (c.active_count ? ' · <b>'+c.active_count+'</b> training this month' : '')+'</div>'
+      + (c.active_count ? ' · <b>'+c.active_count+'</b> training this month' : '')
+      + (c.rank_club ? ' · <b style="color:var(--hyrox);">#'+c.rank_club+' Malaysia</b>' : '')+'</div>'
     + '</div><div class="chev">›</div></div>').join('');
 }
 
