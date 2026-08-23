@@ -358,6 +358,11 @@ async function noteFor(userId, name){
    from here: half an approval — a club with no admin, an admin pointing at no
    club — is worse than none, and a browser can close mid-way. */
 async function viewPartners(){
+  /* The ordering athletes never see. It is here because it answers an
+     operations question — which clubs are alive, which need a call — and not
+     a marketing one. */
+  const board = await q(()=> sb.from('club_board').select('*')
+      .order('active',{ascending:false}).limit(60)) || [];
   const rows = await q(()=> sb.from('club_applications').select('*').order('created_at',{ascending:false}).limit(50)) || [];
   const pending = rows.filter(r=> r.status==='pending');
   const done    = rows.filter(r=> r.status!=='pending');
@@ -373,9 +378,19 @@ async function viewPartners(){
         <button class="p sm" onclick="approveApp('${r.id}')">Approve</button>
         <button class="sm dg" onclick="rejectApp('${r.id}')">Reject</button></div>` : ''}
     </div>`;
+  const quiet = board.filter(b=> (b.active||0) === 0 && (b.members||0) > 0);
   $('body').innerHTML = `<h2>${pending.length} waiting</h2>`
     + (pending.length ? pending.map(card).join('') : '<div class="card"><div class="m">No applications waiting.</div></div>')
-    + (done.length ? `<h2>Reviewed</h2>` + done.map(card).join('') : '');
+    + (done.length ? `<h2>Reviewed</h2>` + done.map(card).join('') : '')
+    + `<h2>Network</h2>`
+    + (board.length ? board.map(b=>`<div class="card"><div class="row">
+        <div class="g"><div class="t">${esc(b.name)} ${b.partner_status==='hq'?'<span class="pill ok">HQ</span>':''}</div>
+          <div class="m">${esc([b.city,b.state].filter(Boolean).join(', ')||'—')}</div>
+          <div class="m">${b.members||0} athletes · <b>${b.active||0}</b> training this month${b.avg_score?` · avg score ${b.avg_score}`:''}</div>
+          ${(b.active||0)===0 && (b.members||0)>0 ? '<div style="margin-top:6px;"><span class="pill warn">nobody trained this month</span></div>' : ''}
+        </div></div></div>`).join('')
+      : '<div class="card"><div class="m">No clubs yet.</div></div>')
+    + `<div class="note">Athletes do not see this ordering. A club that has gone quiet is a call to make, not a rank to publish.${quiet.length?` ${quiet.length} club${quiet.length===1?'':'s'} quiet right now.`:''}</div>`;
 }
 async function approveApp(id){
   if(!confirm('Approve this gym? It becomes a partner club and the applicant becomes its admin.')) return;
