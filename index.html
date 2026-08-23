@@ -1029,6 +1029,16 @@
   .reslevel span{display:block;font-size:11.5px;color:var(--dim);margin-top:2px;}
   .resbadges{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px;justify-content:center;}
   .resbadges .rb{background:#141414;border:1px solid rgba(255,224,0,.35);color:#fff;font-size:11px;font-weight:700;padding:6px 10px;border-radius:99px;}
+  .clbnext{background:linear-gradient(155deg,#1c1b14 0%,#111 60%);border:1px solid rgba(255,224,0,.30);
+           border-radius:18px;padding:16px 16px 15px;}
+  .clbnext .cn-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .clbnext .cn-when{font-family:'Oswald';font-size:12px;letter-spacing:2px;text-transform:uppercase;color:var(--hyrox);}
+  .clbnext .cn-count{font-size:11.5px;font-weight:700;color:var(--dim);}
+  .clbnext .cn-title{font-family:'Oswald';font-size:26px;font-weight:700;letter-spacing:.4px;margin-top:8px;line-height:1.1;}
+  .clbnext .cn-meta{font-size:12.5px;color:var(--dim);margin-top:5px;}
+  .clbnext .cn-focus{font-size:12px;color:#b9b9b9;margin-top:9px;padding-top:9px;border-top:1px solid var(--line);}
+  .klses.clbpast{opacity:.45;}
+  .clblogo{width:44px;height:44px;border-radius:12px;object-fit:cover;border:1px solid var(--line);flex:none;margin-right:12px;}
   .clbperks{display:flex;flex-direction:column;gap:9px;margin-top:6px;}
   .clbperk{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;}
   .clbperk b{display:block;font-size:14px;color:#fff;}
@@ -1037,7 +1047,8 @@
   .clbcal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:4px;}
   .clbcal span{aspect-ratio:1;display:grid;place-items:center;font-size:11px;color:var(--dim);background:#141414;border:1px solid var(--line);border-radius:9px;}
   .clbcal span.dh{background:transparent;border:none;color:#6a6a6a;font-weight:700;font-size:10px;}
-  .clbcal span.on{background:rgba(255,224,0,.16);border-color:rgba(255,224,0,.45);color:#fff;font-weight:700;}
+  .clbcal span.on{background:rgba(255,224,0,.16);border-color:rgba(255,224,0,.45);color:#fff;font-weight:700;cursor:pointer;}
+  .clbcal span.on:active{background:rgba(255,224,0,.28);}
   .clbcal span.now{outline:1px solid var(--dim);}
   .clbscan{position:fixed;inset:0;z-index:9999;background:#000;display:grid;place-items:center;}
   .clbscan video{width:100%;height:100%;object-fit:cover;}
@@ -8125,7 +8136,7 @@ async function clbLoad(force){
   const rows = await cmQ(()=> sb.from('club_physical_members').select('*').eq('user_id', HF.userId));
   clbMe = (rows && rows.length) ? (rows.filter(r=>r.status==='active')[0] || rows[0]) : null;
   if(clbMe && !clbClub){
-    clbClub = await cmQ(()=> sb.from('club_list').select('id,name,city,state').eq('id', clbMe.club_id).maybeSingle());
+    clbClub = await cmQ(()=> sb.from('club_list').select('id,name,city,state,logo_url').eq('id', clbMe.club_id).maybeSingle());
   }
   return clbMe;
 }
@@ -8149,6 +8160,17 @@ function clbOpenNow(s){
   if(!s || s.status!=='scheduled') return false;
   const start=new Date(s.starts_at).getTime(), now=Date.now();
   return now >= start - 45*60000 && now <= start + ((s.duration_min||60)+120)*60000;
+}
+/* The moment check-in opens, so the button can say it instead of failing later */
+function clbOpensAt(s){ return new Date(new Date(s.starts_at).getTime() - 45*60000); }
+function clbCountdown(iso){
+  const ms = new Date(iso) - Date.now();
+  if(ms <= 0) return 'on now';
+  const mins = Math.round(ms/60000);
+  if(mins < 60) return 'in ' + mins + ' min';
+  const h = Math.floor(mins/60), m = mins%60;
+  if(h < 24) return 'in ' + h + 'h' + (m ? ' ' + m + 'm' : '');
+  return 'in ' + Math.round(h/24) + ' days';
 }
 /* consecutive weeks with at least one club session, counting back from this one */
 function clbWeekStreak(dates){
@@ -8188,12 +8210,29 @@ function clbAsk(){
 function clbShell(body){
   const tab=(k,l)=>'<button class="cmtab'+(clbTab===k?' on':'')+'" id="clbtab-'+k+'" onclick="clbSetTab(\''+k+'\')">'+l+'</button>';
   const st = clbMe && clbMe.status!=='active' ? '<span class="clbstat">'+cmEsc(clbMe.status)+'</span>' : '';
-  return '<div class="cmtop"><div class="hgroup" style="flex:1;"><div class="k">'+cmEsc((clbClub&&clbClub.name)||'HITFAT')+'</div>'
+  /* The gym's own logo, because a partner club keeps its own identity —
+     this screen belongs to them as much as to HITFAT. */
+  const logo = (clbClub && clbClub.logo_url)
+    ? '<img src="'+cmEsc(clbClub.logo_url)+'" alt="" class="clblogo">' : '';
+  return '<div class="cmtop">'+logo+'<div class="hgroup" style="flex:1;"><div class="k">'+cmEsc((clbClub&&clbClub.name)||'HITFAT')
+       + (clbClub&&clbClub.city?' · '+cmEsc(clbClub.city):'')+'</div>'
        + '<h2>HYBRID CLUB'+st+'</h2><p>Your physical training — sessions, attendance and what the coach sees.</p></div></div>'
        + '<div class="cmtabs">'+tab('overview','Overview')+tab('schedule','Schedule')+tab('progress','Attendance')+tab('my','My Club')+'</div>'
        + '<div id="clbbody">'+(body||'')+'</div>';
 }
 function clbSetTab(k){ clbTab=k; renderHClub(); }
+/* A countdown that freezes is worse than no countdown, so it ticks while the
+   screen is up and stops itself the moment the screen is not. */
+let clbTicker=null;
+function clbTick(next){
+  clearInterval(clbTicker); clbTicker=null;
+  if(!next) return;
+  clbTicker=setInterval(()=>{
+    const el=$('clb-count');
+    if(!el || curTab!=='hclub'){ clearInterval(clbTicker); clbTicker=null; return; }
+    el.textContent=clbCountdown(next.starts_at);
+  }, 30000);
+}
 function clbBody(html){ const el=$('clbbody'); if(el) el.innerHTML=html; }
 
 async function renderHClub(){
@@ -8236,18 +8275,25 @@ async function clbOverview(){
 
   let h='';
   h+= '<div class="sechead" style="margin-top:14px;">Next training</div>';
+  /* Three honest states rather than one hopeful button. The window the SQL
+     enforces opens 45 minutes before the class, so the card says when — an
+     athlete should not have to type a code to discover it is too early. */
   h+= next
-    ? '<div class="today" style="padding:15px;"><div class="tt" style="font-size:20px;">'+cmEsc(next.title)+'</div>'
-      + '<div class="tm">'+clbWhen(next.starts_at)+(next.coach_name?' · '+cmEsc(next.coach_name):'')+(next.location?' · '+cmEsc(next.location):'')+'</div>'
-      + (next.focus?'<div class="cmnote" style="margin-top:6px;">'+cmEsc(next.focus)+'</div>':'')
-      + '<div class="trow" style="margin-top:12px;">'
+    ? '<div class="clbnext">'
+      + '<div class="cn-top"><div class="cn-when">'+clbWhen(next.starts_at)+'</div>'
+      + '<div class="cn-count" id="clb-count">'+clbCountdown(next.starts_at)+'</div></div>'
+      + '<div class="cn-title">'+cmEsc(next.title)+'</div>'
+      + '<div class="cn-meta">'+[next.coach_name, next.location, (next.duration_min||60)+' min'].filter(Boolean).map(cmEsc).join(' · ')+'</div>'
+      + (next.focus?'<div class="cn-focus">'+cmEsc(next.focus)+'</div>':'')
+      + '<div class="trow" style="margin-top:14px;">'
       + (next.i_attended
           ? '<button class="go sec" disabled>Checked in ✓</button>'
-          : '<button class="go" onclick="openCheckIn()">'+(open?'Check in':'Check in')+'</button>')
+          : clbOpenNow(next)
+            ? '<button class="go" onclick="openCheckIn()">Check in</button>'
+            : '<button class="go sec" disabled>Check-in opens '+clbTime(clbOpensAt(next).toISOString())+'</button>')
       + '<button class="go sec" onclick="clbSetTab(\'schedule\')">Schedule</button></div></div>'
-    : '<div class="cmempty"><b>No sessions scheduled</b><p>When a coach adds this week’s classes they appear here.</p></div>';
-
-  h+= '<button class="buy" style="width:100%;margin-top:14px;" onclick="openCheckIn()">Check in to a session</button>';
+    : '<div class="cmempty"><b>No sessions scheduled</b><p>When a coach adds this week’s classes they appear here — and everyone in the club gets a reminder an hour before.</p>'
+      + '<button class="go" onclick="clbSetTab(\'schedule\')">See the schedule</button></div>';
 
   h+= '<div class="sechead">This month</div>'
     + '<div class="resrow" style="margin-top:0;">'
@@ -8263,6 +8309,7 @@ async function clbOverview(){
   }
 
   h+= clbRaceCardHTML(race);
+  setTimeout(()=>{ try{ clbTick(next); }catch(e){} }, 0);
   return h;
 }
 
@@ -8291,15 +8338,18 @@ async function clbSchedule(){
   const since=new Date(Date.now()-4*3600e3).toISOString();
   const rows = await cmQ(()=> sb.from('club_schedule').select('*').eq('club_id',clbMe.club_id)
       .gte('starts_at',since).order('starts_at').limit(40)) || [];
-  if(!rows.length) return '<div class="cmempty"><b>Nothing scheduled yet</b><p>Classes added by a coach show up here, newest first.</p></div>';
+  if(!rows.length) return '<div class="cmempty"><b>Nothing scheduled yet</b>'
+    + '<p>Classes added by a coach show up here. You will also get a notification an hour before each one.</p>'
+    + '<button class="go sec" onclick="clbSetTab(\'overview\')">Back to overview</button></div>';
   let day='', h='';
   rows.forEach(s=>{
     const d=new Date(s.starts_at).toDateString();
+    const past = new Date(s.starts_at).getTime() + ((s.duration_min||60)+30)*60000 < Date.now();
     if(d!==day){ day=d; h+='<div class="sechead" style="margin:18px 0 8px;">'+clbWhen(s.starts_at).split(' · ')[0]+' <span style="color:var(--dim);font-size:11px;">'+d.slice(4,10)+'</span></div>'; }
-    h+='<div class="klses" onclick="openClubSession(\''+cmEsc(s.id)+'\')">'
+    h+='<div class="klses'+(past?' clbpast':'')+'" onclick="openClubSession(\''+cmEsc(s.id)+'\')">'
       + '<div class="kday">'+clbTime(s.starts_at).replace(' ','')+'</div>'
       + '<div class="kbody"><div class="kt">'+cmEsc(s.title)+(s.status==='cancelled'?' · cancelled':'')+'</div>'
-      + '<div class="km">'+[s.coach_name, s.location, (s.duration_min||60)+' min'].filter(Boolean).map(cmEsc).join(' · ')+'</div></div>'
+      + '<div class="km">'+[s.coach_name, s.location, (s.checked_in?s.checked_in+' checked in':null)].filter(Boolean).map(cmEsc).join(' · ')+'</div></div>'
       + '<div class="ktick '+(s.i_attended?'on':'')+'">✓</div></div>';
   });
   return h;
@@ -8327,12 +8377,14 @@ async function clbAttendance(){
   const thisMonth=new Date(); thisMonth.setDate(1); thisMonth.setHours(0,0,0,0);
   const [months, rows, board] = await Promise.all([
     cmQ(()=> sb.from('club_month_attendance').select('*').eq('user_id',HF.userId).order('month',{ascending:false}).limit(12)),
-    cmQ(()=> sb.from('club_attendance').select('checked_in_at').eq('user_id',HF.userId).order('checked_in_at',{ascending:false}).limit(400)),
+    cmQ(()=> sb.from('club_attendance').select('checked_in_at,session_id').eq('user_id',HF.userId).order('checked_in_at',{ascending:false}).limit(400)),
     cmQ(()=> sb.from('club_consistency').select('*').eq('club_id',clbMe.club_id)
         .eq('month', thisMonth.toISOString().slice(0,10)).order('rank_in_club').limit(100))
   ]);
   const list=rows||[];
-  if(!list.length) return '<div class="cmempty"><b>No check-ins yet</b><p>Scan the code at the gym and your first club session lands here — and in your streak and Hybrid Score.</p></div>';
+  if(!list.length) return '<div class="cmempty"><b>No check-ins yet</b>'
+    + '<p>Scan the code at the gym and your first club session lands here — and in your streak and Hybrid Score.</p>'
+    + '<button class="go" onclick="clbSetTab(\'schedule\')">See what is on</button></div>';
   const streak=clbWeekStreak(list.map(r=>r.checked_in_at));
   // longest run of weeks, computed over everything logged
   const weekOf=d=>{ const t=new Date(d); t.setHours(0,0,0,0); t.setDate(t.getDate()-((t.getDay()+6)%7)); return t.getTime(); };
@@ -8348,11 +8400,16 @@ async function clbAttendance(){
   // this month, as a calendar the eye can read in one go
   const now=new Date(), y=now.getFullYear(), mo=now.getMonth();
   const first=new Date(y,mo,1), days=new Date(y,mo+1,0).getDate(), lead=(first.getDay()+6)%7;
-  const hit={}; list.forEach(r=>{ const d=new Date(r.checked_in_at); if(d.getFullYear()===y&&d.getMonth()===mo) hit[d.getDate()]=1; });
+  const hit={}; clbDayIndex={};
+  list.forEach(r=>{ const d=new Date(r.checked_in_at);
+    if(d.getFullYear()===y&&d.getMonth()===mo){ hit[d.getDate()]=1; (clbDayIndex[d.getDate()]=clbDayIndex[d.getDate()]||[]).push(r); } });
   h+='<div class="sechead">'+first.toLocaleString(undefined,{month:'long'})+'</div><div class="clbcal">'
     + ['M','T','W','T','F','S','S'].map(d=>'<span class="dh">'+d+'</span>').join('')
     + new Array(lead).fill('<span></span>').join('');
-  for(let i=1;i<=days;i++) h+='<span class="'+(hit[i]?'on':'')+(i===now.getDate()?' now':'')+'">'+i+'</span>';
+  // a trained day is worth opening: it says which session it was
+  for(let i=1;i<=days;i++)
+    h+='<span class="'+(hit[i]?'on':'')+(i===now.getDate()?' now':'')+'"'
+      + (hit[i]?' onclick="clbOpenDay('+i+')"':'')+'>'+i+'</span>';
   h+='</div>';
 
   if(months && months.length){
@@ -8390,6 +8447,27 @@ async function clbBoardHTML(board){
   return '<div class="sechead">Club this month</div>'
     + top.map(row).join('') + tail
     + '<div class="cmnote">Sessions attended at the club, this calendar month. Members of this club only.</div>';
+}
+
+/* Tapping a trained day should answer "what did I do", not just glow. */
+let clbDayIndex = {};
+async function clbOpenDay(day){
+  const rows = clbDayIndex[day] || [];
+  if(!rows.length) return;
+  const ids = rows.map(r=>r.session_id).filter(Boolean);
+  const sess = ids.length
+    ? (await cmQ(()=> sb.from('club_schedule').select('id,title,starts_at,coach_name,duration_min').in('id', ids)) || [])
+    : [];
+  const by = {}; sess.forEach(x=>{ by[x.id]=x; });
+  const now = new Date();
+  const label = new Date(now.getFullYear(), now.getMonth(), day)
+      .toLocaleDateString(undefined,{weekday:'long', day:'numeric', month:'long'});
+  $('modal-sheet').innerHTML = '<h3>'+cmEsc(label)+'</h3>'
+    + rows.map(r=>{ const x=by[r.session_id];
+        return '<div class="pfrow"><span class="l" style="color:#fff;">'+cmEsc(x?x.title:'Club session')+'</span>'
+             + '<span class="v">'+clbTime(r.checked_in_at)+'</span></div>'; }).join('')
+    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Close</button></div>';
+  $('modal').classList.add('on');
 }
 
 /* ---- my club ---- */
