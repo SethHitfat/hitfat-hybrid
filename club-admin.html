@@ -69,7 +69,7 @@ const SUPA_KEY = 'sb_publishable_6tKH033Hb74EV7QlKBCFFA_5K_Lsxgv';   // publisha
 const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 const $ = id => document.getElementById(id);
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let me=null, staff=null, tab='today', codeTimer=null, curSession=null;
+let me=null, staff=null, tab='today', codeTimer=null, curSession=null, isHitfat=false;
 
 function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(window._t); window._t=setTimeout(()=>t.classList.remove('on'),2200); }
 async function q(fn){ try{ const r=await fn(); if(r&&r.error){ console.warn(r.error); toast(r.error.message||'Request failed'); return null; } return r?r.data:null; }catch(e){ console.warn(e); return null; } }
@@ -118,6 +118,9 @@ async function boot(){
       <button style="margin-top:12px;" onclick="signOut()">Sign out</button></div>`;
     return;
   }
+  // only HITFAT itself reviews who joins the network
+  const hq = await q(()=> sb.rpc('hitfat_is_admin'));
+  isHitfat = hq === true;
   const club = await q(()=> sb.from('club_list').select('name').eq('id', staff.club_id).maybeSingle());
   $('who').innerHTML = esc((club&&club.name)||'Club') + ' · ' + esc(staff.role) + ' · ' + esc(me.email||'')
     + ' <button class="sm" style="margin-left:8px;" onclick="signOut()">Sign out</button>';
@@ -126,10 +129,11 @@ async function boot(){
 
 function render(){
   const t=(k,l)=>`<button class="${tab===k?'on':''}" onclick="setTab('${k}')">${l}</button>`;
-  $('app').innerHTML = `<div class="tabs">${t('today','Today')}${t('sessions','Sessions')}${t('members','Members')}${t('news','Announcements')}</div><div id="body"></div>`;
+  $('app').innerHTML = `<div class="tabs">${t('today','Today')}${t('sessions','Sessions')}${t('members','Members')}${t('news','Announcements')}${isHitfat?t('partners','Partners'):''}</div><div id="body"></div>`;
   if(tab==='today') viewToday();
   else if(tab==='sessions') viewSessions();
   else if(tab==='members') viewMembers();
+  else if(tab==='partners') viewPartners();
   else viewNews();
 }
 function setTab(k){ if(codeTimer){ clearInterval(codeTimer); codeTimer=null; } tab=k; render(); }
@@ -347,6 +351,42 @@ async function noteFor(userId, name){
     coach_name: (me.user_metadata && me.user_metadata.name) || 'Coach', body: body.trim()
   }).select());
   if(r) toast('Note saved ✓');
+}
+
+/* ---------- partner applications (HITFAT only) ----------
+   Approving is one call to a database function rather than a series of writes
+   from here: half an approval — a club with no admin, an admin pointing at no
+   club — is worse than none, and a browser can close mid-way. */
+async function viewPartners(){
+  const rows = await q(()=> sb.from('club_applications').select('*').order('created_at',{ascending:false}).limit(50)) || [];
+  const pending = rows.filter(r=> r.status==='pending');
+  const done    = rows.filter(r=> r.status!=='pending');
+  const card = r => `<div class="card">
+      <div class="row"><div class="g">
+        <div class="t">${esc(r.gym_name)} ${r.status!=='pending'?`<span class="pill ${r.status==='approved'?'ok':''}">${esc(r.status)}</span>`:''}</div>
+        <div class="m">${esc([r.city, r.state].filter(Boolean).join(', ') || '—')}</div>
+        <div class="m">${esc(r.owner_name||'')}${r.phone?' · '+esc(r.phone):''}${r.email?' · '+esc(r.email):''}</div>
+        ${r.instagram?`<div class="m">${esc(r.instagram)}</div>`:''}
+        ${r.classes?`<div class="note">${esc(r.classes)}</div>`:''}
+      </div></div>
+      ${r.status==='pending' ? `<div class="row" style="margin-top:10px;gap:6px;">
+        <button class="p sm" onclick="approveApp('${r.id}')">Approve</button>
+        <button class="sm dg" onclick="rejectApp('${r.id}')">Reject</button></div>` : ''}
+    </div>`;
+  $('body').innerHTML = `<h2>${pending.length} waiting</h2>`
+    + (pending.length ? pending.map(card).join('') : '<div class="card"><div class="m">No applications waiting.</div></div>')
+    + (done.length ? `<h2>Reviewed</h2>` + done.map(card).join('') : '');
+}
+async function approveApp(id){
+  if(!confirm('Approve this gym? It becomes a partner club and the applicant becomes its admin.')) return;
+  const r = await q(()=> sb.rpc('club_application_approve', { p_id: id }));
+  if(!r) return;
+  toast(r.already ? 'Already approved' : 'Approved ✓'); viewPartners();
+}
+async function rejectApp(id){
+  const note = prompt('Reason (optional, kept internal):') || null;
+  const r = await q(()=> sb.rpc('club_application_reject', { p_id: id, p_note: note }));
+  if(r) { toast('Rejected'); viewPartners(); }
 }
 
 /* ---------- announcements ---------- */

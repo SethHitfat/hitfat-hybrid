@@ -9146,9 +9146,58 @@ function netPaintList(){
     + '</div><div class="chev">›</div></div>').join('');
 }
 
-function netApply(){
+/* An application is a real submission with a real answer at the other end, so
+   the form says what it is: sent, then reviewed by a person. No promise about
+   how long that takes, because nobody can keep one. */
+async function netApply(){
+  if(!cmOn()){ nfToast('Sign in to apply.'); return; }
+  const mine = await cmQ(()=> sb.from('club_applications')
+      .select('id,gym_name,status,created_at,review_note')
+      .eq('created_by', HF.userId).order('created_at',{ascending:false}).limit(1).maybeSingle());
+  if(mine && mine.status === 'pending'){
+    $('modal-sheet').innerHTML = '<h3>Application received</h3>'
+      + '<p class="msub">'+cmEsc(mine.gym_name)+' is with HITFAT for review. A coach will be in touch — you will not need to apply again.</p>'
+      + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Close</button></div>';
+    $('modal').classList.add('on'); return;
+  }
+  if(mine && mine.status === 'approved'){
+    $('modal-sheet').innerHTML = '<h3>Already in the network</h3>'
+      + '<p class="msub">'+cmEsc(mine.gym_name)+' is a partner club. Open the coach console to run its sessions.</p>'
+      + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Close</button>'
+      + '<button class="confirm" onclick="location.href=\'club-admin.html\'">Coach console</button></div>';
+    $('modal').classList.add('on'); return;
+  }
+  const f=(id,label,ph,type)=>'<div class="field"><label>'+label+'</label>'
+    + '<input class="textinput" id="'+id+'" type="'+(type||'text')+'" placeholder="'+(ph||'')+'"></div>';
   $('modal-sheet').innerHTML = '<h3>Apply to join the network</h3>'
-    + '<p class="msub">Partner applications open shortly. In the meantime, message HITFAT and a coach will talk you through it.</p>'
+    + '<p class="msub">Selected gyms join the HITFAT Hybrid Network. Your club keeps its own name, and your members train free on the platform.</p>'
+    + f('na-gym','Gym name','ABC Performance')
+    + f('na-owner','Your name','')
+    + f('na-phone','Phone','01x-xxxxxxx','tel')
+    + f('na-email','Email','','email')
+    + '<div class="field"><label>State</label><select class="textinput" id="na-state">'
+      + '<option value="">Select</option>' + MY_STATES.map(x=>'<option>'+x+'</option>').join('') + '</select></div>'
+    + f('na-city','City','Shah Alam')
+    + f('na-ig','Instagram','@yourgym')
+    + '<div class="field"><label>Hybrid classes you already run</label>'
+      + '<textarea class="noteinput" id="na-classes" placeholder="e.g. two HYROX-style classes a week, Tue and Sat"></textarea></div>'
+    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Cancel</button>'
+    + '<button class="confirm" onclick="netSubmitApply()">Send application</button></div>';
+  $('modal').classList.add('on');
+}
+async function netSubmitApply(){
+  const v=id=>{ const e=$(id); return e ? e.value.trim() : ''; };
+  if(!v('na-gym') || !v('na-owner')){ nfToast('Gym name and your name are needed'); return; }
+  const ok = await cmWrite(()=> sb.from('club_applications').insert({
+    gym_name:v('na-gym'), owner_name:v('na-owner'), phone:v('na-phone')||null,
+    email:v('na-email')||null, state:v('na-state')||null, city:v('na-city')||null,
+    instagram:v('na-ig')||null, classes:v('na-classes')||null, created_by:HF.userId
+  }));
+  closeModal();
+  if(!ok){ cmFail('Could not send the application.'); return; }
+  try{ track('partner_apply',{}); }catch(e){}
+  $('modal-sheet').innerHTML = '<h3>Application sent</h3>'
+    + '<p class="msub">HITFAT reviews every gym before it joins. A coach will be in touch.</p>'
     + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Close</button></div>';
   $('modal').classList.add('on');
 }
