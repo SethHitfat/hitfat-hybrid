@@ -1029,6 +1029,25 @@
   .reslevel span{display:block;font-size:11.5px;color:var(--dim);margin-top:2px;}
   .resbadges{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px;justify-content:center;}
   .resbadges .rb{background:#141414;border:1px solid rgba(255,224,0,.35);color:#fff;font-size:11px;font-weight:700;padding:6px 10px;border-radius:99px;}
+  .netcard{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);
+           border-radius:16px;padding:13px 14px;margin-bottom:9px;cursor:pointer;}
+  .netcard .chev{color:var(--dim2);font-size:20px;flex:none;}
+  .nc-body{flex:1;min-width:0;}
+  .nc-name{font-size:15px;font-weight:700;color:#fff;line-height:1.25;}
+  .nc-place{font-size:12.5px;color:var(--dim);margin-top:2px;}
+  .nc-sub{font-size:10.5px;color:var(--hyrox);letter-spacing:.6px;text-transform:uppercase;font-weight:700;margin-top:4px;}
+  .nc-stats{font-size:11.5px;color:var(--dim2);margin-top:5px;}
+  .nc-stats b{color:#ddd;}
+  .netlogo{border-radius:14px;object-fit:cover;border:1px solid var(--line);flex:none;}
+  .netlogo.fallback{display:grid;place-items:center;background:#1a1a1a;color:var(--hyrox);font-family:'Oswald';font-weight:700;}
+  .netpill{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;
+           padding:3px 7px;border-radius:99px;border:1px solid var(--line);color:var(--dim);vertical-align:middle;}
+  .netpill.hq{color:var(--hyrox);border-color:rgba(255,224,0,.45);}
+  .netphoto{height:150px;border-radius:18px;background-size:cover;background-position:center;
+            border:1px solid var(--line);margin-bottom:-38px;}
+  .netapply{margin-top:26px;padding:18px 16px;border-radius:18px;border:1px dashed var(--line);background:#101010;}
+  .netapply .na-t{font-family:'Oswald';font-size:18px;letter-spacing:.4px;}
+  .netapply .na-m{font-size:12.5px;color:var(--dim);line-height:1.55;margin-top:6px;}
   .clbnext{background:linear-gradient(155deg,#1c1b14 0%,#111 60%);border:1px solid rgba(255,224,0,.30);
            border-radius:18px;padding:16px 16px 15px;}
   .clbnext .cn-top{display:flex;align-items:center;justify-content:space-between;gap:10px;}
@@ -1292,6 +1311,7 @@
       <div id="notifs" style="display:none;"></div>
       <div id="club" style="display:none;"></div>
       <div id="hclub" style="display:none;"></div>
+      <div id="clubs" style="display:none;"></div>
 
       <div id="progress" style="display:none;">
         <div class="hgroup"><div class="k">Your Training</div><h2>PROGRESS</h2><p>Your Hybrid Score, streak and history — all saved to your account.</p></div>
@@ -2745,7 +2765,7 @@ function showCategories(){ $('list').style.display='none'; $('detail').style.dis
 /* ============ TAB NAVIGATION ============ */
 /* every full-screen panel — openers must hide them ALL, otherwise the panel they came
    from stays visible underneath and the new screen looks like it never opened. */
-const PANELS=['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail','store','tsess','tmhome','community','athlete','thread','notifs','club','hclub'];
+const PANELS=['list','detail','prodetail','home','categories','plans','pro','target','progress','profile','explore','coaches','progdetail','store','tsess','tmhome','community','athlete','thread','notifs','club','hclub','clubs'];
 function hidePanels(){ PANELS.forEach(id=>{ const e=$(id); if(e) e.style.display='none'; }); }
 function switchTab(tab){
   track('tab',{tab});
@@ -2778,6 +2798,8 @@ function switchTab(tab){
     $('target').style.display='block'; setActive('tab-explore'); showTargetGrid();
   } else if(tab==='hclub'){
     $('hclub').style.display='block'; renderHClub();
+  } else if(tab==='clubs'){
+    $('clubs').style.display='block'; setActive('tab-community'); renderClubs();
   } else if(tab==='community'){
     $('community').style.display='block'; setActive('tab-community'); renderCommunity();
   } else if(tab==='progress'){
@@ -7650,15 +7672,30 @@ async function openClub(id){
   const real = members.filter(m=> !m.is_demo && !m.is_official);
   const mine = cmMe && cmMe.club_id === id;
 
+  /* A gym's timetable is public — it is the thing that makes someone walk in.
+     Everything private about a session stays in the club's own screen. */
+  const sched = await cmQ(()=> sb.from('club_schedule_public').select('*')
+      .eq('club_id', id).order('starts_at').limit(8)) || [];
+
   el.innerHTML = back
+    + (c.photo_url ? '<div class="netphoto" style="background-image:url(\''+cmEsc(c.photo_url)+'\')"></div>' : '')
     + '<div class="cmprof">'
-      + '<div class="clublogo big">'+cmEsc((c.name||'C').trim().charAt(0).toUpperCase())+'</div>'
+      + (typeof netLogo==='function' ? netLogo(c, 76) : '<div class="clublogo big">'+cmEsc((c.name||'C').trim().charAt(0).toUpperCase())+'</div>')
       + '<div class="cmpn">'+cmEsc(c.name)+'</div>'
+      + (typeof netPill==='function' ? '<div style="margin-top:6px;">'+netPill(c)+'</div>' : '')
+      + '<div class="cmpm" style="margin-top:6px;">HITFAT Hybrid Training Club</div>'
       + (c.state ? '<div class="cmpm">'+cmEsc([c.city,c.state].filter(Boolean).join(', '))+'</div>' : '')
       + (c.description ? '<div class="cmpm">'+cmEsc(c.description)+'</div>' : '')
-      + '<div class="cmpstats"><div><b>'+(c.member_count||0)+'</b><small>Members</small></div></div>'
+      + '<div class="cmpstats"><div><b>'+(c.member_count||0)+'</b><small>Athletes</small></div>'
+      + (c.active_count ? '<div><b>'+c.active_count+'</b><small>Training now</small></div>' : '')+'</div>'
       + '<button class="go'+(mine?' sec':'')+'" onclick="cmJoinClub(\''+cmEsc(id)+'\',this)">'+(mine?'Joined':'Join club')+'</button>'
     + '</div>'
+    + (sched.length
+        ? '<div class="sechead" style="margin-top:22px;">This week</div>'
+          + sched.map(x=>'<div class="klses" style="cursor:default;"><div class="kday">'+clbTime(x.starts_at).replace(' ','')+'</div>'
+            + '<div class="kbody"><div class="kt">'+cmEsc(x.title)+'</div>'
+            + '<div class="km">'+[clbWhen(x.starts_at).split(' · ')[0], x.coach_name, x.location].filter(Boolean).map(cmEsc).join(' · ')+'</div></div></div>').join('')
+        : '')
     + '<div class="sechead" style="margin-top:22px;">Athletes</div>'
     + (real.length ? real.map(cmAthleteRow).join('')
                    : '<div class="cmempty"><b>No athletes yet</b><p>Be the first to join.</p></div>');
@@ -7894,8 +7931,9 @@ async function cmBuildDiscover(){
     // clubs sit below the people and scroll sideways: six full-width rows of
     // empty clubs pushed the athletes off the screen entirely
     + ((clubs && clubs.length && !filtering)
-        ? '<div class="sechead" style="margin:24px 0 10px;">'
-            + (clubs.length > 1 ? 'Clubs in Malaysia' : 'Training club') + '</div>'
+        ? '<div class="sechead" style="margin:24px 0 10px;display:flex;align-items:baseline;justify-content:space-between;">'
+            + (clubs.length > 1 ? 'Clubs in Malaysia' : 'Training club')
+            + '<span class="all" onclick="switchTab(\'clubs\')">See all ›</span></div>'
           + '<div class="hscroll">' + clubs.map(cmClubCard).join('') + '</div>'
           + (clubs.length === 1
               ? '<div class="cmnote">More clubs open as gyms around Malaysia join.</div>'
@@ -8309,6 +8347,9 @@ async function clbOverview(){
   }
 
   h+= clbRaceCardHTML(race);
+  // the club is one of several now, so the network is one tap from inside it
+  h+= '<div class="cmnote" style="margin-top:18px;text-align:center;">'
+    + 'Part of the HITFAT Hybrid Network · <b style="color:var(--acc);cursor:pointer;" onclick="switchTab(\'clubs\')">See every club ›</b></div>';
   setTimeout(()=>{ try{ clbTick(next); }catch(e){} }, 0);
   return h;
 }
@@ -9012,6 +9053,104 @@ async function pushNotify(toUserId, type){
   if(!pushConfigured() || !toUserId || toUserId===HF.userId) return;
   try{ await sb.functions.invoke('push', { body:{ to: toUserId, type: type } }); }
   catch(e){ console.warn('[push] notify', e); }
+}
+
+
+/* ============================================================
+   ████  HITFAT HYBRID NETWORK — the clubs directory  ████
+
+   Partner gyms keep their own name and their own identity. "HITFAT Hybrid
+   Training Club" is the line underneath, never a replacement — a gym is not
+   renamed unless HITFAT actually owns it.
+
+   Nothing invented lives here. A demo athlete is labelled and harmless; an
+   invented gym is a claim about a business that does not exist, and someone
+   could drive to it. A short honest directory beats a long false one.
+   ============================================================ */
+let netClubs = null, netState = '', netQ = '';
+
+function netPill(c){
+  if(c.partner_status === 'hq')     return '<span class="netpill hq">HITFAT HQ</span>';
+  if(c.partner_status === 'paused') return '';
+  return '<span class="netpill">Partner Club</span>';
+}
+function netLogo(c, size){
+  const s = size || 46;
+  if(c.logo_url) return '<img class="netlogo" src="'+cmEsc(c.logo_url)+'" alt="" style="width:'+s+'px;height:'+s+'px;">';
+  return '<div class="netlogo fallback" style="width:'+s+'px;height:'+s+'px;font-size:'+Math.round(s*0.4)+'px;">'
+       + cmEsc((c.name||'C').trim().charAt(0).toUpperCase())+'</div>';
+}
+
+async function netLoad(force){
+  if(netClubs && !force) return netClubs;
+  netClubs = await cmQ(()=> sb.from('club_list').select('*').order('active_count',{ascending:false})) || [];
+  return netClubs;
+}
+
+async function renderClubs(){
+  const el = $('clubs'); if(!el) return;
+  if(!cmOn()){
+    el.innerHTML = '<div class="hgroup"><div class="k">HITFAT Hybrid</div><h2>CLUBS</h2>'
+      + '<p>Training clubs across Malaysia.</p></div>'
+      + '<div class="cmempty"><b>Sign in to see the clubs</b><p>The directory is part of the community.</p></div>';
+    return;
+  }
+  el.innerHTML = '<div class="hgroup"><div class="k">HITFAT Hybrid Network</div><h2>CLUBS</h2>'
+    + '<p>Independent gyms training hybrid across Malaysia. Each keeps its own name — the network is what they share.</p></div>'
+    + '<input class="textinput" id="net-q" placeholder="Search a club or a city" oninput="netSearch(this.value)" '
+    + 'value="'+cmEsc(netQ)+'" style="margin-bottom:10px;">'
+    + '<div class="cmscopes" id="net-states"></div>'
+    + '<div id="net-list">'+cmSkeleton(3)+'</div>'
+    + '<div class="netapply">'
+      + '<div class="na-t">Run a gym?</div>'
+      + '<div class="na-m">Selected gyms can join the HITFAT Hybrid Network. Your members train free on the platform, and your club keeps its own name.</div>'
+      + '<button class="go" style="margin-top:12px;" onclick="netApply()">Apply to join</button>'
+    + '</div>';
+  netPaintStates();
+  await netLoad();
+  netPaintList();
+}
+
+function netPaintStates(){
+  const bar = $('net-states'); if(!bar) return;
+  const states = ['', ...MY_STATES];
+  bar.innerHTML = states.map(s =>
+    '<button class="cmscope'+(netState===s?' on':'')+'" onclick="netSetState(\'' + s.replace(/'/g,"\\'") + '\')">'
+    + (s || 'All Malaysia') + '</button>').join('');
+}
+function netSetState(s){ netState = s; netPaintStates(); netPaintList(); }
+function netSearch(v){ netQ = v || ''; netPaintList(); }
+
+function netPaintList(){
+  const el = $('net-list'); if(!el) return;
+  const q = netQ.trim().toLowerCase();
+  const list = (netClubs||[]).filter(c=>{
+    if(netState && c.state !== netState) return false;
+    if(!q) return true;
+    return [c.name, c.city, c.state].filter(Boolean).join(' ').toLowerCase().indexOf(q) > -1;
+  });
+  if(!list.length){
+    el.innerHTML = '<div class="cmempty"><b>'+(netState?'No club in '+cmEsc(netState)+' yet':'No club found')+'</b>'
+      + '<p>The network is being built one gym at a time. If you train somewhere that should be here, tell them.</p></div>';
+    return;
+  }
+  el.innerHTML = list.map(c =>
+    '<div class="netcard" onclick="openClub(\'' + cmEsc(c.id) + '\')">'
+    + netLogo(c, 52)
+    + '<div class="nc-body">'
+      + '<div class="nc-name">'+cmEsc(c.name)+' '+netPill(c)+'</div>'
+      + '<div class="nc-place">'+cmEsc([c.city, c.state].filter(Boolean).join(', ') || 'Malaysia')+'</div>'
+      + '<div class="nc-sub">HITFAT Hybrid Training Club</div>'
+      + '<div class="nc-stats">'+(c.member_count||0)+' athlete'+((c.member_count||0)===1?'':'s')
+      + (c.active_count ? ' · <b>'+c.active_count+'</b> training this month' : '')+'</div>'
+    + '</div><div class="chev">›</div></div>').join('');
+}
+
+function netApply(){
+  $('modal-sheet').innerHTML = '<h3>Apply to join the network</h3>'
+    + '<p class="msub">Partner applications open shortly. In the meantime, message HITFAT and a coach will talk you through it.</p>'
+    + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Close</button></div>';
+  $('modal').classList.add('on');
 }
 
 </script>
