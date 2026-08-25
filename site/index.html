@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>HITFAT HYBRID — Hybrid & HYROX training in Malaysia</title>
+<meta name="description" content="Free hybrid training, a national community, and HYROX race preparation. Train free on the app, or train with us at HITFAT in Kota Bharu.">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta property="og:title" content="HITFAT HYBRID">
+<meta property="og:description" content="Free hybrid training, a national community, and HYROX race preparation.">
+<meta property="og:image" content="/og-image.png">
+<meta property="og:type" content="website">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#000; --surface:#121212; --line:#242424; --dim:#8f8f8f; --dim2:#616161;
+    --y:#FFE000; --ink:#111; --w:1080px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:#fff;font-family:'Inter',system-ui,sans-serif;font-size:16px;line-height:1.6;
+       -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:var(--w);margin:0 auto;padding:0 20px;}
+  a{color:inherit;text-decoration:none;}
+  h1,h2,h3{font-family:'Oswald',sans-serif;font-weight:700;letter-spacing:.4px;text-transform:uppercase;line-height:1.05;}
+  .y{color:var(--y);}
+
+  /* nav */
+  nav{position:sticky;top:0;z-index:50;background:rgba(0,0,0,.86);backdrop-filter:blur(14px);
+      border-bottom:1px solid var(--line);}
+  nav .in{display:flex;align-items:center;gap:22px;height:62px;}
+  nav .logo{font-family:'Oswald';font-size:19px;font-weight:700;letter-spacing:1px;flex:none;}
+  nav .links{display:flex;gap:20px;margin-left:auto;font-size:13.5px;color:var(--dim);font-weight:500;}
+  nav .links a:hover{color:#fff;}
+  nav .cta{background:var(--y);color:var(--ink);font-family:'Oswald';font-weight:700;letter-spacing:1px;
+           text-transform:uppercase;font-size:13px;padding:10px 17px;border-radius:99px;flex:none;}
+  @media(max-width:760px){ nav .links{display:none;} nav .in{gap:12px;} }
+
+  /* hero */
+  header{position:relative;overflow:hidden;border-bottom:1px solid var(--line);}
+  header .bg{position:absolute;inset:0;background:
+      radial-gradient(720px 380px at 78% -8%, rgba(255,224,0,.16), transparent 62%),
+      linear-gradient(180deg,#0b0b0b 0%, #000 72%);}
+  /* padding shorthand here would reset the horizontal padding .wrap supplies,
+     and the hero text would sit against the edge of a phone screen */
+  header .in{position:relative;padding-top:78px;padding-bottom:84px;max-width:760px;}
+  header .kick{font-family:'Oswald';font-size:12.5px;letter-spacing:3.4px;color:var(--y);margin-bottom:16px;}
+  header h1{font-size:clamp(40px,8.4vw,74px);}
+  header p{color:#c4c4c4;font-size:17px;margin-top:20px;max-width:560px;}
+  .row{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px;}
+  .btn{display:inline-block;font-family:'Oswald';font-weight:700;letter-spacing:1.3px;text-transform:uppercase;
+       font-size:14px;padding:15px 26px;border-radius:99px;border:1px solid var(--line);}
+  .btn.p{background:var(--y);color:var(--ink);border-color:transparent;}
+  .btn:hover{transform:translateY(-1px);}
+  .note{color:var(--dim2);font-size:13px;margin-top:16px;}
+
+  /* sections */
+  section{padding:76px 0;border-bottom:1px solid var(--line);}
+  .kick2{font-family:'Oswald';font-size:11.5px;letter-spacing:3px;color:var(--y);margin-bottom:12px;}
+  h2{font-size:clamp(28px,4.6vw,40px);}
+  .lead{color:var(--dim);margin-top:14px;max-width:620px;}
+  .grid{display:grid;gap:14px;margin-top:36px;}
+  .g3{grid-template-columns:repeat(3,1fr);}
+  .g2{grid-template-columns:repeat(2,1fr);}
+  @media(max-width:860px){ .g3,.g2{grid-template-columns:1fr;} section{padding:56px 0;} }
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:22px;}
+  .card h3{font-size:19px;margin-bottom:8px;}
+  .card p{color:var(--dim);font-size:14.5px;}
+  .card .tag{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--y);font-weight:700;margin-bottom:10px;}
+
+  /* price rows */
+  .prow{display:flex;align-items:baseline;gap:14px;padding:15px 0;border-bottom:1px solid var(--line);}
+  .prow:last-child{border-bottom:none;}
+  .prow .n{font-weight:600;flex:1;}
+  .prow .m{color:var(--dim2);font-size:13px;}
+  .prow .p{font-family:'Oswald';font-size:19px;color:var(--y);}
+  .prow .p.free{color:#2ec27e;}
+
+  /* network */
+  .netbox{background:linear-gradient(158deg,#1a180f 0%,#0d0d0d 62%);border:1px solid rgba(255,224,0,.28);
+          border-radius:22px;padding:30px;}
+  ul.ticks{margin-top:18px;list-style:none;}
+  ul.ticks li{color:#c9c9c9;font-size:15px;padding:7px 0 7px 26px;position:relative;}
+  ul.ticks li:before{content:'';position:absolute;left:0;top:15px;width:11px;height:2px;background:var(--y);}
+
+  footer{padding:52px 0 66px;color:var(--dim2);font-size:13.5px;}
+  footer .fl{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:20px;}
+  footer .fl a:hover{color:#fff;}
+</style>
+</head><body>
+
+<nav><div class="wrap in">
+  <div class="logo">HITFAT <span class="y">HYBRID</span></div>
+  <div class="links">
+    <a href="#train">Train</a>
+    <a href="#programs">Programs</a>
+    <a href="#network">Network</a>
+    <a href="#hq">HQ</a>
+  </div>
+  <a class="cta" href="https://hybrid.hitfat.io">Open the app</a>
+</div></nav>
+
+<header>
+  <div class="bg"></div>
+  <div class="wrap in">
+    <div class="kick">HYBRID &middot; HYROX &middot; MALAYSIA</div>
+    <h1>Train like the<br>race is <span class="y">real</span></h1>
+    <p>Running and strength in the same session, the eight HYROX stations, and the engine to hold it together.
+       Start free — programs, the workout library, timers and the community cost nothing.</p>
+    <div class="row">
+      <a class="btn p" href="https://hybrid.hitfat.io">Start free</a>
+      <a class="btn" href="#network">Bring your gym in</a>
+    </div>
+    <div class="note">Works in your browser. Add it to your home screen and it behaves like an app.</div>
+  </div>
+</header>
+
+<section id="train">
+  <div class="wrap">
+    <div class="kick2">FREE TO START</div>
+    <h2>What you get<br>without paying</h2>
+    <p class="lead">Most of this platform is free, on purpose. You should be training before anyone asks you for money.</p>
+    <div class="grid g3">
+      <div class="card"><div class="tag">Programs</div><h3>Free plans</h3>
+        <p>Hybrid Starter and Foundation Starter — structured weeks you can follow from today, no race ticket needed.</p></div>
+      <div class="card"><div class="tag">Library</div><h3>Video sessions</h3>
+        <p>A full workout library by category, plus target sessions for whichever station is holding you back.</p></div>
+      <div class="card"><div class="tag">Tools</div><h3>Timers &amp; tracking</h3>
+        <p>EMOM, intervals and a race clock. Every session logged builds your Hybrid Score, streak and personal bests.</p></div>
+      <div class="card"><div class="tag">Community</div><h3>Malaysian athletes</h3>
+        <p>Follow other athletes, share sessions, and see who is training near you — state by state.</p></div>
+      <div class="card"><div class="tag">Challenges</div><h3>Monthly challenges</h3>
+        <p>One target a month for the whole community, free to join, with standings that count real training only.</p></div>
+      <div class="card"><div class="tag">Race</div><h3>HYROX preparation</h3>
+        <p>Simulations, station strategy, pacing and a race-day checklist — built around the format you will actually meet.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="programs">
+  <div class="wrap">
+    <div class="kick2">GO DEEPER</div>
+    <h2>Premium programs</h2>
+    <p class="lead">Structured multi-week builds for a specific goal. Every one opens its first week free, so you train
+       it before you decide.</p>
+    <div class="card" style="margin-top:32px;">
+      <div class="prow"><div class="n">Road to HYROX KL<div class="m">12 weeks &middot; race-specific for Kuala Lumpur</div></div><div class="p">RM199</div></div>
+      <div class="prow"><div class="n">12-Week Race Ready<div class="m">Base &rarr; Pace &rarr; Accelerate &rarr; Prime &rarr; Race</div></div><div class="p">RM149</div></div>
+      <div class="prow"><div class="n">8-Week Race Prep<div class="m">A complete final block</div></div><div class="p">RM99</div></div>
+      <div class="prow"><div class="n">13-Week Foundation<div class="m">The full build — base phase is free</div></div><div class="p">RM79</div></div>
+      <div class="prow"><div class="n">Build Your Engine &middot; Hybrid Strength &middot; Run Better &middot; Station Builder<div class="m">Six weeks each, one weakness at a time</div></div><div class="p">RM59</div></div>
+      <div class="prow"><div class="n">HYROX First Timer<div class="m">Four weeks to your first race</div></div><div class="p">RM19</div></div>
+      <div class="prow"><div class="n">Hybrid Starter &middot; Foundation Starter<div class="m">Free, forever</div></div><div class="p free">Free</div></div>
+    </div>
+    <div class="row"><a class="btn p" href="https://hybrid.hitfat.io">See the programs</a></div>
+    <div class="note">Buy once, unlocked in your account. No subscription.</div>
+  </div>
+</section>
+
+<section id="network">
+  <div class="wrap">
+    <div class="kick2">FOR GYM OWNERS</div>
+    <h2>The HITFAT<br>Hybrid Network</h2>
+    <p class="lead">Selected gyms across Malaysia, each keeping its own name and its own members — sharing one
+       platform and one national community.</p>
+    <div class="netbox" style="margin-top:32px;">
+      <h3 style="font-size:21px;">What your club gets</h3>
+      <ul class="ticks">
+        <li>Your own club page — name, logo, city and weekly timetable</li>
+        <li>QR check-in that updates each member's streak and score as they scan</li>
+        <li>Attendance for every session, and a flag when a member has stopped coming</li>
+        <li>A coach console for your schedule, members, notes and announcements</li>
+        <li>Your members on the platform for free, in a national community rather than a private app</li>
+      </ul>
+      <div class="row">
+        <a class="btn p" href="https://hybrid.hitfat.io">Apply to join</a>
+      </div>
+      <div class="note">Applications are reviewed by HITFAT. Not every gym is accepted — the network is built one club at a time.</div>
+    </div>
+    <div class="grid g2" style="margin-top:14px;">
+      <div class="card"><h3>You keep your brand</h3>
+        <p>A partner club is listed under its own name. HITFAT Hybrid is the line underneath, never a replacement for it.</p></div>
+      <div class="card"><h3>No lock-in on your members</h3>
+        <p>Your members' accounts are theirs. If they move city, they keep their training history and join the club there.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="hq">
+  <div class="wrap">
+    <div class="kick2">TRAIN WITH US</div>
+    <h2>HITFAT HQ<br>Kota Bharu</h2>
+    <p class="lead">The club the platform was built for — coach-led hybrid sessions, HYROX preparation, and the
+       people who show up week after week.</p>
+    <div class="grid g2" style="margin-top:32px;">
+      <div class="card"><h3>Coach-led sessions</h3>
+        <p>Hybrid strength, engine work and station practice, programmed by a HYROX Performance Coach (Level 1).</p></div>
+      <div class="card"><h3>Where we are</h3>
+        <p>Kota Bharu, Kelantan.
+           <a class="y" href="https://maps.google.com/?q=Hitfat+Kota+Bharu" target="_blank" rel="noopener">Open in Maps &rsaquo;</a></p></div>
+    </div>
+  </div>
+</section>
+
+<footer><div class="wrap">
+  <div class="fl">
+    <a href="https://hybrid.hitfat.io">Open the app</a>
+    <a href="/privacy">Privacy</a>
+    <a href="/terms">Terms</a>
+  </div>
+  <div>Programming designed by a HYROX Performance Coach (Level 1). Delivered by HITFAT.<br>
+       Structured hybrid training and race-preparation support. Not an official HYROX programme.</div>
+  <div style="margin-top:14px;">&copy; <span id="yr">2026</span> HITFAT. All rights reserved.</div>
+</div></footer>
+
+<script>document.getElementById('yr').textContent = new Date().getFullYear();</script>
+</body></html>
