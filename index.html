@@ -1519,8 +1519,8 @@
 <!-- ============ AUTH / LOGIN (Supabase) ============ -->
 <div id="auth"><div class="auth-in">
   <div class="logo"><span>HITFAT</span> <span class="y">HYBRID</span></div>
-  <button class="bigbtn" style="margin-bottom:18px;" onclick="gqStart()">Kira Score Aku — Percuma</button>
-  <div class="authdiv" style="margin-top:0;">or sign in</div>
+  <button class="bigbtn" id="auth-quiz" style="margin-bottom:18px;" onclick="gqStart()">Kira Score Aku — Percuma</button>
+  <div class="authdiv" id="auth-quizdiv" style="margin-top:0;">or sign in</div>
   <h1 id="auth-title">Sign In</h1>
   <div class="lead" id="auth-lead">Log in to sync your plan and progress across devices.</div>
   <button class="gbtn" onclick="signInGoogle()">
@@ -4713,7 +4713,18 @@ function hideSplash(){
   setTimeout(()=>{ el.classList.add('gone'); setTimeout(()=>{ el.style.display='none'; }, 480); },
              Math.max(0, SPLASH_MIN-(Date.now()-splashT0)));
 }
-function showAuth(){ $('auth').classList.add('on'); hideSplash(); }
+function showAuth(){
+  $('auth').classList.add('on'); hideSplash();
+  /* Offering "calculate my score" to someone who just calculated it reads as if
+     the app was not paying attention. It stays only for an athlete who reached
+     this screen without taking the quiz. */
+  try{
+    const taken = !!gqLoad();
+    const b=$('auth-quiz'), d=$('auth-quizdiv');
+    if(b) b.style.display = taken ? 'none' : '';
+    if(d) d.style.display = taken ? 'none' : '';
+  }catch(e){}
+}
 /* A visitor meets the product, not a password field. Sign-in still exists — it
    is reached after the score, where it has something to save. */
 function showLanding(){ $('land').classList.add('on'); hideAuth(); hideSplash(); }
@@ -9471,9 +9482,20 @@ function gqToAuth(){
   gqClose();
   if(typeof hideLanding === 'function') hideLanding();
   if(typeof showAuth === 'function') showAuth();
-  // the sign-in screen says why it is being shown
+
+  /* Somebody who just finished the quiz needs to CREATE an account. Leaving the
+     form in sign-in mode made the screen contradict itself — title "Sign In",
+     lead "Create an account", submit "Sign In" — and left the actual work to a
+     link they had to notice. */
+  if(typeof _authMode !== 'undefined' && _authMode === 'signin' && typeof authToggle === 'function') authToggle();
+
+  const g = gqLoad();
+  const t = $('auth-title'); if(t) t.textContent = 'Save Your Score';
   const lead = $('auth-lead');
-  if(lead) lead.textContent = 'Create an account and your Hybrid Score is saved to it.';
+  if(lead) lead.textContent = g && g.score
+      ? 'Your Hybrid Score of ' + g.score + ' is saved to your account, and everything else — training, tracking, the community — is free too.'
+      : 'Create an account and your Hybrid Score is saved to it.';
+  const sub = $('auth-submit'); if(sub) sub.textContent = 'Save my score';
 }
 
 /* ---- migration ----
