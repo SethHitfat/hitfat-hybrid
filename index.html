@@ -1097,6 +1097,36 @@
   .bchip .bs{font-size:10px;color:var(--dim);margin-top:3px;font-weight:600;}
   .bchip .bbar{height:3px;border-radius:2px;background:#242424;margin-top:7px;overflow:hidden;}
   .bchip .bbar i{display:block;height:100%;background:var(--hyrox);}
+  /* ---- guest score ---- */
+  /* above #auth (10002): the quiz is opened FROM the sign-in screen, so anything
+     lower would render behind it and look like a dead button */
+  #gq{position:fixed;inset:0;z-index:10050;background:var(--bg);overflow-y:auto;
+      -webkit-overflow-scrolling:touch;display:none;}
+  #gq.on{display:block;}
+  .gq-in{max-width:520px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 26px) 20px
+         calc(env(safe-area-inset-bottom) + 40px);}
+  .gq-top{display:flex;align-items:center;gap:12px;margin-bottom:26px;}
+  .gq-back{background:none;border:none;color:var(--dim);font-size:22px;cursor:pointer;padding:0 4px;line-height:1;}
+  .gq-bar{flex:1;height:3px;border-radius:2px;background:#1e1e1e;overflow:hidden;}
+  .gq-bar i{display:block;height:100%;background:var(--hyrox);transition:width .25s;}
+  .gq-num{font-size:11.5px;color:var(--dim);font-weight:700;letter-spacing:.5px;}
+  .gq-q{font-family:'Oswald';font-size:25px;font-weight:700;line-height:1.2;margin-bottom:20px;}
+  .gq-opts{display:flex;flex-direction:column;gap:10px;}
+  .gq-opt{width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);
+          border-radius:15px;padding:16px 17px;color:#fff;font:inherit;cursor:pointer;}
+  .gq-opt:active{border-color:rgba(255,224,0,.55);}
+  .gq-opt.on{border-color:var(--hyrox);}
+  .gq-opt .l{display:block;font-size:15.5px;font-weight:600;}
+  .gq-opt .s{display:block;font-size:12.5px;color:var(--dim);margin-top:3px;}
+  .gq-res{text-align:center;}
+  .gq-kick{font-family:'Oswald';font-size:11.5px;letter-spacing:3px;color:var(--hyrox);}
+  .gq-est{font-size:12.5px;color:var(--dim);line-height:1.55;max-width:330px;margin:0 auto;}
+  .gq-weak{font-size:13px;color:#cfcfcf;margin-top:18px;}
+  .gq-weak b{color:var(--hyrox);}
+  .gq-save{margin-top:30px;padding:20px 18px;border-radius:18px;
+           border:1px solid rgba(255,224,0,.30);background:linear-gradient(158deg,#1b1a12 0%,#111 65%);}
+  .gq-save .gs-t{font-family:'Oswald';font-size:20px;letter-spacing:.4px;}
+  .gq-save .gs-m{font-size:13px;color:var(--dim);line-height:1.6;margin-top:7px;}
   .joinbar .wish{flex:0 0 auto;order:1;width:54px;height:54px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--dim);font-size:20px;cursor:pointer;}
   .joinbar .wish.on{color:var(--hyrox);border-color:var(--hyrox);}
   .phaselist2 .ph2{display:flex;align-items:center;gap:13px;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:13px 14px;margin-bottom:9px;}
@@ -1468,6 +1498,8 @@
 <!-- ============ AUTH / LOGIN (Supabase) ============ -->
 <div id="auth"><div class="auth-in">
   <div class="logo"><span>HITFAT</span> <span class="y">HYBRID</span></div>
+  <button class="bigbtn" style="margin-bottom:18px;" onclick="gqStart()">Kira Score Aku — Percuma</button>
+  <div class="authdiv" style="margin-top:0;">or sign in</div>
   <h1 id="auth-title">Sign In</h1>
   <div class="lead" id="auth-lead">Log in to sync your plan and progress across devices.</div>
   <button class="gbtn" onclick="signInGoogle()">
@@ -1485,6 +1517,9 @@
   <div class="authtoggle" id="auth-switch">New here? <a onclick="authToggle()">Create an account</a></div>
   <div class="authnote">By continuing you agree to train at your own pace and responsibility. This app provides structured training, not medical advice. <a href="/terms" style="color:var(--hyrox);">Terms</a> · <a href="/privacy" style="color:var(--hyrox);">Privacy</a></div>
 </div></div>
+
+<!-- Guest Hybrid Score: the public door. Shown over everything, needs no session. -->
+<div id="gq"><div class="gq-in" id="gq-in"></div></div>
 
 <!-- Supabase client (loaded from CDN — needs internet + a hosted URL for Google login) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -2018,9 +2053,17 @@ function axisStrength(){
 }
 /* the old formula stays as the starting point, so day one still shows something */
 function seedScores(){
+  const bump = Math.min(38, Math.round((HF.totalDone()||0)*0.7));
+  /* An account that came through the guest quiz starts from its own estimate.
+     Every other account behaves exactly as it did before — no existing score
+     moves because of this. */
+  const g = HF.data.guestSeed;
+  if(g && g.scores){
+    return { engine:g.scores.engine+bump, strength:g.scores.strength+bump,
+             stations:g.scores.stations+bump, running:g.scores.running+bump };
+  }
   const lvl = HF.data.prefs && HF.data.prefs.level;
   const base = {Beginner:26, Intermediate:42, Advanced:58}[lvl] || 28;
-  const bump = Math.min(38, Math.round((HF.totalDone()||0)*0.7));
   return { engine:base+bump, strength:base+3+bump, stations:base-5+bump, running:base-1+bump };
 }
 function scoreBreakdown(){
@@ -3723,8 +3766,8 @@ const HF = {
   KEY:'hitfat_hybrid_v1',
   userId:null, email:null,
   // owned: {programId:{date}}  scores: {engine,strength,stations,running}  wishlist: {programId:1}  purchases: [{id,title,price,date}]
-  data:{ track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[], races:{}, raceGoal:'', badges:{}, prs:{} },
-  _defaults(){ return { track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[], races:{}, raceGoal:'', wallball:[], badges:{}, prs:{} }; },
+  data:{ track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[], races:{}, raceGoal:'', badges:{}, prs:{}, guestSeed:null },
+  _defaults(){ return { track:null, onboarded:false, readiness:false, prefs:{}, sessions:{}, note:'', owned:{}, scores:{}, wishlist:{}, purchases:[], strava:null, sims:[], races:{}, raceGoal:'', wallball:[], badges:{}, prs:{}, guestSeed:null }; },
   cacheKey(){ return this.KEY + (this.userId ? '_'+this.userId : ''); },
   setUser(id, email){ this.userId=id||null; this.email=email||null; },
   apply(obj){ // replace working data from a plain object (cloud or cache)
@@ -3738,6 +3781,7 @@ const HF = {
       d.wallball=Array.isArray(obj.wallball)?obj.wallball.slice():[];
       d.badges=Object.assign({},obj.badges||{});   // an unlisted key is dropped here — badges must be listed or they vanish on reload
       d.prs=Object.assign({},obj.prs||{});
+      d.guestSeed=obj.guestSeed||null;
     }
     this.data=d;
   },
@@ -4758,6 +4802,8 @@ async function onSignedIn(session){
   hideAuth();
   HF.setUser(session.user.id, session.user.email);
   await HF.pull();
+  // a score calculated before signing up belongs to the account now
+  try{ if(gqMigrate()) HF.save(); }catch(e){ console.warn('[guest]', e); }
   syncProfile(session);            // name / email / phone into the profiles table                 // load this user's cloud data (or seed it)
   if(!_appStarted) startApp(); else { switchTab('home'); if(!HF.data.onboarded) startOnboarding(); }
 }
@@ -9211,6 +9257,181 @@ async function netSubmitApply(){
     + '<p class="msub">HITFAT reviews every gym before it joins. A coach will be in touch.</p>'
     + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Close</button></div>';
   $('modal').classList.add('on');
+}
+
+
+/* ============================================================
+   ████  GUEST HYBRID SCORE  ████
+
+   A visitor gets their Hybrid Score before being asked for anything. Five
+   questions, an estimate, then — and only then — an offer to save it.
+
+   WHY THIS IS A SEPARATE ESTIMATOR
+   The account formula blends seedScores() with measured axes, and seedScores()
+   reads only experience level and sessions logged. Feeding five answers into it
+   would leave four of them changing nothing — the same number for different
+   people, which anyone comparing with a friend would notice within a day. So
+   the quiz has its own estimator, every answer moves it, and it is labelled an
+   estimate rather than dressed up as a measurement.
+
+   Existing athletes are untouched: no account has a guestSeed until it comes
+   through this door, and seedScores() falls back to exactly what it did before.
+   ============================================================ */
+const GUEST_KEY = 'hitfat_guest_score_v1';
+
+const GQ = [
+  { k:'level', q:'How would you describe your training right now?',
+    a:[ {v:'new',  l:'New to structured training', s:'Getting started, or coming back'},
+        {v:'reg',  l:'I train regularly',          s:'A few sessions most weeks'},
+        {v:'comp', l:'I train to compete',         s:'Programmed, with a race in mind'} ] },
+  { k:'days', q:'How many sessions in a normal week?',
+    a:[ {v:1, l:'1–2'}, {v:3, l:'3–4'}, {v:5, l:'5 or more'} ] },
+  { k:'run', q:'How much running in a normal week?',
+    a:[ {v:0,  l:'None right now'},
+        {v:10, l:'Up to 10 km'},
+        {v:25, l:'10–25 km'},
+        {v:40, l:'More than 25 km'} ] },
+  { k:'stations', q:'The HYROX stations — ski, sled, carries, wall balls?',
+    a:[ {v:'none', l:'Never touched them'},
+        {v:'some', l:'Some of them, sometimes'},
+        {v:'most', l:'Most of them, regularly'} ] },
+  { k:'race', q:'Have you raced?',
+    a:[ {v:'no',   l:'Not yet'},
+        {v:'soon', l:'Not yet — one booked'},
+        {v:'done', l:'Yes, I have raced HYROX'} ] },
+];
+
+/* Every answer moves at least one axis, and the weights are written where they
+   can be argued with rather than buried. Nothing here reads as a measurement:
+   it is a starting point that the app then corrects with real sessions. */
+function gqEstimate(a){
+  const lvl = { new:24, reg:40, comp:54 }[a.level] ?? 28;
+  const days = Number(a.days) || 1;
+  const km   = Number(a.run) || 0;
+  const st   = { none:0, some:10, most:22 }[a.stations] ?? 0;
+  const race = { no:0, soon:4, done:10 }[a.race] ?? 0;
+
+  const engine   = lvl + days * 4 + Math.min(10, km / 4) + race;
+  const strength = lvl + days * 3 + (a.stations === 'most' ? 8 : a.stations === 'some' ? 4 : 0) + race;
+  const stations = lvl - 6 + st + race * 1.5 + days * 2;
+  const running  = lvl - 4 + Math.min(30, km * 1.1) + days * 1.5 + race;
+
+  const c = v => Math.max(5, Math.min(92, Math.round(v)));   // never 0, never a claim of elite
+  return { engine:c(engine), strength:c(strength), stations:c(stations), running:c(running) };
+}
+function gqTotal(s){ return Math.round((s.engine + s.strength + s.stations + s.running) / 4); }
+
+function gqLoad(){
+  try{ const r = localStorage.getItem(GUEST_KEY); return r ? JSON.parse(r) : null; }catch(e){ return null; }
+}
+function gqSave(obj){
+  try{ localStorage.setItem(GUEST_KEY, JSON.stringify(obj)); }catch(e){}
+}
+
+/* ---- the flow ---- */
+let gqStep = 0, gqAns = {};
+
+function gqStart(){
+  gqStep = 0; gqAns = {};
+  const el = $('gq'); if(!el) return;
+  el.classList.add('on');
+  gqRender();
+  try{ track('guest_quiz_start',{}); }catch(e){}
+}
+function gqClose(){ const el=$('gq'); if(el) el.classList.remove('on'); }
+
+function gqPick(k, v){
+  gqAns[k] = v;
+  if(gqStep < GQ.length - 1){ gqStep++; gqRender(); }
+  else gqFinish();
+}
+function gqBack(){
+  if(gqStep === 0){ gqClose(); return; }
+  gqStep--; gqRender();
+}
+
+function gqRender(){
+  const step = GQ[gqStep];
+  const pct = Math.round((gqStep / GQ.length) * 100);
+  $('gq-in').innerHTML =
+      '<div class="gq-top"><button class="gq-back" onclick="gqBack()">←</button>'
+    + '<div class="gq-bar"><i style="width:'+pct+'%"></i></div>'
+    + '<div class="gq-num">'+(gqStep+1)+'/'+GQ.length+'</div></div>'
+    + '<div class="gq-q">'+step.q+'</div>'
+    + '<div class="gq-opts">'
+    + step.a.map(o=>{
+        const v = typeof o.v === 'number' ? o.v : "'"+o.v+"'";
+        return '<button class="gq-opt'+(gqAns[step.k]===o.v?' on':'')+'" onclick="gqPick(\''+step.k+'\','+v+')">'
+             + '<span class="l">'+o.l+'</span>'+(o.s?'<span class="s">'+o.s+'</span>':'')+'</button>';
+      }).join('')
+    + '</div>';
+  $('gq').scrollTop = 0;
+}
+
+function gqFinish(){
+  const scores = gqEstimate(gqAns);
+  const total  = gqTotal(scores);
+  gqSave({ answers:gqAns, scores:scores, score:total, at:new Date().toISOString(), v:1 });
+  try{ track('guest_quiz_done',{score:total}); }catch(e){}
+  gqResult(scores, total);
+}
+
+function gqResult(scores, total){
+  const weakest = ['engine','strength','stations','running']
+      .reduce((lo,k)=> scores[k] < scores[lo] ? k : lo, 'engine');
+  const bar = k => '<div class="sbar"><div class="l"><span>'+AREA_LABEL[k]+'</span><b>'+scores[k]+'</b></div>'
+                 + '<div class="t"><i style="width:'+scores[k]+'%"></i></div></div>';
+  $('gq-in').innerHTML =
+      '<div class="gq-res">'
+    + '<div class="gq-kick">YOUR HYBRID SCORE</div>'
+    + '<div class="ring" style="--val:'+total+';margin:14px auto 6px;"><div class="rv"><b>'+total+'</b><small>Hybrid</small></div></div>'
+    + '<div class="gq-est">An estimate from five answers. It sharpens as you train — every session you log corrects it.</div>'
+    + '<div class="sb" style="margin-top:20px;">'+['engine','strength','stations','running'].map(bar).join('')+'</div>'
+    + '<div class="gq-weak">Weakest right now: <b>'+AREA_LABEL[weakest]+'</b>. That is the fastest place to gain.</div>'
+    + '</div>'
+    /* The ask comes after the answer, and it asks to keep something that already
+       exists rather than to unlock something withheld. */
+    + '<div class="gq-save">'
+      + '<div class="gs-t">Keep this score</div>'
+      + '<div class="gs-m">Create a free account and this score becomes your starting point — then the training, '
+      + 'the community and the tracking are all free too.</div>'
+      + '<button class="bigbtn" style="margin-top:14px;" onclick="gqToAuth()">Save my score — free</button>'
+      + '<button class="ghostbtn" style="margin-top:9px;" onclick="gqClose()">Not now</button>'
+    + '</div>';
+  $('gq').scrollTop = 0;
+}
+
+function gqToAuth(){
+  try{ track('guest_quiz_to_auth',{}); }catch(e){}
+  gqClose();
+  if(typeof showAuth === 'function') showAuth();
+  // the sign-in screen says why it is being shown
+  const lead = $('auth-lead');
+  if(lead) lead.textContent = 'Create an account and your Hybrid Score is saved to it.';
+}
+
+/* ---- migration ----
+   Runs once, after the account's own data has been pulled. It only fills an
+   account that has nothing yet: an athlete who has trained keeps everything
+   they had, and the guest answers are discarded rather than merged. */
+function gqMigrate(){
+  const g = gqLoad();
+  if(!g || !g.scores) return false;
+  if(g.migrated) return false;
+  if(HF.data.onboarded || HF.totalDone() > 0){
+    gqSave(Object.assign({}, g, { migrated:true, skipped:'account already has data' }));
+    return false;
+  }
+  const a = g.answers || {};
+  HF.data.guestSeed = { scores:g.scores, at:g.at, v:g.v || 1 };
+  HF.data.prefs = Object.assign({}, HF.data.prefs, {
+    level: { new:'Beginner', reg:'Intermediate', comp:'Advanced' }[a.level] || HF.data.prefs.level,
+    days:  Number(a.days) >= 5 ? 5 : Number(a.days) >= 3 ? 4 : 3,
+  });
+  HF.save();
+  gqSave(Object.assign({}, g, { migrated:true }));
+  try{ track('guest_quiz_migrated',{score:g.score}); }catch(e){}
+  return true;
 }
 
 </script>
