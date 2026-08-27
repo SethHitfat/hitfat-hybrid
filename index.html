@@ -1097,6 +1097,25 @@
   .bchip .bs{font-size:10px;color:var(--dim);margin-top:3px;font-weight:600;}
   .bchip .bbar{height:3px;border-radius:2px;background:#242424;margin-top:7px;overflow:hidden;}
   .bchip .bbar i{display:block;height:100%;background:var(--hyrox);}
+  /* ---- landing (pre-auth) ---- */
+  #land{position:fixed;inset:0;z-index:10040;background:var(--bg);overflow-y:auto;
+        -webkit-overflow-scrolling:touch;display:none;}
+  #land.on{display:block;}
+  #land:before{content:'';position:fixed;inset:0;pointer-events:none;
+        background:radial-gradient(620px 320px at 82% -6%, rgba(255,224,0,.14), transparent 62%);}
+  .land-in{position:relative;max-width:460px;margin:0 auto;text-align:center;
+           padding:calc(env(safe-area-inset-top) + 40px) 22px calc(env(safe-area-inset-bottom) + 34px);}
+  .land-in .logo{font-family:'Oswald';font-size:17px;letter-spacing:2px;font-weight:700;margin-bottom:30px;}
+  .land-in h1{font-family:'Oswald';font-size:clamp(34px,9vw,46px);font-weight:700;line-height:1.06;
+              text-transform:uppercase;letter-spacing:.4px;}
+  .land-lead{color:var(--dim);font-size:14.5px;line-height:1.6;margin:16px auto 26px;max-width:360px;}
+  .land-card{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:20px;
+             padding:22px 18px 16px;margin-bottom:28px;}
+  .land-card .lc-tag{position:absolute;top:12px;left:14px;font-size:9.5px;font-weight:800;letter-spacing:1.4px;
+             text-transform:uppercase;color:var(--dim2);}
+  .land-foot{margin-top:20px;font-size:12.5px;color:var(--dim2);}
+  .land-foot a{color:var(--dim);}
+
   /* ---- guest score ---- */
   /* above #auth (10002): the quiz is opened FROM the sign-in screen, so anything
      lower would render behind it and look like a dead button */
@@ -1127,6 +1146,8 @@
            border:1px solid rgba(255,224,0,.30);background:linear-gradient(158deg,#1b1a12 0%,#111 65%);}
   .gq-save .gs-t{font-family:'Oswald';font-size:20px;letter-spacing:.4px;}
   .gq-save .gs-m{font-size:13px;color:var(--dim);line-height:1.6;margin-top:7px;}
+  .gq-signin{text-align:center;margin-top:26px;font-size:13px;color:var(--dim2);}
+  .gq-signin a{color:var(--hyrox);cursor:pointer;}
   .joinbar .wish{flex:0 0 auto;order:1;width:54px;height:54px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--dim);font-size:20px;cursor:pointer;}
   .joinbar .wish.on{color:var(--hyrox);border-color:var(--hyrox);}
   .phaselist2 .ph2{display:flex;align-items:center;gap:13px;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:13px 14px;margin-bottom:9px;}
@@ -1516,6 +1537,30 @@
   <div class="authforgot" id="auth-forgot"><a onclick="authForgot()">Forgot password?</a></div>
   <div class="authtoggle" id="auth-switch">New here? <a onclick="authToggle()">Create an account</a></div>
   <div class="authnote">By continuing you agree to train at your own pace and responsibility. This app provides structured training, not medical advice. <a href="/terms" style="color:var(--hyrox);">Terms</a> · <a href="/privacy" style="color:var(--hyrox);">Privacy</a></div>
+</div></div>
+
+<!-- The first thing a visitor sees. One idea, one picture, one button. -->
+<div id="land"><div class="land-in">
+  <div class="logo"><span>HITFAT</span> <span class="y">HYBRID</span></div>
+  <h1>How hybrid<br>are you <span class="y">really</span>?</h1>
+  <p class="land-lead">Your Hybrid Score is one number for four things a hybrid athlete is made of —
+     engine, strength, stations and running. Answer five questions and see yours.</p>
+
+  <!-- an example card, labelled as one: it shows the shape of the answer without
+       pretending to be the visitor's own -->
+  <div class="land-card">
+    <div class="lc-tag">Example</div>
+    <div class="ring" style="--val:62;margin:2px auto 10px;"><div class="rv"><b>62</b><small>Hybrid</small></div></div>
+    <div class="sb">
+      <div class="sbar"><div class="l"><span>Engine</span><b>62</b></div><div class="t"><i style="width:62%"></i></div></div>
+      <div class="sbar"><div class="l"><span>Strength</span><b>57</b></div><div class="t"><i style="width:57%"></i></div></div>
+      <div class="sbar"><div class="l"><span>Stations</span><b>56</b></div><div class="t"><i style="width:56%"></i></div></div>
+      <div class="sbar"><div class="l"><span>Running</span><b>72</b></div><div class="t"><i style="width:72%"></i></div></div>
+    </div>
+  </div>
+
+  <button class="bigbtn" onclick="landToQuiz()">Kira Score Aku — Percuma</button>
+  <div class="land-foot"><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a></div>
 </div></div>
 
 <!-- Guest Hybrid Score: the public door. Shown over everything, needs no session. -->
@@ -4669,6 +4714,11 @@ function hideSplash(){
              Math.max(0, SPLASH_MIN-(Date.now()-splashT0)));
 }
 function showAuth(){ $('auth').classList.add('on'); hideSplash(); }
+/* A visitor meets the product, not a password field. Sign-in still exists — it
+   is reached after the score, where it has something to save. */
+function showLanding(){ $('land').classList.add('on'); hideAuth(); hideSplash(); }
+function hideLanding(){ $('land').classList.remove('on'); }
+function landToQuiz(){ try{ track('landing_cta',{}); }catch(e){} gqStart(); }
 function hideAuth(){ $('auth').classList.remove('on'); }
 function authMsg(text, kind){ const m=$('auth-msg'); if(m){ m.textContent=text||''; m.className='authmsg'+(kind?' '+kind:''); } }
 function authToggle(){
@@ -4799,7 +4849,7 @@ function startApp(){
   }catch(e){ console.error(e); }
 }
 async function onSignedIn(session){
-  hideAuth();
+  hideAuth(); hideLanding();
   HF.setUser(session.user.id, session.user.email);
   await HF.pull();
   // a score calculated before signing up belongs to the account now
@@ -6653,11 +6703,11 @@ function boot(){
   // Auth-gated mode
   sb.auth.getSession().then(({ data })=>{
     if(data && data.session){ onSignedIn(data.session); }
-    else { showAuth(); }
-  }).catch(()=>{ showAuth(); });
+    else { showLanding(); }
+  }).catch(()=>{ showLanding(); });
   sb.auth.onAuthStateChange((event, session)=>{
     if(session){ onSignedIn(session); }
-    else if(event==='SIGNED_OUT'){ showAuth(); }
+    else if(event==='SIGNED_OUT'){ showLanding(); }
   });
 }
 if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded',boot); } else { boot(); }
@@ -9316,7 +9366,10 @@ function gqEstimate(a){
   const stations = lvl - 6 + st + race * 1.5 + days * 2;
   const running  = lvl - 4 + Math.min(30, km * 1.1) + days * 1.5 + race;
 
-  const c = v => Math.max(5, Math.min(92, Math.round(v)));   // never 0, never a claim of elite
+  /* Capped well below the top of the scale. An estimate that flatters and then
+     deflates the moment real sessions arrive is worse than one that leaves room
+     to climb — the measured axes should usually pull a score UP, not down. */
+  const c = v => Math.max(5, Math.min(78, Math.round(v)));
   return { engine:c(engine), strength:c(strength), stations:c(stations), running:c(running) };
 }
 function gqTotal(s){ return Math.round((s.engine + s.strength + s.stations + s.running) / 4); }
@@ -9365,6 +9418,13 @@ function gqRender(){
              + '<span class="l">'+o.l+'</span>'+(o.s?'<span class="s">'+o.s+'</span>':'')+'</button>';
       }).join('')
     + '</div>';
+  /* The landing itself keeps to one path. This lives here instead, on the first
+     question only — without it, an athlete signing in on a new phone would have
+     to answer five questions to reach a password field. */
+  if(gqStep === 0){
+    $('gq-in').innerHTML += '<div class="gq-signin">Already have an account? '
+      + '<a onclick="gqClose();hideLanding();showAuth()">Sign in</a></div>';
+  }
   $('gq').scrollTop = 0;
 }
 
@@ -9377,8 +9437,11 @@ function gqFinish(){
 }
 
 function gqResult(scores, total){
-  const weakest = ['engine','strength','stations','running']
-      .reduce((lo,k)=> scores[k] < scores[lo] ? k : lo, 'engine');
+  const keys = ['engine','strength','stations','running'];
+  const weakest = keys.reduce((lo,k)=> scores[k] < scores[lo] ? k : lo, 'engine');
+  /* At the top of the answer range all four axes hit the cap. Naming a "weakest"
+     one then would be picking a name out of a tie and calling it a finding. */
+  const spread = Math.max.apply(null, keys.map(k=>scores[k])) - Math.min.apply(null, keys.map(k=>scores[k]));
   const bar = k => '<div class="sbar"><div class="l"><span>'+AREA_LABEL[k]+'</span><b>'+scores[k]+'</b></div>'
                  + '<div class="t"><i style="width:'+scores[k]+'%"></i></div></div>';
   $('gq-in').innerHTML =
@@ -9387,7 +9450,9 @@ function gqResult(scores, total){
     + '<div class="ring" style="--val:'+total+';margin:14px auto 6px;"><div class="rv"><b>'+total+'</b><small>Hybrid</small></div></div>'
     + '<div class="gq-est">An estimate from five answers. It sharpens as you train — every session you log corrects it.</div>'
     + '<div class="sb" style="margin-top:20px;">'+['engine','strength','stations','running'].map(bar).join('')+'</div>'
-    + '<div class="gq-weak">Weakest right now: <b>'+AREA_LABEL[weakest]+'</b>. That is the fastest place to gain.</div>'
+    + (spread >= 4
+        ? '<div class="gq-weak">Weakest right now: <b>'+AREA_LABEL[weakest]+'</b>. That is the fastest place to gain.</div>'
+        : '<div class="gq-weak">Even across all four. Training will show where the real gaps are.</div>')
     + '</div>'
     /* The ask comes after the answer, and it asks to keep something that already
        exists rather than to unlock something withheld. */
@@ -9404,6 +9469,7 @@ function gqResult(scores, total){
 function gqToAuth(){
   try{ track('guest_quiz_to_auth',{}); }catch(e){}
   gqClose();
+  if(typeof hideLanding === 'function') hideLanding();
   if(typeof showAuth === 'function') showAuth();
   // the sign-in screen says why it is being shown
   const lead = $('auth-lead');
