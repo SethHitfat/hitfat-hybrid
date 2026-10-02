@@ -96,15 +96,16 @@ h2 em{color:var(--merah);font-style:inherit}
 .legend{display:flex;gap:16px;font-size:12px;color:var(--redup);font-weight:700;margin-top:10px}
 .legend i{font-style:normal;font-weight:900;margin-right:4px}
 
-/* hadiah */
-.podium{display:grid;grid-template-columns:1fr 1.12fr 1fr;align-items:end;gap:8px;margin-top:18px}
-.pd{border-radius:14px 14px 6px 6px;text-align:center;padding:12px 6px;color:var(--navy);border:2px solid var(--navy);box-shadow:3px 3px 0 var(--navy)}
-.pd small{display:block;font-size:10px;font-weight:900;letter-spacing:.08em}
-.pd b{display:block;font-style:italic;font-weight:900;font-size:24px;line-height:1.15}
-.pd .ic{font-size:24px;line-height:1.2}
-.pd.j{background:linear-gradient(180deg,#ffe36b,var(--kuning));padding:22px 6px 30px}
-.pd.n{background:linear-gradient(180deg,#f6f7fa,#c3c9d6)}
-.pd.k{background:linear-gradient(180deg,#f8b98a,var(--oren))}
+/* hadiah — nilai diletak atas blok podium dalam gambar (kedudukan % ikut gambar) */
+.trofi{position:relative;margin-top:16px;border-radius:18px;overflow:hidden;border:2px solid var(--navy);box-shadow:4px 4px 0 var(--navy);container-type:inline-size}
+.trofi img{width:100%}
+.hd{position:absolute;transform:translate(-50%,-50%);text-align:center;color:#fff;width:27%}
+.hd small{display:block;font-size:2.6cqw;font-weight:900;letter-spacing:.08em;opacity:.9}
+.hd b{display:block;font-style:italic;font-weight:900;font-size:6.6cqw;line-height:1.05;text-shadow:0 2px 10px rgba(0,0,0,.6)}
+.hd.n{left:20%;top:74%}
+.hd.j{left:50%;top:70%}
+.hd.j b{font-size:7.6cqw;color:var(--kuning)}
+.hd.k{left:80%;top:75.5%}
 .kat{text-align:center;color:var(--redup);font-size:13px;font-weight:700;margin-top:12px}
 
 .coach{display:flex;gap:14px;align-items:center;padding:12px;margin-top:18px}
@@ -204,10 +205,11 @@ footer .kaki{width:100%;max-width:900px;margin:10px auto 0}
   <section>
     <span class="lencana biru">Hadiah Tunai</span>
     <h2 class="it">Untuk lelaki <em>&amp; wanita</em></h2>
-    <div class="podium">
-      <div class="pd n"><div class="ic">🥈</div><small>NAIB JOHAN</small><b>RM60</b></div>
-      <div class="pd j"><div class="ic">🏆</div><small>JOHAN</small><b>RM100</b></div>
-      <div class="pd k"><div class="ic">🥉</div><small>KETIGA</small><b>RM30</b></div>
+    <div class="trofi">
+      <img src="/hsn/img/hadiah.jpg" alt="Trofi johan, naib johan dan ketiga" width="900" height="771" loading="lazy">
+      <div class="hd n"><small>NAIB JOHAN</small><b>RM60</b></div>
+      <div class="hd j"><small>JOHAN</small><b>RM100</b></div>
+      <div class="hd k"><small>KETIGA</small><b>RM30</b></div>
     </div>
     <p class="kat">Setiap kategori · 6 pemenang semuanya</p>
 
