@@ -51,3 +51,9 @@
   from = "/terms"
   to = "/terms.html"
   status = 200
+
+# Landing HITFAT RACE — Hari Sukan Negara Kelantan 2026 (/hsn)
+[[redirects]]
+  from = "/hsn"
+  to = "/hsn/index.html"
+  status = 200

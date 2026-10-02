@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HITFAT RACE — Hari Sukan Negara 2026 · Kelantan</title>
+<meta name="description" content="HITFAT RACE sempena Hari Sukan Negara Peringkat Negeri Kelantan 2026. Sabtu 10 Oktober, AEON Mall Kota Bharu. Yuran RM15. Hadiah RM100 / RM60 / RM30 setiap kategori.">
+<meta property="og:title" content="HITFAT RACE — Hari Sukan Negara 2026">
+<meta property="og:description" content="10 Okt 2026 · AEON Mall Kota Bharu · RM15 · Hadiah tunai lelaki & wanita">
+<meta property="og:image" content="https://hybrid.hitfat.io/hsn/img/poster.jpg">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#ffffff">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,500;0,700;0,800;0,900;1,800;1,900&display=swap" rel="stylesheet">
+<style>
+/* Tema ikut template rasmi Hari Sukan Negara Kelantan 2026:
+   latar putih + corak belang kelabu, kilat merah/kuning/biru, swoosh biru & oren,
+   lencana merah berbingkai gelap (macam kotak tarikh dalam template). */
+:root{
+  --merah:#e3222b; --merah2:#b8121b; --kuning:#fcc314; --biru:#1d3c96; --navy:#13235e;
+  --cyan:#2bb4e6; --oren:#f6871f; --teks:#141a33; --redup:#5a6178; --garis:#e2e4ea;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;background:#fff}
+body{font-family:Montserrat,system-ui,-apple-system,sans-serif;color:var(--teks);line-height:1.5;-webkit-font-smoothing:antialiased;
+  background:#fff url(/hsn/img/tema-tekstur.jpg) center top/700px auto repeat;
+  padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+img{max-width:100%;height:auto;display:block}
+a{color:inherit}
+.wrap{max-width:540px;margin:0 auto;padding:0 16px}
+.it{font-style:italic;font-weight:900;text-transform:uppercase;letter-spacing:-.5px}
+
+/* ── HERO = template rasmi, tajuk diletak dalam ruang putih tengahnya ── */
+.hero{max-width:540px;margin:0 auto;position:relative;aspect-ratio:1200/1395;container-type:inline-size;
+  background:#fff url(/hsn/img/tema-hero.jpg) center/100% 100% no-repeat}
+.hero .isi{position:absolute;left:13%;right:10%;top:33%;height:43%;display:flex;flex-direction:column;justify-content:center}
+.hero .eyebrow{display:inline-block;align-self:flex-start;background:var(--biru);color:#fff;font-weight:800;font-size:3.1cqw;letter-spacing:.25em;padding:.5em 1em;border-radius:.4em;transform:skew(-10deg)}
+.hero h1{line-height:.86;margin-top:2.4cqw}
+.hero h1 span{display:block;font-size:15.5cqw;color:var(--navy);
+  text-shadow:.6cqw .6cqw 0 #fff,1.1cqw 1.1cqw 0 var(--navy)}
+.hero h1 b{display:block;font-size:22cqw;color:var(--merah);font-weight:900;
+  text-shadow:.6cqw .6cqw 0 #fff,1.3cqw 1.3cqw 0 var(--navy)}
+.hero .sub{margin-top:2.8cqw;font-weight:800;font-size:3.3cqw;white-space:nowrap;color:var(--navy);letter-spacing:.02em}
+.hero .sub i{font-style:normal;color:var(--merah)}
+
+/* ── kad + lencana ── */
+.kad{background:#fff;border:1px solid var(--garis);border-radius:18px;box-shadow:0 10px 30px rgba(19,35,94,.08)}
+.lencana{display:inline-block;background:linear-gradient(180deg,#ef3a40,var(--merah2));color:#fff;font-weight:900;font-style:italic;text-transform:uppercase;
+  font-size:13px;letter-spacing:.06em;padding:6px 14px;border-radius:9px;border:2px solid #3a0b0e;box-shadow:3px 3px 0 #3a0b0e}
+.lencana.biru{background:linear-gradient(180deg,#2d55c4,var(--biru));border-color:#0b153d;box-shadow:3px 3px 0 #0b153d}
+
+/* panel beli */
+.beli{margin-top:-4px;padding:16px}
+.info{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.info div{background:#f5f6f9;border-radius:12px;padding:10px 12px}
+.info small{display:block;font-size:10px;font-weight:800;letter-spacing:.12em;color:var(--redup)}
+.info b{font-size:14px;font-weight:800}
+.info .penuh{grid-column:1/-1}
+.baris{display:flex;gap:10px;margin-top:12px;align-items:stretch}
+.rm{flex:none;background:var(--kuning);color:var(--navy);border:2px solid var(--navy);box-shadow:3px 3px 0 var(--navy);border-radius:14px;padding:4px 12px;
+  font-style:italic;font-weight:900;font-size:40px;line-height:1.1;display:flex;align-items:flex-start}
+.rm sup{font-size:15px;margin:7px 2px 0 0}
+.cta{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;color:#fff;font-weight:900;font-style:italic;font-size:17px;letter-spacing:.02em;
+  background:linear-gradient(180deg,#ef3a40,var(--merah2));border:2px solid #3a0b0e;box-shadow:4px 4px 0 #3a0b0e;border-radius:14px;padding:14px;text-transform:uppercase}
+.cta:active{transform:translate(3px,3px);box-shadow:1px 1px 0 #3a0b0e}
+.cta svg{width:19px;height:19px;flex:none}
+.nota{text-align:center;font-size:12px;color:var(--redup);margin-top:10px;font-weight:600}
+.kira{display:flex;justify-content:center;gap:8px;margin-top:10px;font-size:11px;font-weight:800;color:var(--redup);letter-spacing:.06em}
+.kira b{font-size:20px;color:var(--navy);font-style:italic;margin-right:2px}
+
+/* ── seksyen ── */
+section{padding:34px 0 0}
+h2{font-size:32px;line-height:1;margin-top:12px;color:var(--navy)}
+h2 em{color:var(--merah);font-style:inherit}
+.lead{color:var(--redup);font-size:14px;margin-top:8px;font-weight:500}
+
+/* laluan station */
+.laluan{margin-top:14px;padding:14px;position:relative}
+.laluan::before{content:"";position:absolute;left:65px;top:34px;bottom:34px;width:4px;border-radius:2px;
+  background:repeating-linear-gradient(180deg,var(--merah) 0 14px,var(--kuning) 14px 28px,var(--biru) 28px 42px)}
+.stn{position:relative;display:flex;align-items:center;gap:12px;padding:6px 0}
+.stn .th{flex:none;width:104px;height:78px;border-radius:12px;overflow:hidden;background:#090a12;border:2px solid var(--navy);box-shadow:3px 3px 0 var(--merah);position:relative;z-index:1}
+.stn .th img{width:100%;height:100%;object-fit:cover}
+.stn.run .th{width:60px;height:45px;border-radius:9px;margin:0 22px;box-shadow:2px 2px 0 var(--cyan)}
+.stn .nm{flex:1;min-width:0}
+.stn .nm b{display:block;font-style:italic;font-weight:900;font-size:17px;line-height:1.1;text-transform:uppercase;color:var(--navy)}
+.stn .nm span{font-size:11px;color:var(--redup);font-weight:700}
+.stn.run .nm b{font-size:14px;color:var(--redup)}
+.rep{display:flex;flex-direction:column;gap:4px;flex:none;align-items:flex-end}
+.rep i{font-style:normal;font-size:11px;font-weight:800;padding:3px 8px;border-radius:7px;white-space:nowrap}
+.rep .w{background:#fde7e8;color:var(--merah2)}
+.rep .l{background:#e3e9fb;color:var(--biru)}
+.stn.fin .th{box-shadow:3px 3px 0 var(--kuning)}
+.stn.fin .nm b{color:var(--merah)}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--redup);font-weight:700;margin-top:10px}
+.legend i{font-style:normal;font-weight:900;margin-right:4px}
+
+/* hadiah */
+.podium{display:grid;grid-template-columns:1fr 1.12fr 1fr;align-items:end;gap:8px;margin-top:18px}
+.pd{border-radius:14px 14px 6px 6px;text-align:center;padding:12px 6px;color:var(--navy);border:2px solid var(--navy);box-shadow:3px 3px 0 var(--navy)}
+.pd small{display:block;font-size:10px;font-weight:900;letter-spacing:.08em}
+.pd b{display:block;font-style:italic;font-weight:900;font-size:24px;line-height:1.15}
+.pd .ic{font-size:24px;line-height:1.2}
+.pd.j{background:linear-gradient(180deg,#ffe36b,var(--kuning));padding:22px 6px 30px}
+.pd.n{background:linear-gradient(180deg,#f6f7fa,#c3c9d6)}
+.pd.k{background:linear-gradient(180deg,#f8b98a,var(--oren))}
+.kat{text-align:center;color:var(--redup);font-size:13px;font-weight:700;margin-top:12px}
+
+.coach{display:flex;gap:14px;align-items:center;padding:12px;margin-top:18px}
+.coach img{width:92px;height:92px;border-radius:14px;object-fit:cover;flex:none;border:2px solid var(--navy);box-shadow:3px 3px 0 var(--cyan)}
+.coach b{display:block;font-style:italic;font-weight:900;font-size:19px;text-transform:uppercase;color:var(--navy)}
+.coach span{font-size:13px;color:var(--redup);font-weight:500}
+
+/* tentatif */
+.hari{padding:16px;margin-top:14px}
+.masa{display:grid;grid-template-columns:auto 1fr;gap:10px 14px;align-items:baseline}
+.masa b{font-style:italic;font-weight:900;font-size:16px;color:var(--merah);white-space:nowrap}
+.masa span{font-size:14px;font-weight:600}
+.lok{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px dashed var(--garis);margin-top:14px;padding-top:14px}
+.lok b{display:block;font-style:italic;font-weight:900;font-size:17px;text-transform:uppercase;color:var(--navy);line-height:1.15}
+.lok span{font-size:12px;color:var(--redup);font-weight:600}
+.peta{flex:none;text-decoration:none;font-weight:800;font-size:13px;color:var(--biru);border:2px solid var(--biru);padding:8px 12px;border-radius:10px}
+
+/* daftar */
+.langkah{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.langkah div{padding:12px 10px}
+.langkah i{font-style:italic;font-weight:900;display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:var(--biru);color:#fff;margin-bottom:8px}
+.langkah b{font-size:13px;line-height:1.3;display:block;font-weight:800}
+.faq{margin-top:12px;padding:0 16px}
+details{border-bottom:1px solid var(--garis);padding:14px 0}
+details:last-child{border-bottom:0}
+summary{font-weight:800;font-size:14px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:12px}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";color:var(--merah);font-size:20px;line-height:1;font-weight:900}
+details[open] summary::after{content:"–"}
+details p{color:var(--redup);font-size:14px;margin-top:6px;font-weight:500}
+
+.akhir{text-align:center;padding:36px 0 28px}
+.akhir h2{font-size:38px}
+.akhir .cta{margin-top:18px;padding:17px;font-size:18px}
+
+footer{background:#fff}
+footer .kbs{width:200px;margin:0 auto;padding-top:18px}
+footer .kaki{width:100%;max-width:900px;margin:10px auto 0}
+
+.melekit{position:fixed;left:0;right:0;bottom:0;z-index:50;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  border-top:3px solid var(--merah);padding:10px 0 calc(10px + env(safe-area-inset-bottom));transform:translateY(110%);transition:transform .25s;box-shadow:0 -8px 24px rgba(19,35,94,.12)}
+.melekit.on{transform:none}
+.melekit .wrap{display:flex;align-items:center;gap:12px}
+.melekit p{flex:1;font-size:12px;color:var(--redup);line-height:1.25;font-weight:600}
+.melekit p b{display:block;color:var(--navy);font-size:15px;font-weight:900;font-style:italic}
+.melekit a{text-decoration:none;color:#fff;font-weight:900;font-style:italic;background:linear-gradient(180deg,#ef3a40,var(--merah2));border:2px solid #3a0b0e;box-shadow:3px 3px 0 #3a0b0e;padding:10px 18px;border-radius:12px}
+
+@media (max-width:360px){.rm{font-size:32px}.cta{font-size:15px}.stn .th{width:88px;height:66px}.laluan::before{left:57px}.stn.run .th{margin:0 14px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="hero" aria-label="Hari Sukan Negara Peringkat Negeri Kelantan 2026 — 10 Oktober 2026, AEON Mall Kota Bharu">
+  <div class="isi">
+    <span class="eyebrow">HITFAT PRESENTS</span>
+    <h1 class="it"><span>Hitfat</span><b>Race</b></h1>
+    <p class="sub">9 STATION · <i>RM15</i> · HADIAH TUNAI</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="kad beli">
+    <div class="info">
+      <div><small>TARIKH</small><b>Sabtu, 10 Okt</b></div>
+      <div><small>WAKTU RACE</small><b>8.30 – 10.30 pg</b></div>
+      <div class="penuh"><small>LOKASI</small><b>AEON Mall Kota Bharu</b></div>
+    </div>
+    <div class="baris">
+      <div class="rm"><sup>RM</sup>15</div>
+      <a class="cta" href="https://hitfat.bcl.my/form/hari-sukan-negara" id="cta-atas">Daftar Sekarang
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+    </div>
+    <p class="nota">Sekali bayar · 18 tahun ke atas · Bayar melalui FPX</p>
+    <div class="kira" id="kira"><span><b id="kh">–</b>HARI</span><span><b id="kj">–</b>JAM</span><span><b id="km">–</b>MIN</span><span><b id="ks">–</b>SAAT</span></div>
+  </div>
+
+  <section>
+    <span class="lencana">Format Race</span>
+    <h2 class="it">9 Station. <em>Satu laluan.</em></h2>
+    <p class="lead">Siapkan ikut urutan. Masa paling pantas menang.</p>
+
+    <div class="kad laluan">
+      <div class="stn"><div class="th"><img src="/hsn/img/st-ski.jpg" alt=""></div><div class="nm"><b>Ski</b><span>Station 1</span></div><div class="rep"><i class="w">W 300m</i><i class="l">L 400m</i></div></div>
+      <div class="stn run"><div class="th"><img src="/hsn/img/st-run.jpg" alt=""></div><div class="nm"><b>Run 100m</b></div></div>
+      <div class="stn"><div class="th"><img src="/hsn/img/st-pushup.jpg" alt=""></div><div class="nm"><b>Push Up Release</b><span>Station 3</span></div><div class="rep"><i class="w">W 20x</i><i class="l">L 30x</i></div></div>
+      <div class="stn run"><div class="th"><img src="/hsn/img/st-run.jpg" alt=""></div><div class="nm"><b>Run 100m</b></div></div>
+      <div class="stn"><div class="th"><img src="/hsn/img/st-squat.jpg" alt=""></div><div class="nm"><b>Squat</b><span>Station 5</span></div><div class="rep"><i class="w">W 20x</i><i class="l">L 30x</i></div></div>
+      <div class="stn run"><div class="th"><img src="/hsn/img/st-run.jpg" alt=""></div><div class="nm"><b>Run 100m</b></div></div>
+      <div class="stn"><div class="th"><img src="/hsn/img/st-situp.jpg" alt=""></div><div class="nm"><b>Sit Up</b><span>Station 7</span></div><div class="rep"><i class="w">W 20x</i><i class="l">L 30x</i></div></div>
+      <div class="stn run"><div class="th"><img src="/hsn/img/st-run.jpg" alt=""></div><div class="nm"><b>Run 100m</b></div></div>
+      <div class="stn fin"><div class="th"><img src="/hsn/img/st-finish.jpg" alt=""></div><div class="nm"><b>Finisher</b><span>Garisan penamat</span></div></div>
+    </div>
+    <div class="legend"><span><i style="color:var(--merah)">W</i>Wanita</span><span><i style="color:var(--biru)">L</i>Lelaki</span></div>
+  </section>
+
+  <section>
+    <span class="lencana biru">Hadiah Tunai</span>
+    <h2 class="it">Untuk lelaki <em>&amp; wanita</em></h2>
+    <div class="podium">
+      <div class="pd n"><div class="ic">🥈</div><small>NAIB JOHAN</small><b>RM60</b></div>
+      <div class="pd j"><div class="ic">🏆</div><small>JOHAN</small><b>RM100</b></div>
+      <div class="pd k"><div class="ic">🥉</div><small>KETIGA</small><b>RM30</b></div>
+    </div>
+    <p class="kat">Setiap kategori · 6 pemenang semuanya</p>
+
+    <div class="kad coach">
+      <img src="/hsn/img/coach.jpg" alt="Coach Dhil" width="260" height="260" loading="lazy">
+      <div><b>Coach Dhil</b><span>Bersama SenamFIT 20 minit — sihat, aktif, bersama.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <span class="lencana">Pada Hari Tu</span>
+    <h2 class="it">Sabtu, <em>10 Okt 2026</em></h2>
+    <div class="kad hari">
+      <div class="masa">
+        <b>8.30 – 10.30</b><span>HITFAT RACE berlangsung</span>
+        <b>10.45 pagi</b><span>Pengumuman pemenang (ikut tentatif KBS)</span>
+      </div>
+      <div class="lok">
+        <div><b>AEON Mall Kota Bharu</b><span>Program 7.00 pagi – 6.00 petang</span></div>
+        <a class="peta" href="https://www.google.com/maps/search/?api=1&query=AEON+Mall+Kota+Bharu" target="_blank" rel="noopener">Peta ↗</a>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="lencana biru">Cara Daftar</span>
+    <h2 class="it">Siap dalam <em>2 minit</em></h2>
+    <div class="langkah">
+      <div class="kad"><i>1</i><b>Tekan Daftar</b></div>
+      <div class="kad"><i>2</i><b>Isi nama, e-mel &amp; telefon</b></div>
+      <div class="kad"><i>3</i><b>Bayar RM15 (FPX)</b></div>
+    </div>
+    <div class="kad faq">
+      <details><summary>Saya tak pernah buat race macam ni. Boleh ke?</summary><p>Boleh. Larian cuma 100m setiap pusingan dan ulangan untuk wanita lebih rendah. Buat ikut kemampuan anda.</p></details>
+      <details><summary>Siapa yang boleh sertai?</summary><p>Semua peserta berumur 18 tahun ke atas, kategori lelaki dan wanita.</p></details>
+      <details><summary>Boleh daftar untuk kawan sekali?</summary><p>Boleh. Pilih bilangan tiket dalam borang bayaran.</p></details>
+      <details><summary>Lepas bayar, apa jadi?</summary><p>Resit dihantar ke e-mel anda. Simpan resit tersebut sebagai bukti pendaftaran.</p></details>
+    </div>
+  </section>
+
+  <div class="akhir">
+    <span class="lencana">Jumpa Di Sana</span>
+    <h2 class="it">Garisan penamat <em>menanti</em></h2>
+    <p class="lead">10 Okt · AEON Mall Kota Bharu · RM15</p>
+    <a class="cta" href="https://hitfat.bcl.my/form/hari-sukan-negara">Daftar Sekarang — RM15</a>
+  </div>
+</main>
+
+<footer>
+  <img class="kbs" src="/hsn/img/kbs.jpg" alt="Kementerian Belia dan Sukan · Jabatan Belia dan Sukan Negeri Kelantan" width="340" height="134" loading="lazy">
+  <img class="kaki" src="/hsn/img/tema-kaki.jpg" alt="harisukannegara.my · #MalaysiaAktif #HSN2026 · rakan strategik" width="1200" height="115" loading="lazy">
+</footer>
+
+<div class="melekit" id="melekit">
+  <div class="wrap">
+    <p>HITFAT RACE · 10 Okt<b>RM15 sekali bayar</b></p>
+    <a href="https://hitfat.bcl.my/form/hari-sukan-negara">DAFTAR</a>
+  </div>
+</div>
+
+<script>
+(function(){
+  // Kiraan undur ke 10 Okt 2026, 8.30 pagi waktu Malaysia (UTC+8)
+  var T=Date.parse('2026-10-10T08:30:00+08:00');
+  function p(n){return n<10?'0'+n:''+n}
+  function tik(){
+    var s=Math.floor(Math.max(0,T-Date.now())/1000);
+    if(!s){document.getElementById('kira').textContent='RACE SEDANG BERLANGSUNG!';return}
+    document.getElementById('kh').textContent=Math.floor(s/86400);
+    document.getElementById('kj').textContent=p(Math.floor(s%86400/3600));
+    document.getElementById('km').textContent=p(Math.floor(s%3600/60));
+    document.getElementById('ks').textContent=p(s%60);
+    setTimeout(tik,1000);
+  }
+  tik();
+  // Bar daftar bawah muncul bila butang atas dah lepas dari skrin
+  var bar=document.getElementById('melekit'),btn=document.getElementById('cta-atas');
+  if('IntersectionObserver' in window){
+    new IntersectionObserver(function(e){bar.classList.toggle('on',!e[0].isIntersecting)}).observe(btn);
+  }else{bar.classList.add('on')}
+})();
+</script>
+</body>
+</html>
