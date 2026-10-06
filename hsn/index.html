@@ -155,6 +155,21 @@ footer .kaki{width:100%;max-width:900px;margin:10px auto 0}
 
 @media (max-width:360px){.rm{font-size:32px}.cta{font-size:15px}.stn .th{width:88px;height:66px}.laluan::before{left:57px}.stn.run .th{margin:0 14px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* pop up selepas bayar berjaya (BCL redirect ke ?daftar=berjaya) */
+.pop{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(10,16,48,.62);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.pop.on{display:flex;animation:popIn .25s ease-out}
+.pop .kotak{position:relative;width:100%;max-width:400px;background:#fff;border:3px solid var(--navy);box-shadow:6px 6px 0 var(--merah);border-radius:22px;padding:26px 22px 22px;text-align:center}
+.pop .ikon{font-size:48px;line-height:1}
+.pop h3{font-style:italic;font-weight:900;text-transform:uppercase;font-size:26px;line-height:1.05;color:var(--navy);margin-top:10px}
+.pop h3 em{color:var(--merah);font-style:inherit}
+.pop p{color:var(--redup);font-size:14px;font-weight:600;margin-top:10px}
+.pop .tarikh{display:inline-block;margin-top:12px;background:#f5f6f9;border-radius:12px;padding:8px 12px;font-size:13px;font-weight:800;color:var(--navy)}
+.pop .one{display:block;margin-top:18px;text-decoration:none;color:#fff;font-weight:900;font-style:italic;text-transform:uppercase;font-size:16px;background:linear-gradient(180deg,#2d55c4,var(--biru));border:2px solid #0b153d;box-shadow:4px 4px 0 #0b153d;border-radius:14px;padding:14px}
+.pop .one small{display:block;font-size:11px;font-weight:700;font-style:normal;text-transform:none;opacity:.85;margin-top:2px}
+.pop .tutup{position:absolute;top:10px;right:12px;width:36px;height:36px;border:0;background:#f1f2f6;border-radius:50%;font-size:20px;font-weight:900;color:var(--navy);cursor:pointer}
+.pop .lain{display:block;margin-top:12px;font-size:13px;font-weight:700;color:var(--redup);background:none;border:0;cursor:pointer;width:100%}
+@keyframes popIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
 </style>
 </head>
 <body>
@@ -290,6 +305,30 @@ footer .kaki{width:100%;max-width:900px;margin:10px auto 0}
   if('IntersectionObserver' in window){
     new IntersectionObserver(function(e){bar.classList.toggle('on',!e[0].isIntersecting)}).observe(btn);
   }else{bar.classList.add('on')}
+})();
+</script>
+
+<div class="pop" id="pop" role="dialog" aria-modal="true" aria-labelledby="pop-t">
+  <div class="kotak">
+    <button class="tutup" type="button" aria-label="Tutup" onclick="tutupPop()">×</button>
+    <div class="ikon">🎉</div>
+    <h3 id="pop-t">Pendaftaran <em>berjaya!</em></h3>
+    <p>Terima kasih kerana menyertai HITFAT RACE. Resit telah dihantar ke e-mel anda.</p>
+    <div class="tarikh">📅 Sabtu, 10 Okt · 8.00 pagi · AEON Mall Kota Bharu</div>
+    <a class="one" href="https://hitfat.io/one">Teruskan ke HITFAT ONE →<small>Train. Transform. Compete.</small></a>
+    <button class="lain" type="button" onclick="tutupPop()">Kembali ke halaman race</button>
+  </div>
+</div>
+
+<script>
+/* BCL redirect ke ?daftar=berjaya selepas bayaran berjaya -> papar pop up */
+(function(){
+  var q=new URLSearchParams(location.search), pop=document.getElementById('pop');
+  if(q.get('daftar')!=='berjaya'||!pop) return;
+  pop.classList.add('on');
+  window.tutupPop=function(){pop.classList.remove('on');history.replaceState(null,'',location.pathname);};
+  pop.addEventListener('click',function(e){if(e.target===pop)tutupPop();});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')tutupPop();});
 })();
 </script>
 </body>
