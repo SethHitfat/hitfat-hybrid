@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>HITFAT RUN CLUB</title>
+<meta name="description" content="Kelab larian HITFAT: rakam larian dengan GPS, larian berpandu dengan coach, cabaran bulanan dan leaderboard.">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HITFAT RUN">
+<link rel="manifest" href="/run/manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap');
+  :root{
+    /* Same palette as HITFAT Hybrid: black page, cards a shade above, one red. */
+    --bg:#000; --s1:#121212; --s2:#1C1C1C; --s3:#262626; --line:#262626;
+    --txt:#fff; --dim:#9A9A9A; --dim2:#6E6E6E;
+    --red:#F0392B; --red-solid:#D92C1A; --red-deep:#3A0B06;
+    --ok:#2BD96B; --warn:#FFB020;
+    --r:16px;
+    --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; background:var(--bg); color:var(--txt); font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif; }
+  body{ overscroll-behavior:none; }
+  button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; }
+  input,select,textarea{ font:inherit; color:var(--txt); background:var(--s2); border:1px solid var(--line); border-radius:12px; padding:12px 14px; width:100%; }
+  input:focus,select:focus,textarea:focus{ outline:2px solid var(--red); outline-offset:0; }
+  .num{ font-family:Oswald,Impact,sans-serif; font-weight:700; letter-spacing:.01em; font-variant-numeric:tabular-nums; }
+  .cap{ font-size:11px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); }
+  .hide{ display:none !important; }
+
+  /* ---------- shell ---------- */
+  #app{ max-width:560px; margin:0 auto; min-height:100vh; padding:calc(var(--safe-t) + 8px) 16px calc(92px + var(--safe-b)); }
+  header.top{ display:flex; align-items:center; justify-content:space-between; padding:10px 0 14px; }
+  .brand{ font-family:Oswald,sans-serif; font-weight:700; font-size:20px; letter-spacing:.04em; }
+  .brand b{ color:var(--red); }
+  .avatar{ width:36px; height:36px; border-radius:50%; background:var(--s2); display:grid; place-items:center; font-weight:800; font-size:14px; border:2px solid var(--lvl,#FFD60A); }
+  h1.title{ font-family:Oswald,sans-serif; font-size:40px; line-height:1; margin:6px 0 18px; text-transform:uppercase; }
+  h2.sec{ font-family:Oswald,sans-serif; font-size:22px; margin:26px 0 12px; text-transform:uppercase; letter-spacing:.02em; }
+  .card{ background:var(--s1); border-radius:var(--r); padding:16px; }
+  .row{ display:flex; gap:12px; align-items:center; }
+  .grow{ flex:1; min-width:0; }
+  .muted{ color:var(--dim); }
+  .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:14px 18px; border-radius:999px; font-weight:800; font-size:15px; background:var(--s2); }
+  .btn.red{ background:var(--red-solid); color:#fff; }
+  .btn.white{ background:#fff; color:#000; }
+  .btn.block{ width:100%; }
+  .btn.sm{ padding:9px 14px; font-size:13px; }
+  .pill{ display:inline-flex; padding:8px 14px; border-radius:999px; background:var(--s2); font-weight:700; font-size:13px; color:var(--dim); }
+  .pill.on{ background:#fff; color:#000; }
+  .pills{ display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; }
+  .pills::-webkit-scrollbar{ display:none; }
+
+  /* ---------- bottom nav ---------- */
+  nav.tabs{ position:fixed; left:0; right:0; bottom:0; z-index:20; background:rgba(0,0,0,.92); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border-top:1px solid var(--line); padding:8px 0 calc(8px + var(--safe-b)); }
+  nav.tabs .in{ max-width:560px; margin:0 auto; display:grid; grid-template-columns:repeat(5,1fr); }
+  nav.tabs button{ display:flex; flex-direction:column; align-items:center; gap:4px; font-size:10.5px; font-weight:700; color:var(--dim2); padding:4px 0; }
+  nav.tabs button svg{ width:24px; height:24px; }
+  nav.tabs button.on{ color:#fff; }
+  nav.tabs button.on svg{ color:var(--red); }
+
+  /* ---------- run tab ---------- */
+  .gps{ display:inline-flex; align-items:center; gap:8px; font-size:12px; font-weight:700; color:var(--dim); }
+  .gps i{ width:9px; height:9px; border-radius:50%; background:var(--dim2); }
+  .gps.good i{ background:var(--ok); } .gps.ok i{ background:var(--warn); } .gps.bad i{ background:var(--red); }
+  .runhero{ position:relative; border-radius:24px; overflow:hidden; height:46vh; min-height:300px; background:var(--s1); }
+  #premap{ position:absolute; inset:0; }
+  .runhero .shade{ position:absolute; inset:0; background:linear-gradient(180deg,rgba(0,0,0,.2),rgba(0,0,0,.05) 40%,rgba(0,0,0,.85)); pointer-events:none; z-index:400; }
+  .runhero .over{ position:absolute; left:16px; right:16px; bottom:16px; z-index:401; }
+  .goalset{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin:16px 0; }
+  .goalset button{ background:var(--s1); border-radius:14px; padding:12px 6px; font-size:12px; font-weight:700; color:var(--dim); }
+  .goalset button.on{ background:#fff; color:#000; }
+  .goalval{ display:flex; align-items:center; justify-content:center; gap:18px; margin:4px 0 14px; }
+  .goalval button{ width:44px; height:44px; border-radius:50%; background:var(--s2); font-size:22px; font-weight:700; }
+  .goalval .v{ font-size:56px; line-height:1; min-width:150px; text-align:center; }
+  .startbtn{ display:block; margin:8px auto 0; width:132px; height:132px; border-radius:50%; background:var(--red-solid); color:#fff;
+    font-family:Oswald,sans-serif; font-size:30px; font-weight:700; letter-spacing:.04em; box-shadow:0 0 0 10px rgba(240,57,43,.16),0 18px 40px rgba(217,44,26,.35); }
+  .startbtn:active{ transform:scale(.96); }
+  .guidedchip{ display:flex; align-items:center; gap:12px; background:var(--s1); border-radius:14px; padding:12px; margin-top:16px; }
+
+  /* ---------- live run (full screen) ---------- */
+  #live{ position:fixed; inset:0; z-index:50; background:var(--red-solid); color:#fff; display:flex; flex-direction:column; padding:calc(var(--safe-t) + 14px) 20px calc(24px + var(--safe-b)); }
+  #live.paused{ background:#000; }
+  #live .lv-top{ display:flex; justify-content:space-between; align-items:center; font-weight:700; font-size:13px; }
+  #live .lv-main{ flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; }
+  #live .big{ font-size:min(32vw,170px); line-height:.9; }
+  #live .unit{ font-family:Oswald,sans-serif; font-size:20px; font-weight:600; opacity:.85; margin-top:6px; text-transform:uppercase; letter-spacing:.08em; }
+  #live .trio{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; width:100%; margin-top:36px; }
+  #live .trio .num{ font-size:34px; line-height:1; }
+  #live .trio .l{ font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; opacity:.75; margin-top:6px; }
+  #live .seg{ background:rgba(0,0,0,.22); border-radius:16px; padding:12px 14px; width:100%; text-align:left; margin-bottom:22px; }
+  #live.paused .seg{ background:var(--s1); }
+  #live .seg .bar{ height:5px; border-radius:3px; background:rgba(255,255,255,.25); margin-top:10px; overflow:hidden; }
+  #live .seg .bar i{ display:block; height:100%; background:#fff; width:0; }
+  #live .ctrls{ display:flex; justify-content:center; align-items:center; gap:28px; }
+  .round{ width:84px; height:84px; border-radius:50%; display:grid; place-items:center; background:#000; color:#fff; }
+  .round svg{ width:34px; height:34px; }
+  .round.white{ background:#fff; color:#000; }
+  .round.sm{ width:58px; height:58px; background:rgba(0,0,0,.25); }
+  .round.sm svg{ width:24px; height:24px; }
+  #live.paused .round.sm{ background:var(--s2); }
+  .hold{ position:relative; overflow:hidden; }
+  .hold .fill{ position:absolute; inset:0; background:var(--red); transform:scaleY(0); transform-origin:bottom; transition:transform .1s linear; }
+  .hold svg,.hold span{ position:relative; }
+  #live .holdhint{ text-align:center; font-size:12px; font-weight:700; opacity:.7; margin-top:12px; min-height:16px; }
+  #livemap{ position:absolute; inset:0; z-index:0; }
+  #live.mapmode .lv-main .big,#live.mapmode .lv-main .unit{ display:none; }
+  #live .mapwrap{ display:none; position:relative; width:100%; flex:1; border-radius:20px; overflow:hidden; margin:14px 0; }
+  #live.mapmode .mapwrap{ display:block; }
+  #live.mapmode .lv-main{ flex:0; }
+  #live.mapmode .trio{ margin-top:0; }
+
+  #countdown{ position:fixed; inset:0; z-index:60; background:var(--red-solid); display:grid; place-items:center; font-size:46vw; color:#fff; }
+
+  /* ---------- activity ---------- */
+  .totals .big{ font-size:76px; line-height:.95; }
+  .stat3{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:16px; }
+  .stat3 .num{ font-size:24px; line-height:1; }
+  .stat3 .l{ font-size:11px; color:var(--dim); font-weight:600; margin-top:4px; }
+  .chart{ margin-top:18px; }
+  .chart svg{ width:100%; height:130px; display:block; }
+  .lvl{ display:flex; align-items:center; gap:14px; }
+  .lvl .dot{ width:54px; height:54px; border-radius:50%; flex:none; display:grid; place-items:center; color:#000; font-weight:800; font-size:12px; }
+  .prog{ height:8px; background:var(--s3); border-radius:4px; overflow:hidden; margin-top:8px; }
+  .prog i{ display:block; height:100%; background:var(--red); border-radius:4px; }
+  .runitem{ display:flex; gap:14px; align-items:center; padding:14px 0; border-bottom:1px solid var(--line); }
+  .runitem:last-child{ border-bottom:0; }
+  .runitem .thumb{ width:62px; height:62px; flex:none; border-radius:14px; background:var(--s2); display:grid; place-items:center; overflow:hidden; }
+  .runitem .thumb svg{ width:100%; height:100%; }
+  .runitem .km{ font-size:28px; line-height:1; }
+  .runitem .meta{ font-size:12px; color:var(--dim); margin-top:4px; }
+  .prgrid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .prgrid .card .num{ font-size:26px; }
+
+  /* ---------- guided ---------- */
+  .gcard{ position:relative; border-radius:20px; overflow:hidden; min-height:170px; padding:18px; display:flex; flex-direction:column; justify-content:flex-end; margin-bottom:12px; text-align:left; width:100%; }
+  .gcard .t{ font-family:Oswald,sans-serif; font-size:28px; line-height:1.02; text-transform:uppercase; }
+  .gcard .m{ font-size:12px; font-weight:700; opacity:.85; margin-top:6px; letter-spacing:.04em; }
+  .gcard .tag{ position:absolute; top:16px; left:18px; font-size:11px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; background:rgba(0,0,0,.35); padding:5px 9px; border-radius:999px; }
+  .gcard .done{ position:absolute; top:16px; right:18px; font-size:11px; font-weight:800; background:#fff; color:#000; padding:5px 9px; border-radius:999px; }
+  .segs{ display:flex; gap:3px; height:28px; align-items:flex-end; margin:16px 0; }
+  .segs i{ display:block; border-radius:3px; }
+
+  /* ---------- club ---------- */
+  .chal{ background:linear-gradient(150deg,var(--red-solid),#7a160c); border-radius:22px; padding:20px; }
+  .chal .num{ font-size:60px; line-height:.95; }
+  .chal .prog{ background:rgba(0,0,0,.3); height:10px; border-radius:5px; }
+  .chal .prog i{ background:#fff; }
+  .lb{ display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--line); }
+  .lb:last-child{ border-bottom:0; }
+  .lb .rk{ width:28px; font-family:Oswald,sans-serif; font-size:20px; color:var(--dim); text-align:center; }
+  .lb.me{ background:var(--red-deep); margin:0 -16px; padding:12px 16px; border-radius:12px; border-bottom:0; }
+  .lb .km{ font-size:20px; }
+  .badges{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .badge{ background:var(--s1); border-radius:16px; padding:14px 8px; text-align:center; }
+  .badge .ic{ width:56px; height:56px; margin:0 auto 8px; border-radius:50%; display:grid; place-items:center; font-size:26px; background:var(--s3); filter:grayscale(1); opacity:.45; }
+  .badge.got .ic{ background:var(--red-solid); filter:none; opacity:1; }
+  .badge .n{ font-size:12px; font-weight:700; line-height:1.25; }
+  .badge .d{ font-size:10.5px; color:var(--dim); margin-top:4px; line-height:1.3; }
+
+  /* ---------- profile ---------- */
+  .setrow{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 0; border-bottom:1px solid var(--line); }
+  .setrow:last-child{ border-bottom:0; }
+  .sw{ position:relative; width:50px; height:30px; flex:none; }
+  .sw input{ position:absolute; opacity:0; inset:0; margin:0; cursor:pointer; z-index:1; }
+  .sw i{ position:absolute; inset:0; background:var(--s3); border-radius:15px; transition:.2s; }
+  .sw i::after{ content:""; position:absolute; top:3px; left:3px; width:24px; height:24px; border-radius:50%; background:#fff; transition:.2s; }
+  .sw input:checked + i{ background:var(--red-solid); }
+  .sw input:checked + i::after{ transform:translateX(20px); }
+
+  /* ---------- sheet / modal ---------- */
+  #sheet{ position:fixed; inset:0; z-index:70; background:rgba(0,0,0,.7); display:flex; align-items:flex-end; justify-content:center; }
+  #sheet .box{ background:var(--s1); width:100%; max-width:560px; max-height:92vh; overflow-y:auto; border-radius:24px 24px 0 0; padding:20px 16px calc(24px + var(--safe-b)); }
+  #sheet .grab{ width:40px; height:5px; border-radius:3px; background:var(--s3); margin:0 auto 16px; }
+  #sheet h3{ font-family:Oswald,sans-serif; font-size:26px; margin:0 0 12px; text-transform:uppercase; }
+  #sheet label{ display:block; font-size:12px; font-weight:700; color:var(--dim); margin:14px 0 6px; }
+  .msg{ font-size:13px; margin-top:10px; min-height:18px; color:var(--dim); }
+  .msg.err{ color:#ff7b70; }
+
+  /* ---------- run detail ---------- */
+  #detail{ position:fixed; inset:0; z-index:65; background:var(--bg); overflow-y:auto; }
+  #detail .in{ max-width:560px; margin:0 auto; padding:calc(var(--safe-t) + 10px) 16px calc(40px + var(--safe-b)); }
+  #detmap{ height:300px; border-radius:20px; overflow:hidden; background:var(--s1); }
+  .dgrid{ display:grid; grid-template-columns:1fr 1fr; gap:18px 12px; margin:20px 0; }
+  .dgrid .num{ font-size:30px; line-height:1; }
+  .dgrid .l{ font-size:12px; color:var(--dim); font-weight:600; margin-top:4px; }
+  .splits .sp{ display:grid; grid-template-columns:34px 64px 1fr; gap:10px; align-items:center; padding:7px 0; font-size:14px; }
+  .splits .sp .b{ height:14px; border-radius:3px; background:var(--s3); }
+  .splits .sp .b i{ display:block; height:100%; border-radius:3px; background:var(--red); }
+  .splits .sp.best .b i{ background:#fff; }
+  .feel{ display:flex; gap:8px; }
+  .feel button{ flex:1; background:var(--s2); border-radius:14px; padding:10px 0; font-size:24px; }
+  .feel button.on{ background:#fff; }
+  .toast{ position:fixed; left:50%; bottom:calc(100px + var(--safe-b)); transform:translateX(-50%) translateY(20px); background:#fff; color:#000; font-weight:700; font-size:14px;
+    padding:12px 18px; border-radius:999px; opacity:0; transition:.25s; z-index:90; pointer-events:none; max-width:90vw; text-align:center; }
+  .toast.on{ opacity:1; transform:translateX(-50%) translateY(0); }
+  /* Leaflet's panes carry z-indexes up to 1000; keep them inside their own box. */
+  .runhero,#detmap,#live .mapwrap{ isolation:isolate; }
+  .leaflet-container{ background:#111; }
+  /* OSM's standard tiles, darkened, so no tile API key is needed */
+  .leaflet-tile-pane{ filter:invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.35); }
+  .leaflet-control-attribution{ font-size:9px; background:rgba(0,0,0,.55) !important; color:#999 !important; }
+  .leaflet-control-attribution a{ color:#bbb !important; }
+  .me-dot{ width:18px; height:18px; border-radius:50%; background:var(--red); border:3px solid #fff; box-shadow:0 0 0 8px rgba(240,57,43,.25); }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header class="top">
+    <div class="brand">HITFAT <b>RUN</b> CLUB</div>
+    <button class="avatar" id="hdr-avatar" onclick="go('profile')" aria-label="Profil">?</button>
+  </header>
+  <main id="view"></main>
+</div>
+
+<nav class="tabs" aria-label="Navigasi">
+  <div class="in">
+    <button data-tab="run" onclick="go('run')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="14" cy="4" r="2"/><path d="M8 21l3-6 3 2v5M6 12l3-4 4 1 3 3 3 1M11 15l-1-3"/></svg>Larian</button>
+    <button data-tab="guided" onclick="go('guided')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><rect x="2" y="14" width="5" height="7" rx="2"/><rect x="17" y="14" width="5" height="7" rx="2"/></svg>Berpandu</button>
+    <button data-tab="activity" onclick="go('activity')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Aktiviti</button>
+    <button data-tab="club" onclick="go('club')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/></svg>Kelab</button>
+    <button data-tab="profile" onclick="go('profile')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Profil</button>
+  </div>
+</nav>
+
+<!-- live run screen -->
+<div id="live" class="hide">
+  <div class="lv-top">
+    <span id="lv-gps" class="gps"><i></i><span>GPS</span></span>
+    <span id="lv-state">LARIAN</span>
+    <span id="lv-clock" style="font-weight:700"></span>
+  </div>
+  <div class="mapwrap"><div id="livemap"></div></div>
+  <div class="lv-main">
+    <div id="lv-seg" class="seg hide">
+      <div class="row"><div class="grow"><div class="cap" style="color:inherit;opacity:.75" id="lv-seg-n">SEGMEN</div>
+        <div style="font-weight:800;font-size:18px;margin-top:2px" id="lv-seg-t">Warm-up</div></div>
+        <div class="num" style="font-size:26px" id="lv-seg-r">0:00</div></div>
+      <div class="bar"><i id="lv-seg-bar"></i></div>
+    </div>
+    <div class="big num" id="lv-big">0.00</div>
+    <div class="unit" id="lv-unit">Kilometer</div>
+    <div class="trio">
+      <div><div class="num" id="lv-a">--</div><div class="l" id="lv-al">Pace</div></div>
+      <div><div class="num" id="lv-b">0:00</div><div class="l">Masa</div></div>
+      <div><div class="num" id="lv-c">0</div><div class="l">Kalori</div></div>
+    </div>
+  </div>
+  <div style="margin-top:28px">
+    <div class="ctrls" id="lv-run-ctrls">
+      <button class="round sm" id="lv-mapbtn2" onclick="Live.toggleMap()" aria-label="Peta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg></button>
+      <button class="round" onclick="Live.pause()" aria-label="Pause"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg></button>
+      <button class="round sm" onclick="Live.speakStatus()" aria-label="Status suara"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5L6 9H2v6h4l5 4V5zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/></svg></button>
+    </div>
+    <div class="ctrls hide" id="lv-pause-ctrls">
+      <button class="round hold" id="lv-end" aria-label="Tekan lama untuk tamat"><span class="fill"></span><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
+      <button class="round white" onclick="Live.resume()" aria-label="Sambung"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l13 8-13 8z"/></svg></button>
+    </div>
+    <div class="holdhint" id="lv-hint"></div>
+  </div>
+</div>
+
+<div id="countdown" class="hide num" onclick="Live.skipCountdown()">3</div>
+<div id="detail" class="hide"></div>
+<div id="sheet" class="hide" onclick="if(event.target===this) closeSheet()"><div class="box"><div class="grab"></div><div id="sheet-body"></div></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   HITFAT RUN CLUB — single-file PWA, lives at /run beside HITFAT Hybrid.
+
+   Works with no login at all: every run is kept in localStorage first.
+   Signing in (same Supabase project and session as the Hybrid app) adds
+   cloud backup and puts the run on the club leaderboard.
+
+   Tables it needs are in run/SETUP.sql. Until they exist the app still
+   works; only sync and the leaderboard say they are not ready.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const $ = id => document.getElementById(id);
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function toast(m){ const t=$('toast'); t.textContent=m; t.classList.add('on'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('on'),2400); }
+function uid(){ return (crypto.randomUUID ? crypto.randomUUID() : 'r'+Date.now().toString(36)+Math.random().toString(36).slice(2)); }
+
+/* ---------- formatting ---------- */
+function fmtKm(m, dp){ return (m/1000).toFixed(dp==null?2:dp); }
+function fmtDur(s){ s=Math.max(0,Math.round(s)); const h=Math.floor(s/3600), m=Math.floor(s%3600/60), x=s%60;
+  return h ? h+':'+String(m).padStart(2,'0')+':'+String(x).padStart(2,'0') : m+':'+String(x).padStart(2,'0'); }
+function fmtPace(secPerKm){ if(!isFinite(secPerKm) || secPerKm<=0 || secPerKm>3600) return "--'--\"";
+  const s=Math.round(secPerKm); return Math.floor(s/60)+"'"+String(s%60).padStart(2,'0')+'"'; }
+function paceOf(sec, m){ return m>0 ? sec/(m/1000) : NaN; }
+const HARI=['Ahad','Isnin','Selasa','Rabu','Khamis','Jumaat','Sabtu'];
+const BULAN=['Januari','Februari','Mac','April','Mei','Jun','Julai','Ogos','September','Oktober','November','Disember'];
+function fmtDate(ms){ const d=new Date(ms); return HARI[d.getDay()]+', '+d.getDate()+' '+BULAN[d.getMonth()].slice(0,3)+' '+d.getFullYear(); }
+function fmtTime(ms){ const d=new Date(ms); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function partOfDay(ms){ const h=new Date(ms).getHours(); return h<12?'Pagi':h<15?'Tengah Hari':h<19?'Petang':'Malam'; }
+function monthKey(d){ d=d||new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function startOfWeek(d){ d=new Date(d||Date.now()); d.setHours(0,0,0,0); const dow=(d.getDay()+6)%7; d.setDate(d.getDate()-dow); return d; } // Monday
+function startOfMonth(d){ d=new Date(d||Date.now()); return new Date(d.getFullYear(), d.getMonth(), 1); }
+
+/* ---------- geo ---------- */
+function haversine(a,b){ const R=6371000, r=Math.PI/180;
+  const dLat=(b[0]-a[0])*r, dLng=(b[1]-a[1])*r;
+  const x=Math.sin(dLat/2)**2 + Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin(dLng/2)**2;
+  return 2*R*Math.asin(Math.sqrt(x)); }
+/* Keep a saved route small: never more than ~600 points, 5 decimals (~1 m). */
+function thinRoute(pts, max){ max=max||600; if(pts.length<=max) return pts.map(p=>[+p[0].toFixed(5),+p[1].toFixed(5)]);
+  const step=pts.length/max, out=[]; for(let i=0;i<max;i++) out.push(pts[Math.floor(i*step)]);
+  out.push(pts[pts.length-1]); return out.map(p=>[+p[0].toFixed(5),+p[1].toFixed(5)]); }
+function routeSVG(route, color, pad){
+  if(!route || route.length<2) return '';
+  pad=pad==null?8:pad; const W=100, H=100;
+  const lat0=route[0][0]*Math.PI/180, k=Math.cos(lat0);
+  const xs=route.map(p=>p[1]*k), ys=route.map(p=>-p[0]);
+  const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
+  const span=Math.max(maxX-minX, maxY-minY) || 1e-6, s=(W-2*pad)/span;
+  const ox=(W-(maxX-minX)*s)/2, oy=(H-(maxY-minY)*s)/2;
+  const d=xs.map((x,i)=>(i?'L':'M')+((x-minX)*s+ox).toFixed(1)+' '+((ys[i]-minY)*s+oy).toFixed(1)).join('');
+  return `<svg viewBox="0 0 ${W} ${H}"><path d="${d}" fill="none" stroke="${color||'#F0392B'}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+/* Fastest time over `dist` metres anywhere in the run, from [elapsedSec, cumMetres] pairs. */
+function bestEffort(trace, dist){
+  if(!trace || trace.length<2 || trace[trace.length-1][1] < dist) return null;
+  let best=Infinity, i=0;
+  for(let j=1;j<trace.length;j++){
+    while(i+1<j && trace[j][1]-trace[i+1][1] >= dist) i++;
+    const dd=trace[j][1]-trace[i][1];
+    if(dd>=dist){ const t=(trace[j][0]-trace[i][0])*dist/dd; if(t<best) best=t; }
+  }
+  return isFinite(best) ? Math.round(best) : null;
+}
+const PR_DIST=[[1000,'1K'],[5000,'5K'],[10000,'10K'],[21097,'Separuh Maraton'],[42195,'Maraton']];
+
+/* ═══════════════ SUPABASE ═══════════════ */
+const SUPA_URL='https://auth.hitfat.io';   // same project as HITFAT Hybrid
+const SUPA_KEY='sb_publishable_6tKH033Hb74EV7QlKBCFFA_5K_Lsxgv'; // publishable key, safe in client
+let sb=null;
+try{ if(window.supabase) sb=window.supabase.createClient(SUPA_URL, SUPA_KEY); }catch(e){ console.warn('Supabase init failed', e); }
+const Cloud = { ready:null, clubReady:null }; // null = unknown, false = table missing
+function tableMissing(err){ return err && (err.code==='42P01' || err.code==='PGRST205' || /does not exist|schema cache/i.test(err.message||'')); }
+
+/* ═══════════════ STORE ═══════════════ */
+const RC = {
+  KEY:'hitfat_run_v1', userId:null, email:null, meta:null,
+  data:null,
+  defaults(){ return { profile:{ name:'', weightKg:65, voice:true, kmCues:true, autoPause:false, indoor:false, upd:0 },
+    challenges:{}, runs:[], deleted:[], badges:{} }; },
+  cacheKey(){ return this.KEY + (this.userId?'_'+this.userId:''); },
+  load(){ this.data=this.defaults();
+    try{ const r=localStorage.getItem(this.cacheKey());
+      if(r) this.apply(JSON.parse(r)); }catch(e){} },
+  apply(o){ const d=this.defaults(); if(o && typeof o==='object'){
+      Object.assign(d.profile, o.profile||{}); d.challenges=Object.assign({}, o.challenges||{});
+      d.runs=Array.isArray(o.runs)?o.runs.filter(r=>r&&r.id):[]; d.deleted=Array.isArray(o.deleted)?o.deleted.slice():[];
+      d.badges=Object.assign({}, o.badges||{}); }
+    this.data=d; this.sort(); },
+  sort(){ this.data.runs.sort((a,b)=>b.start-a.start); },
+  save(){ try{ localStorage.setItem(this.cacheKey(), JSON.stringify(this.data)); }catch(e){ console.warn('save failed', e); } this.push(); },
+  /* Two devices can both log runs offline, so a pull is a merge, never a replace. */
+  merge(remote){
+    if(!remote) return;
+    const del=new Set([...(this.data.deleted||[]), ...(remote.deleted||[])]);
+    const byId={};
+    [...(remote.runs||[]), ...this.data.runs].forEach(r=>{ if(!r||!r.id||del.has(r.id)) return;
+      const cur=byId[r.id]; if(!cur || (r.upd||0) > (cur.upd||0)) byId[r.id]=r; });
+    this.data.runs=Object.values(byId); this.data.deleted=[...del].slice(-500);
+    if(remote.profile && (remote.profile.upd||0) > (this.data.profile.upd||0)) Object.assign(this.data.profile, remote.profile);
+    this.data.challenges=Object.assign({}, remote.challenges||{}, this.data.challenges);
+    this.data.badges=Object.assign({}, remote.badges||{}, this.data.badges);
+    this.sort();
+  },
+  push(){ if(!sb || !this.userId || Cloud.ready===false) return;
+    clearTimeout(this._t);
+    this._t=setTimeout(async()=>{
+      const { error } = await sb.from('run_data').upsert({ user_id:this.userId, data:this.data, updated_at:new Date().toISOString() }, { onConflict:'user_id' });
+      if(error){ if(tableMissing(error)) Cloud.ready=false; console.warn('cloud save failed', error.message); } else Cloud.ready=true;
+    }, 800); },
+  async pull(){ if(!sb || !this.userId) return;
+    const { data:row, error } = await sb.from('run_data').select('data').eq('user_id', this.userId).maybeSingle();
+    if(error){ if(tableMissing(error)) Cloud.ready=false; console.warn('cloud load failed', error.message); return; }
+    Cloud.ready=true;
+    if(row && row.data) this.merge(row.data);
+    try{ localStorage.setItem(this.cacheKey(), JSON.stringify(this.data)); }catch(e){}
+    this.push(); },
+  runs(){ return this.data.runs; },
+  getRun(id){ return this.data.runs.find(r=>r.id===id); },
+  addRun(r){ r.upd=Date.now(); this.data.runs.push(r); this.sort(); this.save(); Club.post(r); checkBadges(); },
+  updateRun(r){ r.upd=Date.now(); this.save(); Club.post(r); },
+  deleteRun(id){ this.data.runs=this.data.runs.filter(r=>r.id!==id); this.data.deleted.push(id); this.save(); Club.remove(id); },
+  setProfile(k,v){ this.data.profile[k]=v; this.data.profile.upd=Date.now(); this.save(); },
+  displayName(){ const p=this.data.profile; if(p.name) return p.name;
+    const m=this.meta||{}; return m.full_name || m.name || (this.email ? this.email.split('@')[0] : 'Pelari'); },
+  totals(since, until){ let dist=0, dur=0, n=0; until=until||Infinity;
+    this.data.runs.forEach(r=>{ if(r.start>=since && r.start<until){ dist+=r.dist; dur+=r.dur; n++; } });
+    return { dist, dur, n }; },
+};
+
+/* ═══════════════ CLUB (shared leaderboard rows) ═══════════════ */
+const Club = {
+  row(r){ return { id:r.id, user_id:RC.userId, display_name:RC.displayName().slice(0,40), started_at:new Date(r.start).toISOString(),
+    distance_m:Math.round(r.dist), duration_s:Math.max(1,Math.round(r.dur)) }; },
+  /* The database refuses anything faster than ~2:23/km, so a GPS glitch can't top the board. */
+  ok(r){ return r.dist>=200 && r.dist <= r.dur*7; },
+  async post(r){ if(!sb || !RC.userId || Cloud.clubReady===false || !this.ok(r)) return;
+    const { error } = await sb.from('run_club_runs').upsert(this.row(r), { onConflict:'id' });
+    if(error){ if(tableMissing(error)) Cloud.clubReady=false; console.warn('club post failed', error.message); } else Cloud.clubReady=true; },
+  async remove(id){ if(!sb || !RC.userId || Cloud.clubReady===false) return;
+    await sb.from('run_club_runs').delete().eq('id', id); },
+  async backfill(){ if(!sb || !RC.userId) return;
+    const rows=RC.runs().filter(r=>this.ok(r)).map(r=>this.row(r));
+    for(let i=0;i<rows.length;i+=200){
+      const { error } = await sb.from('run_club_runs').upsert(rows.slice(i,i+200), { onConflict:'id' });
+      if(error){ if(tableMissing(error)) Cloud.clubReady=false; return; }
+    }
+    Cloud.clubReady=true; },
+  async board(since){
+    if(!sb) return { error:'offline' };
+    if(!RC.userId) return { error:'login' };
+    const { data, error } = await sb.from('run_club_runs').select('user_id,display_name,distance_m,duration_s,started_at')
+      .gte('started_at', new Date(since).toISOString()).limit(10000);
+    if(error){ if(tableMissing(error)){ Cloud.clubReady=false; return { error:'setup' }; } return { error:error.message }; }
+    Cloud.clubReady=true;
+    const by={};
+    (data||[]).forEach(r=>{ const b=by[r.user_id]||(by[r.user_id]={ id:r.user_id, name:r.display_name, dist:0, dur:0, n:0, last:'' });
+      b.dist+=r.distance_m; b.dur+=r.duration_s; b.n++; if(r.started_at>b.last){ b.last=r.started_at; b.name=r.display_name; } });
+    return { rows:Object.values(by).sort((a,b)=>b.dist-a.dist) };
+  },
+};
+
+/* ═══════════════ VOICE ═══════════════ */
+const Voice = {
+  voice:null, ctx:null,
+  init(){ if(!('speechSynthesis' in window)) return;
+    const pick=()=>{ const vs=speechSynthesis.getVoices();
+      this.voice = vs.find(v=>/^ms/i.test(v.lang)) || vs.find(v=>/^id/i.test(v.lang)) || null; };
+    pick(); speechSynthesis.onvoiceschanged=pick; },
+  /* iOS only lets audio start from a tap, so START primes both engines. */
+  unlock(){ try{ if('speechSynthesis' in window){ const u=new SpeechSynthesisUtterance(' '); u.volume=0; speechSynthesis.speak(u); } }catch(e){}
+    try{ this.ctx=this.ctx||new (window.AudioContext||window.webkitAudioContext)(); if(this.ctx.state==='suspended') this.ctx.resume(); }catch(e){} },
+  say(text, force){ if(!force && !RC.data.profile.voice) return; if(!('speechSynthesis' in window)) return;
+    try{ const u=new SpeechSynthesisUtterance(text); u.lang=this.voice?this.voice.lang:'ms-MY'; if(this.voice) u.voice=this.voice; u.rate=1.02;
+      speechSynthesis.speak(u); }catch(e){} },
+  beep(n, hi){ if(!this.ctx) return; n=n||1;
+    for(let i=0;i<n;i++){ try{ const o=this.ctx.createOscillator(), g=this.ctx.createGain(), t=this.ctx.currentTime+i*0.22;
+      o.frequency.value=hi?1320:880; o.connect(g); g.connect(this.ctx.destination);
+      g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(0.35,t+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+0.16);
+      o.start(t); o.stop(t+0.18); }catch(e){} } },
+  paceWords(spk){ if(!isFinite(spk)) return ''; const s=Math.round(spk); return Math.floor(s/60)+' minit '+(s%60)+' saat'; },
+  durWords(sec){ sec=Math.round(sec); const h=Math.floor(sec/3600), m=Math.floor(sec%3600/60), s=sec%60;
+    return (h?h+' jam ':'')+(m?m+' minit ':'')+(s&&!h?s+' saat':'').trim(); },
+};
+
+/* ═══════════════ GUIDED RUNS ═══════════════
+   A run is a list of segments, each ended by time (sec) or distance (m).
+   `say` is spoken as the segment begins; `tips` are [secondsIn, line]. */
+const GUIDED = [
+  { id:'first', title:'Larian Pertama', tag:'Pemula', mins:20, color:'#D92C1A', coach:'Coach Seth',
+    desc:'Untuk yang tak pernah lari. Jalan dan lari selang-seli, tak ada tekanan pace langsung.',
+    segs:[
+      { sec:180, kind:'warm', label:'Jalan laju', say:'Selamat datang ke larian pertama kau. Aku Coach Seth. Hari ni kita tak kejar laju. Mula dengan jalan laju tiga minit.',
+        tips:[[90,'Bahu relaks. Tangan hayun dari bahu, bukan dari siku.']] },
+      ...Array.from({length:5}).flatMap((_,i)=>[
+        { sec:90, kind:'easy', label:'Lari santai '+(i+1)+'/5', say: i===0?'Okay, lari perlahan sembilan puluh saat. Pace yang kau masih boleh bercakap.':'Lari santai lagi. Kau boleh.',
+          tips: i===2?[[45,'Separuh jalan dah. Ingat, aku tak kisah laju. Aku kisah kau tak berhenti datang.']]:[] },
+        { sec:120, kind:'rest', label:'Jalan', say:'Jalan. Tarik nafas dalam-dalam.' }]),
+      { sec:150, kind:'cool', label:'Cool down', say:'Siap semua set. Jalan perlahan untuk cool down. Hari ni kau dah buktikan kau boleh mula.' },
+    ]},
+  { id:'easy30', title:'Easy Run 30', tag:'Recovery', mins:30, color:'#2F80FF', coach:'Coach Seth',
+    desc:'Larian santai zon 2. Bina enjin aerobik tanpa penat sampai esok.',
+    segs:[
+      { sec:300, kind:'warm', label:'Warm-up', say:'Easy run tiga puluh minit. Lima minit pertama lebih perlahan dari yang kau rasa perlu.' },
+      { sec:1200, kind:'easy', label:'Zon 2', say:'Sekarang masuk zon dua. Kalau tak boleh bercakap satu ayat penuh, perlahankan.',
+        tips:[[300,'Check postur. Dada terbuka, pandang depan sepuluh meter.'],[600,'Separuh jalan. Easy run yang betul rasa macam terlalu senang. Itu tanda kau buat betul.'],[900,'Langkah pendek, cepat. Jangan hentak tumit.']] },
+      { sec:300, kind:'cool', label:'Cool down', say:'Lima minit terakhir. Perlahankan sikit dan biar degupan jantung turun.' },
+    ]},
+  { id:'interval', title:'Interval 1 : 2', tag:'Speed', mins:28, color:'#FF8A00', coach:'Coach Seth',
+    desc:'8 kali 1 minit laju, 2 minit santai. Bina kelajuan untuk 5K dan HYROX.',
+    segs:[
+      { sec:360, kind:'warm', label:'Warm-up', say:'Interval satu banding dua. Warm-up enam minit dulu. Jangan skip.' },
+      ...Array.from({length:8}).flatMap((_,i)=>[
+        { sec:60, kind:'fast', label:'LAJU '+(i+1)+'/8', say: i===7?'Set terakhir! Habiskan semua!':i===0?'Laju! Satu minit. Lapan puluh peratus usaha.':'Laju! Set '+(i+1)+'.',
+          tips:[[30,'Tiga puluh saat lagi!']] },
+        { sec:120, kind:'rest', label:'Santai', say:'Okay perlahan. Recover. Jangan berhenti, jog perlahan.' }]),
+      { sec:240, kind:'cool', label:'Cool down', say:'Siap lapan set. Kau memang gila. Cool down empat minit.' },
+    ]},
+  { id:'tempo', title:'Tempo 20', tag:'Threshold', mins:35, color:'#9B5CFF', coach:'Coach Seth',
+    desc:'20 minit pada pace "selesa yang susah". Larian paling berkesan untuk naikkan pace 10K.',
+    segs:[
+      { sec:480, kind:'warm', label:'Warm-up', say:'Tempo run. Lapan minit warm-up dulu, mula perlahan.' },
+      { sec:1200, kind:'fast', label:'Tempo', say:'Masuk tempo. Selesa tapi susah. Kau boleh cakap dua tiga perkataan je.',
+        tips:[[300,'Lima minit. Cari ritma. Nafas ikut langkah.'],[600,'Separuh. Jangan naikkan pace, kekalkan.'],[900,'Lima minit lagi. Ini part mental. Kira langkah kalau perlu.'],[1140,'Satu minit terakhir!']] },
+      { sec:420, kind:'cool', label:'Cool down', say:'Tempo siap. Perlahan, cool down tujuh minit.' },
+    ]},
+  { id:'hyrox8', title:'HYROX 8 × 1K', tag:'Race Prep', mins:50, color:'#F0392B', coach:'Coach Seth',
+    desc:'Lapan kali satu kilometer pada pace race, rehat 90 saat. Sama macam lapan larian dalam HYROX.',
+    segs:[
+      { sec:420, kind:'warm', label:'Warm-up', say:'HYROX lapan kali satu K. Warm-up tujuh minit.' },
+      ...Array.from({length:8}).flatMap((_,i)=>[
+        { m:1000, kind:'fast', label:'1K #'+(i+1), say: i===0?'Satu kilometer pace race. Bayangkan kau baru keluar dari Roxzone.':'Kilometer '+(i+1)+'. Same pace.',
+          tips:[] },
+        ...(i<7?[{ sec:90, kind:'rest', label:'Rehat', say:'Rehat sembilan puluh saat. Dalam race, ini station kau.' }]:[])]),
+      { sec:300, kind:'cool', label:'Cool down', say:'Lapan kilometer race pace siap. Kau sedia untuk HYROX.' },
+    ]},
+  { id:'long', title:'Long Run Ahad', tag:'Endurance', mins:60, color:'#2BD96B', coach:'Coach Seth',
+    desc:'Satu jam perlahan. Kaki biasa dengan masa atas jalan.',
+    segs:[
+      { sec:600, kind:'warm', label:'Mula perlahan', say:'Long run satu jam. Sepuluh minit pertama paling perlahan. Kita ada masa.' },
+      { sec:2700, kind:'easy', label:'Long run', say:'Okay, masuk pace santai kau. Kekal di sini.',
+        tips:[[600,'Minum air kalau ada. Jangan tunggu dahaga.'],[1350,'Separuh jalan. Badan kau sedang belajar bakar lemak sebagai tenaga.'],[2100,'Kaki mula berat? Normal. Pendekkan langkah.']] },
+      { sec:300, kind:'cool', label:'Cool down', say:'Lima minit terakhir. Hari Ahad kau dah menang.' },
+    ]},
+  { id:'mind15', title:'Larian Minda 15', tag:'Mindful', mins:15, color:'#5A5A5A', coach:'Coach Seth',
+    desc:'Larian pendek bila stres. Tak ada nombor, fokus nafas.',
+    segs:[
+      { sec:900, kind:'easy', label:'Santai', say:'Lima belas minit untuk kepala kau. Lupakan pace. Dengar nafas.',
+        tips:[[180,'Tarik nafas tiga langkah, hembus tiga langkah.'],[450,'Apa yang kau risaukan tadi, biar dia tinggal di belakang.'],[720,'Tiga minit lagi. Terima kasih sebab jaga diri hari ni.']] },
+    ]},
+];
+const KIND_COLOR={ warm:'#6E6E6E', easy:'#2F80FF', fast:'#F0392B', rest:'#3A3A3A', cool:'#6E6E6E' };
+function guidedById(id){ return GUIDED.find(g=>g.id===id); }
+function guidedEstSec(g){ return g.segs.reduce((s,x)=>s+(x.sec || x.m*0.36),0); }
+
+/* ═══════════════ LIVE RUN ENGINE ═══════════════ */
+const Live = {
+  st:null, watchId:null, tick:null, wake:null, map:null, mapLine:null, mapMe:null, warmWatch:null, lastFix:null,
+  /* goal: {type:'free'|'dist'|'time', v}  — v in metres or seconds */
+  async begin(goal, guidedId){
+    Voice.unlock();
+    const indoor=RC.data.profile.indoor;
+    if(!indoor && !('geolocation' in navigator)){ toast('Peranti ini tiada GPS. Guna mod Indoor.'); return; }
+    this.st={ id:uid(), status:'countdown', goal:goal||{type:'free'}, guided:guidedId||null, indoor,
+      start:0, acc:0, resumeAt:0, dist:0, pts:[], trace:[], splits:[], last:null,
+      segIdx:-1, segStartE:0, segStartD:0, tipsDone:{}, goalHalf:false, goalDone:false, autoPaused:false, stillSince:0 };
+    if(!indoor) this.startWatch();
+    $('live').classList.remove('hide','paused','mapmode'); document.body.style.overflow='hidden';
+    this.render();
+    this.requestWake();
+    await this.countdown();
+    if(!this.st) return;
+    const now=Date.now(); this.st.start=now; this.st.resumeAt=now; this.st.status='running';
+    Voice.beep(1,true);
+    const g=guidedId && guidedById(guidedId);
+    if(g) this.nextSeg();
+    else Voice.say(goal.type==='dist' ? 'Mula. Sasaran '+fmtKm(goal.v,1)+' kilometer.' : goal.type==='time' ? 'Mula. Sasaran '+Voice.durWords(goal.v)+'.' : 'Larian bermula.');
+    this.tick=setInterval(()=>this.onTick(), 500);
+    this.render();
+  },
+  countdown(){ return new Promise(res=>{ const el=$('countdown'); let n=3; el.textContent=n; el.classList.remove('hide'); Voice.beep(1);
+    this._cdRes=()=>{ clearInterval(this._cd); el.classList.add('hide'); res(); };
+    this._cd=setInterval(()=>{ n--; if(n<=0){ this._cdRes(); return; } el.textContent=n; Voice.beep(1); }, 1000); }); },
+  skipCountdown(){ if(this._cdRes) this._cdRes(); },
+  startWatch(){ if(this.watchId!=null) return;
+    this.watchId=navigator.geolocation.watchPosition(p=>this.onFix(p), e=>this.onGpsErr(e), { enableHighAccuracy:true, maximumAge:0, timeout:20000 }); },
+  stopWatch(){ if(this.watchId!=null){ navigator.geolocation.clearWatch(this.watchId); this.watchId=null; } },
+  onGpsErr(e){ if(e.code===1){ toast('Akses lokasi ditolak. Benarkan lokasi dalam tetapan browser.'); } setGps(null); },
+  elapsed(){ const s=this.st; if(!s) return 0; return s.acc + (s.status==='running' ? (Date.now()-s.resumeAt) : 0); },
+  eSec(){ return this.elapsed()/1000; },
+  onFix(p){
+    const s=this.st; if(!s) return;
+    const c=p.coords, pt=[c.latitude, c.longitude], acc=c.accuracy||99, now=Date.now();
+    this.lastFix={ pt, acc, t:now }; setGps(acc);
+    if(this.map) this.updateMap(pt);
+    if(s.status==='paused' && s.autoPaused){
+      if(s.pauseAt && haversine(s.pauseAt, pt) > 12 && acc<=30){ this.resume(true); }
+      return;
+    }
+    if(s.status!=='running') return;
+    if(acc>35) return;                                  // too vague to trust
+    const e=this.eSec();
+    if(!s.last){ s.last={ pt, t:now }; s.pts.push(pt); s.trace.push([e, s.dist]); return; }
+    const d=haversine(s.last.pt, pt), dt=(now-s.last.t)/1000;
+    if(d < Math.max(3, acc*0.25)) { this.checkStill(now); return; }  // jitter: wait until it adds up
+    if(dt>0 && d/dt > 9) return;                        // faster than a sprinter: a GPS jump
+    const prevD=s.dist, prevE=s.trace.length ? s.trace[s.trace.length-1][0] : 0;
+    s.dist+=d; s.last={ pt, t:now }; s.pts.push(pt); s.trace.push([+e.toFixed(1), +s.dist.toFixed(1)]); s.stillSince=0;
+    // kilometre splits, interpolated to the exact crossing
+    while(s.dist >= (s.splits.length+1)*1000){
+      const mark=(s.splits.length+1)*1000, f=(mark-prevD)/(s.dist-prevD||1), atE=prevE+(e-prevE)*f;
+      const prevMark=s.splits.reduce((a,b)=>a+b,0);
+      s.splits.push(+(atE-prevMark).toFixed(1));
+      this.announceKm();
+    }
+    this.persist();
+  },
+  checkStill(now){ const s=this.st; if(!RC.data.profile.autoPause || s.status!=='running') return;
+    if(!s.stillSince) s.stillSince=now;
+    else if(now-s.stillSince > 10000){ s.autoPaused=true; s.pauseAt=s.last?s.last.pt:null; this.pause(true); } },
+  announceKm(){ const s=this.st; if(!RC.data.profile.kmCues) return;
+    const k=s.splits.length, e=this.eSec(), last=s.splits[k-1];
+    Voice.say(k+' kilometer. Masa '+Voice.durWords(e)+'. Pace kilometer ini '+Voice.paceWords(last)+'.'); },
+  onTick(){ const s=this.st; if(!s) return;
+    if(s.status==='running'){
+      this.guidedTick(); this.goalTick();
+      if(!s.indoor && this.lastFix && Date.now()-this.lastFix.t > 15000) setGps(null);
+      if(Math.floor(this.eSec())%5===0) this.persist();
+    }
+    this.render(); },
+  goalTick(){ const s=this.st, g=s.goal; if(g.type==='free' || s.guided) return;
+    const cur = g.type==='dist' ? s.dist : this.eSec(), f=cur/g.v;
+    if(!s.goalHalf && f>=0.5){ s.goalHalf=true; Voice.say('Separuh jalan. Teruskan.'); }
+    if(!s.goalDone && f>=1){ s.goalDone=true; Voice.beep(3,true); Voice.say('Sasaran tercapai! Hebat. Tekan pause dan tahan butang untuk tamat, atau teruskan.'); } },
+  segDone(){ const s=this.st, g=guidedById(s.guided), seg=g && g.segs[s.segIdx]; if(!seg) return 0;
+    return seg.sec ? (this.eSec()-s.segStartE)/seg.sec : (s.indoor ? (this.eSec()-s.segStartE)/(seg.m*0.36) : (s.dist-s.segStartD)/seg.m); },
+  guidedTick(){ const s=this.st; if(!s.guided) return; const g=guidedById(s.guided); if(!g || s.segIdx>=g.segs.length) return;
+    const seg=g.segs[s.segIdx], into=this.eSec()-s.segStartE;
+    (seg.tips||[]).forEach((t,i)=>{ const k=s.segIdx+':'+i; if(!s.tipsDone[k] && into>=t[0]){ s.tipsDone[k]=1; Voice.say(t[1]); } });
+    if(seg.sec && seg.sec-into <= 3.5 && seg.sec-into > 0 && !s.tipsDone[s.segIdx+':cd']){ s.tipsDone[s.segIdx+':cd']=1; Voice.beep(3); }
+    // a timed segment ends exactly on schedule, so half-second ticks don't add up over a session
+    if(this.segDone()>=1) this.nextSeg(seg.sec ? s.segStartE+seg.sec : null); },
+  nextSeg(atE){ const s=this.st, g=guidedById(s.guided); s.segIdx++; s.segStartE=atE!=null ? atE : this.eSec(); s.segStartD=s.dist;
+    if(s.segIdx>=g.segs.length){ Voice.beep(2,true); Voice.say('Larian berpandu selesai. Tahniah! Kau boleh teruskan berlari, atau pause dan tamatkan.'); return; }
+    const seg=g.segs[s.segIdx]; if(s.segIdx>0) Voice.beep(seg.kind==='fast'?2:1, seg.kind==='fast'); Voice.say(seg.say); },
+  pause(auto){ const s=this.st; if(!s || s.status!=='running') return;
+    s.acc+=Date.now()-s.resumeAt; s.status='paused'; s.last=null;
+    $('live').classList.add('paused');
+    if(!auto){ s.autoPaused=false; Voice.say('Larian dijeda.'); } else Voice.say('Auto pause.');
+    this.persist(); this.render(); },
+  resume(auto){ const s=this.st; if(!s || s.status!=='paused') return;
+    s.status='running'; s.resumeAt=Date.now(); s.autoPaused=false; s.stillSince=0;
+    $('live').classList.remove('paused'); Voice.say(auto?'Sambung semula.':'Larian disambung.'); this.render(); },
+  speakStatus(){ const s=this.st; Voice.say(fmtKm(s.dist)+' kilometer. Masa '+Voice.durWords(this.eSec())+'. Pace purata '+Voice.paceWords(paceOf(this.eSec(), s.dist))+'.', true); },
+  async requestWake(){ try{ if('wakeLock' in navigator) this.wake=await navigator.wakeLock.request('screen'); }catch(e){} },
+  persist(){ const s=this.st; if(!s || !s.start) return;
+    try{ localStorage.setItem('hitfat_run_live', JSON.stringify(Object.assign({}, s, { acc:this.elapsed(), status:'paused', savedAt:Date.now() }))); }catch(e){} },
+  clearPersist(){ try{ localStorage.removeItem('hitfat_run_live'); }catch(e){} },
+  /* Recover a run the browser killed mid-way (tab closed, phone restarted). */
+  recoverable(){ try{ const r=JSON.parse(localStorage.getItem('hitfat_run_live')||'null'); if(r && Date.now()-r.savedAt < 6*3600e3) return r; }catch(e){} this.clearPersist(); return null; },
+  restore(r){ this.st=Object.assign(r, { status:'paused', last:null, autoPaused:false });
+    $('live').classList.remove('hide','mapmode'); $('live').classList.add('paused'); document.body.style.overflow='hidden';
+    if(!r.indoor) this.startWatch(); this.requestWake(); this.tick=setInterval(()=>this.onTick(), 500); this.render(); },
+  async finish(){
+    const s=this.st; if(!s) return;
+    if(s.status==='running') this.pause(true);
+    let dist=s.dist;
+    if(s.indoor){
+      const v=prompt('Larian indoor: berapa kilometer kau lari? (cth 5.2)', '');
+      if(v===null) return;
+      dist=Math.round(parseFloat(String(v).replace(',','.'))*1000)||0;
+      if(dist>0 && s.splits.length===0){ const per=s.acc/1000/(dist/1000); for(let k=1;k*1000<=dist;k++) s.splits.push(+per.toFixed(1)); }
+    }
+    if(dist<50 && s.acc<60000){ if(!confirm('Larian terlalu pendek untuk disimpan. Buang?')) return; this.teardown(); return; }
+    const dur=s.acc/1000;
+    const run={ id:s.id, start:s.start, dur:+dur.toFixed(1), dist:Math.round(dist), splits:s.splits, route:thinRoute(s.pts),
+      title:'', feel:null, note:'', guided:s.guided, indoor:!!s.indoor, best:{} };
+    if(!s.indoor) PR_DIST.forEach(([m])=>{ const b=bestEffort(s.trace, m); if(b) run.best[m]=b; });
+    else PR_DIST.forEach(([m])=>{ if(dist>=m) run.best[m]=Math.round(dur*m/dist); });
+    const prsBefore=computePRs();
+    RC.addRun(run);
+    Voice.say('Larian tamat. '+fmtKm(dist)+' kilometer dalam '+Voice.durWords(dur)+'. Kerja bagus.');
+    this.teardown();
+    openDetail(run.id, prsBefore);
+  },
+  teardown(){ clearInterval(this.tick); this.tick=null; this.stopWatch(); this.st=null; this.clearPersist();
+    try{ this.wake && this.wake.release(); }catch(e){} this.wake=null;
+    if(this.map){ this.map.remove(); this.map=null; }
+    $('live').classList.add('hide'); document.body.style.overflow=''; go(curTab); },
+  toggleMap(){ const el=$('live'); el.classList.toggle('mapmode');
+    if(el.classList.contains('mapmode')){
+      if(!window.L){ toast('Peta tak dapat dimuat (tiada internet).'); el.classList.remove('mapmode'); return; }
+      setTimeout(()=>{ if(!this.map){ this.map=makeMap('livemap', true); }
+        this.map.invalidateSize(); const pts=this.st?this.st.pts:[];
+        if(!this.mapLine) this.mapLine=L.polyline(pts,{ color:'#F0392B', weight:5 }).addTo(this.map); else this.mapLine.setLatLngs(pts);
+        if(this.lastFix) this.updateMap(this.lastFix.pt, true); }, 30);
+    } },
+  updateMap(pt, center){ if(!this.map) return;
+    if(!this.mapMe) this.mapMe=L.marker(pt,{ icon:L.divIcon({ className:'', html:'<div class="me-dot"></div>', iconSize:[18,18], iconAnchor:[9,9] }) }).addTo(this.map);
+    else this.mapMe.setLatLng(pt);
+    if(this.mapLine && this.st) this.mapLine.setLatLngs(this.st.pts);
+    this.map.setView(pt, center ? 16 : this.map.getZoom(), { animate:!center }); },
+  render(){ const s=this.st; if(!s) return;
+    const e=this.eSec(), g=s.guided && guidedById(s.guided);
+    $('lv-state').textContent = s.status==='paused' ? (s.autoPaused?'AUTO PAUSE':'DIJEDA') : g ? g.title.toUpperCase() : s.indoor ? 'INDOOR' : 'LARIAN';
+    $('lv-mapbtn2').style.visibility = s.indoor ? 'hidden' : 'visible';
+    $('lv-clock').textContent = fmtTime(Date.now());
+    $('lv-gps').style.visibility = s.indoor ? 'hidden' : 'visible';
+    // the big number follows the goal: time for a time goal, distance otherwise
+    if(s.goal.type==='time' && !g){ $('lv-big').textContent=fmtDur(Math.max(0,s.goal.v-e)); $('lv-unit').textContent='Baki masa'; $('lv-b').textContent=fmtKm(s.dist); $('lv-b').nextElementSibling.textContent='KM'; }
+    else { $('lv-big').textContent = s.indoor ? fmtDur(e) : fmtKm(s.dist); $('lv-unit').textContent = s.indoor ? 'Masa' : s.goal.type==='dist' ? 'Kilometer / '+fmtKm(s.goal.v,1) : 'Kilometer';
+      $('lv-b').textContent = s.indoor ? '--' : fmtDur(e); $('lv-b').nextElementSibling.textContent = s.indoor ? 'KM' : 'Masa'; }
+    $('lv-a').textContent = s.indoor ? '--' : fmtPace(this.curPace());
+    $('lv-al').textContent = 'Pace';
+    $('lv-c').textContent = Math.round(kcal(s.dist, e));
+    // guided segment panel
+    const box=$('lv-seg');
+    if(g && s.segIdx>=0 && s.segIdx<g.segs.length){ const seg=g.segs[s.segIdx]; box.classList.remove('hide');
+      $('lv-seg-n').textContent='Segmen '+(s.segIdx+1)+' / '+g.segs.length; $('lv-seg-t').textContent=seg.label;
+      const f=clamp(this.segDone(),0,1);
+      $('lv-seg-r').textContent = seg.sec ? fmtDur(seg.sec-(e-s.segStartE)) : s.indoor ? fmtDur(seg.m*0.36-(e-s.segStartE)) : Math.max(0,Math.round(seg.m-(s.dist-s.segStartD)))+' m';
+      $('lv-seg-bar').style.width=(f*100)+'%'; }
+    else if(g && s.segIdx>=g.segs.length){ box.classList.remove('hide'); $('lv-seg-n').textContent='Selesai'; $('lv-seg-t').textContent='Larian berpandu siap 🎉'; $('lv-seg-r').textContent=''; $('lv-seg-bar').style.width='100%'; }
+    else if(s.goal.type!=='free'){ box.classList.remove('hide'); const cur=s.goal.type==='dist'?s.dist:e, f=clamp(cur/s.goal.v,0,1);
+      $('lv-seg-n').textContent='Sasaran'; $('lv-seg-t').textContent = s.goal.type==='dist' ? fmtKm(s.goal.v,1)+' km' : fmtDur(s.goal.v);
+      $('lv-seg-r').textContent=Math.round(f*100)+'%'; $('lv-seg-bar').style.width=(f*100)+'%'; }
+    else box.classList.add('hide');
+    $('lv-run-ctrls').classList.toggle('hide', s.status!=='running' && s.status!=='countdown');
+    $('lv-pause-ctrls').classList.toggle('hide', s.status!=='paused');
+    $('lv-hint').textContent = s.status==='paused' ? 'Tahan ■ untuk tamat' : '';
+  },
+  /* pace over the last ~20 s of moving time, which reacts quickly without jumping about */
+  curPace(){ const t=this.st.trace; if(t.length<2) return NaN; const last=t[t.length-1]; let i=t.length-1;
+    while(i>0 && last[0]-t[i][0] < 20) i--;
+    const dd=last[1]-t[i][1], de=last[0]-t[i][0]; if(dd<15 || this.eSec()-last[0] > 12) return NaN; return de/(dd/1000); },
+};
+function kcal(m, sec){ return (RC.data.profile.weightKg||65) * (m/1000) * 1.036; }
+function setGps(acc){ const els=[$('lv-gps'), $('pre-gps')].filter(Boolean);
+  const cls = acc==null ? 'bad' : acc<=15 ? 'good' : acc<=35 ? 'ok' : 'bad';
+  const txt = acc==null ? 'Mencari GPS…' : acc<=15 ? 'GPS kuat' : acc<=35 ? 'GPS sederhana' : 'GPS lemah';
+  els.forEach(el=>{ el.className='gps '+cls; el.querySelector('span').textContent=txt; }); }
+
+/* hold-to-end, like every serious run app: a pocket tap must never end a run */
+(function(){ const b=$('lv-end'); let t=null, start=0;
+  const fill=b.querySelector('.fill');
+  const down=e=>{ e.preventDefault(); start=Date.now(); $('lv-hint').textContent='Teruskan tahan…';
+    t=setInterval(()=>{ const f=clamp((Date.now()-start)/1000,0,1); fill.style.transform='scaleY('+f+')';
+      if(f>=1){ up(); Live.finish(); } }, 30); };
+  const up=()=>{ clearInterval(t); t=null; fill.style.transform='scaleY(0)'; if(Live.st && Live.st.status==='paused') $('lv-hint').textContent='Tahan ■ untuk tamat'; };
+  b.addEventListener('pointerdown', down); ['pointerup','pointerleave','pointercancel'].forEach(ev=>b.addEventListener(ev, up));
+})();
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && Live.st) Live.requestWake(); });
+
+/* ═══════════════ MAPS ═══════════════ */
+function makeMap(el, interactive){
+  const m=L.map(el,{ zoomControl:false, attributionControl:true, dragging:interactive!==false, scrollWheelZoom:false, doubleClickZoom:interactive!==false, touchZoom:interactive!==false, boxZoom:false, keyboard:false });
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{ maxZoom:19,
+    attribution:'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(m);
+  m.attributionControl.setPrefix(false);
+  m.setView([6.1254,102.2381], 13); // Kota Bharu until we know better
+  return m;
+}
+
+/* ═══════════════ STATS / LEVELS / PRs / BADGES ═══════════════ */
+const LEVELS=[
+  { n:'Kuning', km:0, c:'#FFD60A' }, { n:'Oren', km:50, c:'#FF8A00' }, { n:'Hijau', km:250, c:'#2BD96B' },
+  { n:'Biru', km:1000, c:'#2F80FF' }, { n:'Ungu', km:2500, c:'#9B5CFF' }, { n:'Hitam', km:5000, c:'#E5E5E5' },
+  { n:'Merah HITFAT', km:15000, c:'#F0392B' } ];
+function levelOf(km){ let i=0; LEVELS.forEach((l,k)=>{ if(km>=l.km) i=k; }); const cur=LEVELS[i], nxt=LEVELS[i+1]||null;
+  return { i, cur, nxt, f: nxt ? (km-cur.km)/(nxt.km-cur.km) : 1, left: nxt ? nxt.km-km : 0 }; }
+function lifetimeKm(){ return RC.runs().reduce((s,r)=>s+r.dist,0)/1000; }
+function computePRs(){ const out={}; RC.runs().forEach(r=>{ Object.entries(r.best||{}).forEach(([m,t])=>{ if(!out[m] || t<out[m].t) out[m]={ t, id:r.id, start:r.start }; }); });
+  const longest=RC.runs().reduce((a,r)=>!a||r.dist>a.dist?r:a, null); if(longest) out.longest={ d:longest.dist, id:longest.id, start:longest.start };
+  return out; }
+function dayKey(ms){ const d=new Date(ms); return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate(); }
+function streakDays(){ const days=new Set(RC.runs().map(r=>dayKey(r.start))); let best=0, cur=0, prev=null;
+  [...days].sort().forEach(k=>{ const d=new Date(Math.floor(k/10000), Math.floor(k/100)%100-1, k%100);
+    cur = prev && (d-prev)/864e5===1 ? cur+1 : 1; best=Math.max(best,cur); prev=d; });
+  return best; }
+const BADGES=[
+  { id:'first', ic:'👟', n:'Langkah Pertama', d:'Siapkan larian pertama', test:()=>RC.runs().length>=1 },
+  { id:'5k', ic:'5K', n:'Kelab 5K', d:'Lari 5 km sekali jalan', test:()=>RC.runs().some(r=>r.dist>=5000) },
+  { id:'10k', ic:'10K', n:'Wira 10K', d:'Lari 10 km sekali jalan', test:()=>RC.runs().some(r=>r.dist>=10000) },
+  { id:'hm', ic:'21', n:'Separuh Maraton', d:'Lari 21.1 km', test:()=>RC.runs().some(r=>r.dist>=21097) },
+  { id:'fm', ic:'42', n:'Maraton', d:'Lari 42.2 km', test:()=>RC.runs().some(r=>r.dist>=42195) },
+  { id:'t100', ic:'💯', n:'100 KM', d:'Jumlah 100 km', test:()=>lifetimeKm()>=100 },
+  { id:'t500', ic:'🔥', n:'500 KM', d:'Jumlah 500 km', test:()=>lifetimeKm()>=500 },
+  { id:'s3', ic:'3️⃣', n:'Tiga Hari', d:'Lari 3 hari berturut', test:()=>streakDays()>=3 },
+  { id:'s7', ic:'7️⃣', n:'Seminggu Penuh', d:'Lari 7 hari berturut', test:()=>streakDays()>=7 },
+  { id:'early', ic:'🌅', n:'Burung Awal', d:'Mula sebelum 6:30 pagi', test:()=>RC.runs().some(r=>{ const d=new Date(r.start); return d.getHours()*60+d.getMinutes() < 390; }) },
+  { id:'night', ic:'🌙', n:'Pelari Malam', d:'Mula selepas 9 malam', test:()=>RC.runs().some(r=>new Date(r.start).getHours()>=21) },
+  { id:'guided5', ic:'🎧', n:'Murid Coach', d:'5 larian berpandu', test:()=>RC.runs().filter(r=>r.guided).length>=5 },
+  { id:'week4', ic:'📅', n:'Konsisten', d:'4 larian dalam seminggu', test:()=>{ const c={}; RC.runs().forEach(r=>{ const k=+startOfWeek(r.start); c[k]=(c[k]||0)+1; }); return Object.values(c).some(n=>n>=4); } },
+  { id:'chal', ic:'🏆', n:'Juara Cabaran', d:'Capai cabaran bulanan', test:()=>Object.entries(RC.data.challenges).some(([mk,t])=>{ const [y,m]=mk.split('-').map(Number);
+      return RC.totals(+new Date(y,m-1,1), +new Date(y,m,1)).dist/1000 >= t; }) },
+];
+function checkBadges(){ const got=RC.data.badges, fresh=[];
+  BADGES.forEach(b=>{ if(!got[b.id] && b.test()){ got[b.id]=Date.now(); fresh.push(b); } });
+  if(fresh.length){ RC.save(); setTimeout(()=>toast('🏅 Lencana baru: '+fresh.map(b=>b.n).join(', ')), 900); }
+  return fresh; }
+
+/* ═══════════════ NAV ═══════════════ */
+let curTab='run', preMap=null, runGoal={ type:'free', v:0 }, pickedGuided=null;
+function go(tab){ curTab=tab; document.querySelectorAll('nav.tabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab));
+  if(preMap && tab!=='run'){ preMap.remove(); preMap=null; }
+  if(tab!=='run') stopWarm();
+  ({ run:renderRun, guided:renderGuided, activity:renderActivity, club:renderClub, profile:renderProfile })[tab]();
+  window.scrollTo(0,0); paintAvatar();
+  if(!/access_token|error_description/.test(location.hash) && !/[?&]code=/.test(location.search)){ try{ history.replaceState(null,'','#'+tab); }catch(e){} } }
+function paintAvatar(){ const a=$('hdr-avatar'); const n=RC.displayName(); a.textContent=(n||'?').trim().charAt(0).toUpperCase();
+  a.style.setProperty('--lvl', levelOf(lifetimeKm()).cur.c); }
+
+/* ---------- RUN TAB ---------- */
+function stopWarm(){ if(Live.warmWatch!=null) navigator.geolocation.clearWatch(Live.warmWatch); Live.warmWatch=null; }
+async function warmGps(){
+  if(RC.data.profile.indoor || !('geolocation' in navigator) || Live.warmWatch!=null) return;
+  // only warm up silently if permission was already given — otherwise wait for START
+  try{ if(navigator.permissions){ const p=await navigator.permissions.query({ name:'geolocation' }); if(p.state!=='granted'){ setGps(null); $('pre-gps') && ($('pre-gps').querySelector('span').textContent='GPS sedia bila tekan START'); return; } } }catch(e){}
+  Live.warmWatch=navigator.geolocation.watchPosition(p=>{ setGps(p.coords.accuracy);
+    const pt=[p.coords.latitude,p.coords.longitude];
+    if(preMap){ if(!preMap._me) preMap._me=L.marker(pt,{ icon:L.divIcon({ className:'', html:'<div class="me-dot"></div>', iconSize:[18,18], iconAnchor:[9,9] }) }).addTo(preMap);
+      else preMap._me.setLatLng(pt);
+      if(!preMap._centered){ preMap.setView(pt,16); preMap._centered=true; } } },
+    ()=>setGps(null), { enableHighAccuracy:true, maximumAge:5000, timeout:20000 });
+}
+function renderRun(){
+  const p=RC.data.profile, g=pickedGuided && guidedById(pickedGuided), wk=RC.totals(+startOfWeek());
+  $('view').innerHTML=`
+    <div class="runhero">
+      <div id="premap"></div><div class="shade"></div>
+      <div class="over">
+        <span id="pre-gps" class="gps"><i></i><span>${p.indoor?'Mod indoor':'Mencari GPS…'}</span></span>
+        <div class="row" style="margin-top:10px;align-items:flex-end">
+          <div class="grow"><div class="cap" style="color:#ddd">Minggu ini</div><div class="num" style="font-size:44px;line-height:1">${fmtKm(wk.dist,1)} <span style="font-size:18px">KM</span></div></div>
+          <button class="pill ${p.indoor?'on':''}" onclick="toggleIndoor()">${p.indoor?'🏠 Indoor':'📍 Outdoor'}</button>
+        </div>
+      </div>
+    </div>
+    ${g ? `<div class="guidedchip"><div style="width:44px;height:44px;border-radius:12px;background:${g.color};display:grid;place-items:center">🎧</div>
+        <div class="grow"><div class="cap">Larian berpandu</div><div style="font-weight:800">${esc(g.title)} · ${g.mins} min</div></div>
+        <button class="pill" onclick="pickedGuided=null;renderRun()">Buang</button></div>`
+      : `<div class="goalset">
+        ${[['free','Bebas'],['dist','Jarak'],['time','Masa'],['guided','Berpandu']].map(([k,l])=>`<button class="${runGoal.type===k?'on':''}" onclick="setGoalType('${k}')">${l}</button>`).join('')}
+      </div>
+      ${runGoal.type==='dist'||runGoal.type==='time' ? `<div class="goalval">
+        <button onclick="bumpGoal(-1)">−</button>
+        <div class="v num">${runGoal.type==='dist'?fmtKm(runGoal.v,1)+'<span style="font-size:22px"> KM</span>':fmtDur(runGoal.v)}</div>
+        <button onclick="bumpGoal(1)">+</button></div>` : ''}`}
+    <button class="startbtn" onclick="startRun()">START</button>
+    ${resumeCard()}
+  `;
+  if(!p.indoor && window.L){ preMap=makeMap('premap', false); if(Live.lastFix){ preMap.setView(Live.lastFix.pt,16); } warmGps(); }
+  else if(p.indoor) $('premap').innerHTML='<div style="position:absolute;inset:0;display:grid;place-items:center;font-size:90px;opacity:.15">🏃</div>';
+}
+function resumeCard(){ const r=Live.recoverable(); if(!r || Live.st) return '';
+  return `<div class="card" style="margin-top:22px;border:1px solid var(--red)"><div style="font-weight:800">Larian tadi belum disimpan</div>
+    <div class="muted" style="font-size:13px;margin:4px 0 12px">${fmtKm(r.dist)} km · ${fmtDur(r.acc/1000)} · ${fmtDate(r.start)}</div>
+    <div class="row"><button class="btn red sm" onclick="Live.restore(Live.recoverable())">Sambung / simpan</button><button class="btn sm" onclick="Live.clearPersist();renderRun()">Buang</button></div></div>`; }
+function setGoalType(k){ if(k==='guided'){ go('guided'); return; }
+  runGoal={ type:k, v: k==='dist' ? 5000 : k==='time' ? 1800 : 0 }; renderRun(); }
+function bumpGoal(d){ if(runGoal.type==='dist') runGoal.v=clamp(runGoal.v + d*(runGoal.v<5000?500:1000), 500, 100000);
+  else runGoal.v=clamp(runGoal.v + d*(runGoal.v<1800?300:600), 300, 6*3600); renderRun(); }
+function toggleIndoor(){ RC.setProfile('indoor', !RC.data.profile.indoor); stopWarm(); if(preMap){ preMap.remove(); preMap=null; } renderRun(); }
+function startRun(){ if(Live.st) return; const r=Live.recoverable(); if(r && !confirm('Ada larian belum disimpan. Buang dan mula baru?')) return; Live.clearPersist();
+  stopWarm(); if(preMap){ preMap.remove(); preMap=null; }
+  Live.begin(pickedGuided ? { type:'free' } : runGoal, pickedGuided); pickedGuided=null; }
+
+/* ---------- GUIDED TAB ---------- */
+function renderGuided(){
+  const done={}; RC.runs().forEach(r=>{ if(r.guided) done[r.guided]=(done[r.guided]||0)+1; });
+  $('view').innerHTML=`<h1 class="title">Larian<br>Berpandu</h1>
+    <p class="muted" style="margin:-8px 0 18px;font-size:14px">Coach dalam telinga kau. Pakai earphone, tekan mula, ikut suara.</p>
+    ${GUIDED.map(g=>`<button class="gcard" style="background:linear-gradient(160deg,${g.color},${shade(g.color)})" onclick="openGuided('${g.id}')">
+      <span class="tag">${esc(g.tag)}</span>${done[g.id]?`<span class="done">✓ ${done[g.id]}×</span>`:''}
+      <div class="t">${esc(g.title)}</div><div class="m">${g.mins} MIN · ${esc(g.coach.toUpperCase())}</div></button>`).join('')}`;
+}
+function shade(hex){ const n=parseInt(hex.slice(1),16); const f=v=>Math.round(v*0.35).toString(16).padStart(2,'0');
+  return '#'+f(n>>16)+f(n>>8&255)+f(n&255); }
+function segBars(g){ const tot=guidedEstSec(g);
+  return `<div class="segs">${g.segs.map(s=>{ const w=(s.sec||s.m*0.36)/tot*100, h={ fast:28, easy:18, warm:12, cool:12, rest:8 }[s.kind]||12;
+    return `<i style="width:${w}%;height:${h}px;background:${KIND_COLOR[s.kind]}"></i>`; }).join('')}</div>`; }
+function openGuided(id){ const g=guidedById(id);
+  openSheet(`<div style="border-radius:18px;padding:18px;background:linear-gradient(160deg,${g.color},${shade(g.color)});margin-bottom:14px">
+      <div class="cap" style="color:#fff;opacity:.8">${esc(g.tag)} · ${g.mins} min</div><h3 style="margin:6px 0 0;font-size:32px">${esc(g.title)}</h3></div>
+    <p style="font-size:15px;line-height:1.5">${esc(g.desc)}</p>
+    ${segBars(g)}
+    <div style="font-size:13px" class="muted">${g.segs.map(s=>`${esc(s.label)} · ${s.sec?fmtDur(s.sec):s.m+' m'}`).join('<br>')}</div>
+    <button class="btn red block" style="margin-top:18px" onclick="closeSheet();pickedGuided='${g.id}';go('run')">Pilih larian ini</button>
+    <button class="btn block" style="margin-top:8px" onclick="Voice.unlock();Voice.say(guidedById('${g.id}').segs[0].say, true)">🔊 Dengar contoh</button>`); }
+
+/* ---------- ACTIVITY TAB ---------- */
+let actRange='week';
+function rangeBounds(k){ const now=new Date();
+  if(k==='week'){ const s=startOfWeek(now); return { since:+s, label:'Minggu Ini', buckets:7, bucket:i=>[+s+i*864e5, +s+(i+1)*864e5], blabel:i=>['I','S','R','K','J','S','A'][i] }; }
+  if(k==='month'){ const s=startOfMonth(now), n=new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+    return { since:+s, label:BULAN[now.getMonth()], buckets:n, bucket:i=>[+new Date(s.getFullYear(),s.getMonth(),i+1), +new Date(s.getFullYear(),s.getMonth(),i+2)], blabel:i=>(i===0||(i+1)%5===0)?String(i+1):'' }; }
+  if(k==='year'){ const y=now.getFullYear(); return { since:+new Date(y,0,1), label:String(y), buckets:12, bucket:i=>[+new Date(y,i,1), +new Date(y,i+1,1)], blabel:i=>BULAN[i].charAt(0) }; }
+  const first=RC.runs().length ? new Date(RC.runs()[RC.runs().length-1].start).getFullYear() : now.getFullYear(), ny=now.getFullYear()-first+1;
+  return { since:0, label:'Sepanjang Masa', buckets:ny, bucket:i=>[+new Date(first+i,0,1), +new Date(first+i+1,0,1)], blabel:i=>String(first+i).slice(2) }; }
+function barChart(b){ const vals=[]; for(let i=0;i<b.buckets;i++){ const [a,z]=b.bucket(i); vals.push(RC.totals(a,z).dist/1000); }
+  const max=Math.max(...vals, 1), W=320, H=130, gap=b.buckets>14?2:6, bw=(W-gap*(b.buckets-1))/b.buckets;
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${vals.map((v,i)=>{ const h=v>0?Math.max(3,(H-22)*v/max):2, x=i*(bw+gap);
+    return `<rect x="${x.toFixed(1)}" y="${(H-18-h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${v>0?'#F0392B':'#262626'}"/>
+      <text x="${(x+bw/2).toFixed(1)}" y="${H-3}" font-size="10" fill="#6E6E6E" text-anchor="middle" font-family="Inter">${b.blabel(i)}</text>`; }).join('')}</svg>`; }
+function renderActivity(){
+  const b=rangeBounds(actRange), t=RC.totals(b.since), lk=lifetimeKm(), lv=levelOf(lk), prs=computePRs();
+  const list=RC.runs().filter(r=>r.start>=b.since);
+  $('view').innerHTML=`<div class="row" style="justify-content:space-between;align-items:flex-start"><h1 class="title">Aktiviti</h1>
+      <button class="btn sm" style="margin-top:8px" onclick="manualRun()">＋ Tambah</button></div>
+    <div class="pills">${[['week','Minggu'],['month','Bulan'],['year','Tahun'],['all','Semua']].map(([k,l])=>`<button class="pill ${actRange===k?'on':''}" onclick="actRange='${k}';renderActivity()">${l}</button>`).join('')}</div>
+    <div class="totals" style="margin-top:20px"><div class="cap">${esc(b.label)}</div>
+      <div class="big num">${fmtKm(t.dist)}</div><div class="cap" style="margin-top:2px">Kilometer</div>
+      <div class="stat3"><div><div class="num">${t.n}</div><div class="l">Larian</div></div>
+        <div><div class="num">${fmtPace(paceOf(t.dur,t.dist))}</div><div class="l">Pace purata</div></div>
+        <div><div class="num">${fmtDur(t.dur)}</div><div class="l">Masa</div></div></div>
+      <div class="chart">${barChart(b)}</div></div>
+    <div class="card" style="margin-top:22px"><div class="lvl"><div class="dot" style="background:${lv.cur.c}">${lv.i+1}</div>
+      <div class="grow"><div class="cap">Level</div><div style="font-weight:800;font-size:18px">${lv.cur.n}</div>
+        <div class="prog"><i style="width:${(lv.f*100).toFixed(1)}%;background:${lv.cur.c}"></i></div>
+        <div class="muted" style="font-size:12px;margin-top:6px">${lv.nxt?`${fmtKm(lv.left*1000,1)} km lagi ke ${lv.nxt.n}`:'Level tertinggi. Legenda.'} · ${lk.toFixed(1)} km jumlah</div></div></div></div>
+    <h2 class="sec">Rekod Peribadi</h2>
+    <div class="prgrid">${PR_DIST.map(([m,l])=>`<div class="card"${prs[m]?` onclick="openDetail('${prs[m].id}')" style="cursor:pointer"`:''}><div class="cap">${l}</div><div class="num">${prs[m]?fmtDur(prs[m].t):'--'}</div>
+        <div class="muted" style="font-size:11px">${prs[m]?fmtDate(prs[m].start):'Belum ada'}</div></div>`).join('')}
+      <div class="card"${prs.longest?` onclick="openDetail('${prs.longest.id}')" style="cursor:pointer"`:''}><div class="cap">Paling jauh</div><div class="num">${prs.longest?fmtKm(prs.longest.d)+' km':'--'}</div>
+        <div class="muted" style="font-size:11px">${prs.longest?fmtDate(prs.longest.start):'Belum ada'}</div></div></div>
+    <h2 class="sec">Larian</h2>
+    <div class="card" style="padding:4px 16px">${list.length ? list.map(runItem).join('') : `<div style="padding:28px 0;text-align:center" class="muted">Belum ada larian dalam tempoh ini.<br><br><button class="btn red sm" onclick="go('run')">Mula larian</button></div>`}</div>`;
+}
+function runTitle(r){ if(r.title) return r.title; const g=r.guided&&guidedById(r.guided); if(g) return g.title; return 'Larian '+partOfDay(r.start)+' '+HARI[new Date(r.start).getDay()]; }
+function runItem(r){ return `<div class="runitem" onclick="openDetail('${r.id}')" style="cursor:pointer">
+    <div class="thumb">${r.route&&r.route.length>1?routeSVG(r.route):`<span style="font-size:26px">${r.indoor?'🏠':r.guided?'🎧':'🏃'}</span>`}</div>
+    <div class="grow"><div class="muted" style="font-size:12px;font-weight:600">${fmtDate(r.start)}</div>
+      <div class="km num">${fmtKm(r.dist)} <span style="font-size:14px">KM</span></div>
+      <div class="meta">${esc(runTitle(r))} · ${fmtPace(paceOf(r.dur,r.dist))} · ${fmtDur(r.dur)}</div></div>
+    ${r.feel?`<span style="font-size:22px">${FEELS[r.feel]||''}</span>`:''}</div>`; }
+
+/* ---------- RUN DETAIL ---------- */
+const FEELS={ 1:'😫', 2:'😕', 3:'🙂', 4:'😀', 5:'🔥' };
+let detMap=null;
+function openDetail(id, prsBefore){
+  const r=RC.getRun(id); if(!r) return;
+  const newPRs = prsBefore ? PR_DIST.filter(([m])=>r.best&&r.best[m] && (!prsBefore[m] || r.best[m]<prsBefore[m].t)).map(([,l])=>l) : [];
+  const sp=r.splits||[], fastest=sp.length?Math.min(...sp):0, slowest=sp.length?Math.max(...sp):0;
+  const rest=r.dist-sp.length*1000, restSec=r.dur-sp.reduce((a,b)=>a+b,0);
+  $('detail').innerHTML=`<div class="in">
+    <div class="row" style="justify-content:space-between;margin-bottom:12px">
+      <button class="btn sm" onclick="closeDetail()">← ${prsBefore?'Siap':'Kembali'}</button>
+      <button class="btn sm" onclick="shareRun('${r.id}')">Kongsi ↗</button></div>
+    ${prsBefore?`<div class="cap" style="color:var(--red)">Larian disimpan</div>`:''}
+    <div class="muted" style="font-size:13px;font-weight:600;margin-top:4px">${fmtDate(r.start)} · ${fmtTime(r.start)}</div>
+    <h1 class="title" style="margin:4px 0 14px;font-size:30px" onclick="renameRun('${r.id}')">${esc(runTitle(r))} <span style="font-size:16px;opacity:.5">✎</span></h1>
+    ${newPRs.length?`<div class="card" style="background:var(--red-deep);margin-bottom:14px">🏅 <b>Rekod peribadi baru:</b> ${newPRs.join(', ')}</div>`:''}
+    ${r.route&&r.route.length>1?`<div id="detmap"></div>`:''}
+    <div class="num" style="font-size:84px;line-height:.95;margin-top:18px">${fmtKm(r.dist)}</div><div class="cap">Kilometer</div>
+    <div class="dgrid">
+      <div><div class="num">${fmtPace(paceOf(r.dur,r.dist))}</div><div class="l">Pace purata</div></div>
+      <div><div class="num">${fmtDur(r.dur)}</div><div class="l">Masa</div></div>
+      <div><div class="num">${Math.round(kcal(r.dist,r.dur))}</div><div class="l">Kalori (anggaran)</div></div>
+      <div><div class="num">${r.best&&r.best[1000]?fmtPace(r.best[1000]):'--'}</div><div class="l">1K terpantas</div></div></div>
+    ${sp.length?`<h2 class="sec">Split</h2><div class="card splits">
+      <div class="sp muted" style="font-size:11px;font-weight:700"><span>KM</span><span>PACE</span><span></span></div>
+      ${sp.map((s,i)=>`<div class="sp ${s===fastest&&sp.length>1?'best':''}"><span class="num">${i+1}</span><span class="num">${fmtPace(s)}</span>
+        <div class="b"><i style="width:${(30+70*(slowest>fastest?(slowest-s)/(slowest-fastest):1)).toFixed(0)}%"></i></div></div>`).join('')}
+      ${rest>=50&&restSec>0?`<div class="sp muted"><span class="num">${(rest/1000).toFixed(2)}</span><span class="num">${fmtPace(paceOf(restSec,rest))}</span><span></span></div>`:''}
+    </div>`:''}
+    <h2 class="sec">Macam mana rasa?</h2>
+    <div class="feel">${[1,2,3,4,5].map(k=>`<button class="${r.feel===k?'on':''}" onclick="setFeel('${r.id}',${k})">${FEELS[k]}</button>`).join('')}</div>
+    <label class="cap" style="display:block;margin:18px 0 6px">Nota</label>
+    <textarea id="det-note" rows="3" placeholder="Kasut, cuaca, dengan siapa…" onchange="setNote('${r.id}',this.value)">${esc(r.note||'')}</textarea>
+    <button class="btn block" style="margin-top:28px;color:#ff7b70" onclick="delRun('${r.id}')">Padam larian</button>
+  </div>`;
+  $('detail').classList.remove('hide'); $('detail').scrollTop=0; document.body.style.overflow='hidden';
+  if(r.route&&r.route.length>1&&window.L){ setTimeout(()=>{ detMap=makeMap('detmap', true); const line=L.polyline(r.route,{ color:'#F0392B', weight:5 }).addTo(detMap);
+    L.circleMarker(r.route[0],{ radius:6, color:'#fff', fillColor:'#2BD96B', fillOpacity:1, weight:2 }).addTo(detMap);
+    L.circleMarker(r.route[r.route.length-1],{ radius:6, color:'#fff', fillColor:'#F0392B', fillOpacity:1, weight:2 }).addTo(detMap);
+    detMap.fitBounds(line.getBounds(),{ padding:[24,24] }); }, 30); }
+  else if(r.route&&r.route.length>1){ $('detmap').innerHTML=routeSVG(r.route,'#F0392B',10); }
+}
+function closeDetail(){ if(detMap){ detMap.remove(); detMap=null; } $('detail').classList.add('hide'); $('detail').innerHTML=''; document.body.style.overflow=''; go(curTab==='run'?'activity':curTab); }
+function setFeel(id,k){ const r=RC.getRun(id); r.feel=r.feel===k?null:k; RC.updateRun(r); document.querySelectorAll('.feel button').forEach((b,i)=>b.classList.toggle('on', r.feel===i+1)); }
+function setNote(id,v){ const r=RC.getRun(id); r.note=String(v).slice(0,1000); RC.updateRun(r); }
+function renameRun(id){ const r=RC.getRun(id); const v=prompt('Nama larian', runTitle(r)); if(v===null) return; r.title=v.trim().slice(0,60); RC.updateRun(r); openDetail(id); }
+function delRun(id){ if(!confirm('Padam larian ini? Tak boleh undo.')) return; RC.deleteRun(id); closeDetail(); toast('Larian dipadam'); }
+
+/* ---------- manual entry (treadmill, forgot the phone) ---------- */
+function manualRun(){ const now=new Date(); now.setMinutes(now.getMinutes()-now.getTimezoneOffset());
+  openSheet(`<h3>Tambah larian</h3>
+    <label>Tarikh & masa mula</label><input type="datetime-local" id="mr-start" value="${now.toISOString().slice(0,16)}">
+    <label>Jarak (km)</label><input type="number" id="mr-dist" inputmode="decimal" step="0.01" min="0.1" placeholder="5.00">
+    <label>Masa (jam : minit : saat)</label>
+    <div class="row"><input type="number" id="mr-h" min="0" placeholder="0" inputmode="numeric"><input type="number" id="mr-m" min="0" max="59" placeholder="30" inputmode="numeric"><input type="number" id="mr-s" min="0" max="59" placeholder="00" inputmode="numeric"></div>
+    <label>Nama (pilihan)</label><input id="mr-title" maxlength="60" placeholder="Treadmill gym">
+    <div class="msg err" id="mr-msg"></div>
+    <button class="btn red block" style="margin-top:12px" onclick="saveManual()">Simpan</button>`); }
+function saveManual(){ const dist=Math.round(parseFloat(String($('mr-dist').value).replace(',','.'))*1000);
+  const dur=(+$('mr-h').value||0)*3600+(+$('mr-m').value||0)*60+(+$('mr-s').value||0), start=new Date($('mr-start').value).getTime();
+  if(!(dist>0)) return $('mr-msg').textContent='Masukkan jarak.';
+  if(!(dur>0)) return $('mr-msg').textContent='Masukkan masa.';
+  if(!isFinite(start)) return $('mr-msg').textContent='Tarikh tak sah.';
+  if(dur/(dist/1000) < 150) return $('mr-msg').textContent='Pace lebih laju dari 2:30/km. Semak semula.';
+  const per=dur/(dist/1000), splits=[]; for(let k=1;k*1000<=dist;k++) splits.push(+per.toFixed(1));
+  const best={}; PR_DIST.forEach(([m])=>{ if(dist>=m) best[m]=Math.round(per*m/1000); });
+  const prsBefore=computePRs();
+  RC.addRun({ id:uid(), start, dur, dist, splits, route:[], title:$('mr-title').value.trim().slice(0,60), feel:null, note:'', guided:null, indoor:true, manual:true, best });
+  closeSheet(); toast('Larian ditambah'); renderActivity(); }
+
+/* ---------- CLUB TAB ---------- */
+let lbRange='month';
+async function renderClub(){
+  const mk=monthKey(), target=RC.data.challenges[mk], now=new Date(), mt=RC.totals(+startOfMonth()).dist/1000;
+  const daysLeft=new Date(now.getFullYear(), now.getMonth()+1, 0).getDate()-now.getDate();
+  const got=RC.data.badges;
+  $('view').innerHTML=`<h1 class="title">Kelab</h1>
+    <div class="chal">
+      <div class="cap" style="color:#fff;opacity:.8">Cabaran ${BULAN[now.getMonth()]}</div>
+      ${target ? `<div class="num" style="margin-top:6px">${mt.toFixed(1)}<span style="font-size:24px"> / ${target} KM</span></div>
+        <div class="prog" style="margin-top:12px"><i style="width:${clamp(mt/target*100,0,100).toFixed(1)}%"></i></div>
+        <div style="font-size:13px;font-weight:600;margin-top:10px;opacity:.9">${mt>=target?'🏆 Cabaran tercapai! Gila.':`${(target-mt).toFixed(1)} km lagi · ${daysLeft} hari tinggal · ~${((target-mt)/Math.max(1,daysLeft)).toFixed(1)} km sehari`}</div>
+        <button class="pill" style="margin-top:14px;background:rgba(0,0,0,.3);color:#fff" onclick="pickChallenge()">Tukar sasaran</button>`
+      : `<div style="font-family:Oswald,sans-serif;font-size:30px;margin:8px 0 6px;line-height:1.05">BERAPA KM BULAN INI?</div>
+        <div style="font-size:14px;opacity:.9;margin-bottom:14px">Pilih sasaran, kami kira setiap larian kau.</div>
+        <button class="btn white" onclick="pickChallenge()">Sertai cabaran</button>`}
+    </div>
+    <h2 class="sec">Leaderboard</h2>
+    <div class="pills" style="margin-bottom:12px">${[['week','Minggu ini'],['month','Bulan ini']].map(([k,l])=>`<button class="pill ${lbRange===k?'on':''}" onclick="lbRange='${k}';renderClub()">${l}</button>`).join('')}</div>
+    <div class="card" id="lb" style="padding:6px 16px"><div class="muted" style="padding:20px 0;text-align:center">Memuatkan…</div></div>
+    <h2 class="sec">Lencana</h2>
+    <div class="badges">${BADGES.map(b=>`<div class="badge ${got[b.id]?'got':''}"><div class="ic"><span style="font-size:${/^[0-9A-Z]+$/.test(b.ic)?'17px;font-family:Oswald;font-weight:700':'26px'}">${b.ic}</span></div>
+      <div class="n">${esc(b.n)}</div><div class="d">${got[b.id]?'Dapat '+fmtDate(got[b.id]).split(', ')[1]:esc(b.d)}</div></div>`).join('')}</div>`;
+  const since = lbRange==='week' ? +startOfWeek() : +startOfMonth();
+  const res=await Club.board(since); const el=$('lb'); if(!el || curTab!=='club') return;
+  if(res.error==='login'){ el.innerHTML=`<div style="padding:22px 0;text-align:center"><div style="font-weight:800">Log masuk untuk masuk leaderboard</div>
+      <div class="muted" style="font-size:13px;margin:6px 0 14px">Larian kau tetap disimpan dalam telefon walaupun tak log masuk.</div>
+      <button class="btn red sm" onclick="openLogin()">Log masuk</button></div>`; return; }
+  if(res.error==='setup'){ el.innerHTML=`<div class="muted" style="padding:22px 0;text-align:center;font-size:14px">Leaderboard belum diaktifkan.<br>Admin perlu jalankan <code>run/SETUP.sql</code> dalam Supabase.</div>`; return; }
+  if(res.error){ el.innerHTML=`<div class="muted" style="padding:22px 0;text-align:center">Tak dapat muat leaderboard. Cuba lagi nanti.</div>`; return; }
+  const rows=res.rows; if(!rows.length){ el.innerHTML=`<div class="muted" style="padding:22px 0;text-align:center">Belum ada larian ${lbRange==='week'?'minggu':'bulan'} ini. Jadi yang pertama!</div>`; return; }
+  const myIdx=rows.findIndex(r=>r.id===RC.userId), top=rows.slice(0,50);
+  el.innerHTML = top.map((r,i)=>lbRow(r,i)).join('') + (myIdx>=50 ? `<div class="muted" style="text-align:center;padding:4px 0">⋯</div>`+lbRow(rows[myIdx],myIdx) : '');
+}
+function lbRow(r,i){ const me=r.id===RC.userId;
+  return `<div class="lb ${me?'me':''}"><div class="rk">${i<3?['🥇','🥈','🥉'][i]:i+1}</div>
+    <div class="avatar" style="--lvl:#333">${esc((r.name||'?').charAt(0).toUpperCase())}</div>
+    <div class="grow"><div style="font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.name)}${me?' (kau)':''}</div>
+      <div class="muted" style="font-size:12px">${r.n} larian · ${fmtPace(paceOf(r.dur,r.dist))}/km</div></div>
+    <div class="km num">${fmtKm(r.dist,1)}</div></div>`; }
+function pickChallenge(){ const mk=monthKey(), cur=RC.data.challenges[mk];
+  openSheet(`<h3>Cabaran ${BULAN[new Date().getMonth()]}</h3><p class="muted" style="font-size:14px;margin-top:-4px">Pilih jumlah kilometer untuk bulan ini.</p>
+    <div class="badges" style="grid-template-columns:repeat(3,1fr)">${[20,30,50,75,100,150].map(k=>`<button class="badge ${cur===k?'got':''}" style="padding:18px 8px" onclick="setChallenge(${k})"><div class="num" style="font-size:32px">${k}</div><div class="d">KM</div></button>`).join('')}</div>
+    ${cur?`<button class="btn block" style="margin-top:14px" onclick="setChallenge(0)">Keluar dari cabaran</button>`:''}`); }
+function setChallenge(k){ const mk=monthKey(); if(k) RC.data.challenges[mk]=k; else delete RC.data.challenges[mk]; RC.save(); closeSheet(); checkBadges(); renderClub(); if(k) toast('Cabaran '+k+' km disertai. Jom!'); }
+
+/* ---------- PROFILE TAB ---------- */
+function renderProfile(){
+  const p=RC.data.profile, lk=lifetimeKm(), lv=levelOf(lk), all=RC.totals(0);
+  $('view').innerHTML=`<div style="text-align:center;margin:10px 0 24px">
+      <div class="avatar" style="width:92px;height:92px;font-size:38px;margin:0 auto;border-width:4px;--lvl:${lv.cur.c}">${esc(RC.displayName().charAt(0).toUpperCase())}</div>
+      <div style="font-family:Oswald,sans-serif;font-size:30px;margin-top:12px;text-transform:uppercase">${esc(RC.displayName())}</div>
+      <div class="muted" style="font-size:13px">${RC.userId?esc(RC.email||''):'Belum log masuk · data dalam telefon ini sahaja'}</div>
+      <div class="pill" style="margin-top:10px;background:${lv.cur.c};color:#000">Level ${lv.cur.n}</div></div>
+    <div class="stat3 card" style="margin-top:0;text-align:center"><div><div class="num">${fmtKm(all.dist,1)}</div><div class="l">KM jumlah</div></div>
+      <div><div class="num">${all.n}</div><div class="l">Larian</div></div><div><div class="num">${fmtPace(paceOf(all.dur,all.dist))}</div><div class="l">Pace purata</div></div></div>
+    ${RC.userId?'':`<button class="btn red block" style="margin-top:16px" onclick="openLogin()">Log masuk / Daftar</button>
+      <p class="muted" style="font-size:12px;text-align:center;margin-top:8px">Akaun sama dengan app HITFAT. Backup larian & masuk leaderboard kelab.</p>`}
+    <h2 class="sec">Tetapan</h2>
+    <div class="card" style="padding:2px 16px">
+      <div class="setrow"><div><div style="font-weight:700">Nama paparan</div><div class="muted" style="font-size:12px">Ditunjuk dalam leaderboard</div></div>
+        <button class="pill" onclick="editName()">${esc(p.name||'Tetapkan')}</button></div>
+      <div class="setrow"><div><div style="font-weight:700">Berat badan</div><div class="muted" style="font-size:12px">Untuk anggaran kalori</div></div>
+        <button class="pill" onclick="editWeight()">${p.weightKg} kg</button></div>
+      ${swRow('voice','Coach suara','Pengumuman suara semasa larian')}
+      ${swRow('kmCues','Pengumuman setiap KM','Masa & pace setiap kilometer')}
+      ${swRow('autoPause','Auto pause','Jeda sendiri bila kau berhenti')}
+      <div class="setrow"><div><div style="font-weight:700">Uji suara</div><div class="muted" style="font-size:12px">${Voice.voice?esc(Voice.voice.name):'Suara Bahasa Melayu tak dijumpai, guna suara lalai'}</div></div>
+        <button class="pill" onclick="Voice.unlock();Voice.say('Satu kilometer. Pace enam minit dua belas saat. Teruskan!', true)">🔊 Main</button></div>
+    </div>
+    <h2 class="sec">Lain-lain</h2>
+    <div class="card" style="padding:2px 16px">
+      <div class="setrow"><div style="font-weight:700">Eksport data (JSON)</div><button class="pill" onclick="exportData()">Muat turun</button></div>
+      <div class="setrow"><div style="font-weight:700">App HITFAT Hybrid</div><a class="pill" href="/" style="text-decoration:none">Buka</a></div>
+      ${RC.userId?`<div class="setrow"><div style="font-weight:700">Log keluar</div><button class="pill" onclick="signOut()">Log keluar</button></div>`:''}
+    </div>
+    <p class="muted" style="font-size:11px;text-align:center;margin:24px 0 0;line-height:1.5">Tip: biar skrin hidup dan app terbuka semasa larian.<br>Browser telefon hentikan GPS bila skrin dikunci.</p>`;
+}
+function swRow(k,t,d){ return `<div class="setrow"><div><div style="font-weight:700">${t}</div><div class="muted" style="font-size:12px">${d}</div></div>
+  <label class="sw"><input type="checkbox" ${RC.data.profile[k]?'checked':''} onchange="RC.setProfile('${k}',this.checked)"><i></i></label></div>`; }
+function editName(){ const v=prompt('Nama paparan (maks 40 huruf)', RC.data.profile.name||RC.displayName()); if(v===null) return;
+  RC.setProfile('name', v.trim().slice(0,40)); renderProfile(); paintAvatar();
+  if(RC.userId) Club.backfill(); }
+function editWeight(){ const v=parseFloat(prompt('Berat badan (kg)', RC.data.profile.weightKg)); if(!(v>=25&&v<=250)) return; RC.setProfile('weightKg', Math.round(v)); renderProfile(); }
+function exportData(){ const blob=new Blob([JSON.stringify(RC.data,null,1)],{ type:'application/json' }), a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download='hitfat-run-'+new Date().toISOString().slice(0,10)+'.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 2000); }
+
+/* ---------- sheet ---------- */
+function openSheet(html){ $('sheet-body').innerHTML=html; $('sheet').classList.remove('hide'); }
+function closeSheet(){ $('sheet').classList.add('hide'); $('sheet-body').innerHTML=''; }
+
+/* ═══════════════ AUTH ═══════════════ */
+let authSignup=false;
+function openLogin(){ if(!sb){ toast('Log masuk tak tersedia (tiada internet).'); return; }
+  openSheet(`<h3>${authSignup?'Daftar':'Log masuk'}</h3>
+    <p class="muted" style="font-size:13px;margin-top:-4px">Akaun yang sama dengan app HITFAT.</p>
+    <button class="btn white block" onclick="signInGoogle()"><svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.5l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.8 6C12.4 13.7 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.4-.8-3-.8-4.7s.3-3.3.8-4.7l-7.8-6C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.8-6z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2.1 1.4-4.8 2.2-8.5 2.2-6.3 0-11.6-4.2-13.5-9.9l-7.8 6C6.6 42.6 14.6 48 24 48z"/></svg> Teruskan dengan Google</button>
+    <div class="muted" style="text-align:center;font-size:12px;margin:14px 0 2px">atau dengan e-mel</div>
+    <label>E-mel</label><input id="au-email" type="email" autocomplete="email" inputmode="email">
+    <label>Kata laluan</label><input id="au-pass" type="password" autocomplete="${authSignup?'new-password':'current-password'}">
+    <div class="msg" id="au-msg"></div>
+    <button class="btn red block" style="margin-top:8px" onclick="emailAuth()">${authSignup?'Daftar':'Log masuk'}</button>
+    <div style="text-align:center;font-size:13px;margin-top:14px" class="muted">${authSignup?'Dah ada akaun?':'Baru di sini?'} <a style="color:#fff;font-weight:700;cursor:pointer" onclick="authSignup=!authSignup;openLogin()">${authSignup?'Log masuk':'Daftar akaun'}</a></div>`); }
+function authMsg(t,err){ const m=$('au-msg'); if(m){ m.textContent=t; m.className='msg'+(err?' err':''); } }
+function redirectURL(){ return location.origin + '/run/'; }
+function signInGoogle(){ authMsg('Membuka Google…'); sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo:redirectURL() } }).then(r=>{ if(r&&r.error) authMsg(r.error.message,true); }); }
+async function emailAuth(){ const email=$('au-email').value.trim(), pass=$('au-pass').value;
+  if(!email||!pass) return authMsg('Isi e-mel dan kata laluan.', true);
+  authMsg('Sebentar…');
+  if(authSignup){ const { data, error }=await sb.auth.signUp({ email, password:pass, options:{ emailRedirectTo:redirectURL() } });
+    if(error) return authMsg(error.message,true); if(!data.session) return authMsg('Semak e-mel untuk sahkan akaun.'); }
+  else { const { error }=await sb.auth.signInWithPassword({ email, password:pass }); if(error) return authMsg(error.message,true); }
+}
+async function signOut(){ if(!confirm('Log keluar? Larian dalam akaun kekal di cloud.')) return; await sb.auth.signOut(); }
+async function onSignedIn(session){
+  const u=session.user; if(RC.userId===u.id) return;
+  const guest=RC.data;                         // runs logged before signing in come along
+  RC.userId=u.id; RC.email=u.email; RC.meta=u.user_metadata||{};
+  RC.load(); if(guest && guest.runs.length){ RC.merge(guest); try{ localStorage.removeItem(RC.KEY); }catch(e){} }
+  closeSheet(); await RC.pull(); RC.save(); Club.backfill(); checkBadges(); go(curTab);
+}
+function onSignedOut(){ RC.userId=null; RC.email=null; RC.meta=null; RC.load(); go(curTab); }
+
+/* ═══════════════ SHARE CARD ═══════════════ */
+async function shareRun(id){ const r=RC.getRun(id); if(!r) return;
+  try{ await document.fonts.load('700 100px Oswald'); }catch(e){}
+  const W=1080, H=1350, c=document.createElement('canvas'); c.width=W; c.height=H; const x=c.getContext('2d');
+  x.fillStyle='#000'; x.fillRect(0,0,W,H);
+  const grad=x.createLinearGradient(0,0,0,H); grad.addColorStop(0,'rgba(217,44,26,.35)'); grad.addColorStop(.6,'rgba(0,0,0,0)'); x.fillStyle=grad; x.fillRect(0,0,W,H);
+  if(r.route&&r.route.length>1){ const lat0=r.route[0][0]*Math.PI/180, k=Math.cos(lat0); const xs=r.route.map(p=>p[1]*k), ys=r.route.map(p=>-p[0]);
+    const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys), box=640, span=Math.max(maxX-minX,maxY-minY)||1e-6, s=box/span;
+    const ox=(W-(maxX-minX)*s)/2, oy=110+(box-(maxY-minY)*s)/2;
+    x.strokeStyle='#F0392B'; x.lineWidth=14; x.lineJoin='round'; x.lineCap='round'; x.beginPath();
+    xs.forEach((v,i)=>{ const px=(v-minX)*s+ox, py=(ys[i]-minY)*s+oy; i?x.lineTo(px,py):x.moveTo(px,py); }); x.stroke(); }
+  x.fillStyle='#fff'; x.textAlign='left';
+  x.font='700 240px Oswald, Impact, sans-serif'; x.fillText(fmtKm(r.dist), 80, 1010);
+  x.font='600 44px Oswald, sans-serif'; x.fillStyle='#bbb'; x.fillText('KILOMETER', 88, 1070);
+  x.fillStyle='#fff'; x.font='700 70px Oswald, sans-serif';
+  x.fillText(fmtPace(paceOf(r.dur,r.dist)), 80, 1190); x.fillText(fmtDur(r.dur), 500, 1190);
+  x.font='600 30px Inter, sans-serif'; x.fillStyle='#9a9a9a'; x.fillText('PACE', 84, 1235); x.fillText('MASA', 504, 1235);
+  x.font='700 40px Oswald, sans-serif'; x.fillStyle='#fff'; x.fillText('HITFAT', 80, 90); x.fillStyle='#F0392B'; x.fillText('RUN', 80+x.measureText('HITFAT ').width, 90);
+  x.fillStyle='#fff'; x.fillText('CLUB', 80+x.measureText('HITFAT RUN ').width, 90);
+  x.textAlign='right'; x.font='500 30px Inter, sans-serif'; x.fillStyle='#9a9a9a'; x.fillText(fmtDate(r.start), W-80, 88);
+  c.toBlob(async blob=>{ const file=new File([blob], 'hitfat-run.png', { type:'image/png' });
+    if(navigator.canShare && navigator.canShare({ files:[file] })){ try{ await navigator.share({ files:[file], text:fmtKm(r.dist)+' km dengan HITFAT RUN CLUB 🏃' }); }catch(e){} }
+    else { const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='hitfat-run.png'; a.click(); toast('Gambar dimuat turun'); } }, 'image/png'); }
+
+/* ═══════════════ BOOT ═══════════════ */
+function boot(){
+  Voice.init(); RC.load();
+  const t=(location.hash||'').slice(1); go(['run','guided','activity','club','profile'].includes(t)?t:'run');
+  if(sb){
+    sb.auth.getSession().then(({ data })=>{ if(data && data.session) onSignedIn(data.session); }).catch(()=>{});
+    sb.auth.onAuthStateChange((ev, session)=>{ if(session) onSignedIn(session); else if(ev==='SIGNED_OUT') onSignedOut(); });
+  }
+  window.addEventListener('beforeunload', e=>{ if(Live.st && Live.st.status!=='countdown'){ Live.persist(); e.preventDefault(); e.returnValue=''; } });
+}
+window.addEventListener('error', e=>console.error('JS error', e.message, e.lineno));
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+</script>
+</body>
+</html>

@@ -24,6 +24,11 @@
     Cache-Control = "public, max-age=0, must-revalidate"
 
 [[headers]]
+  for = "/run/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
   for = "/lab.html"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
