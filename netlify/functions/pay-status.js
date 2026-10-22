@@ -1,6 +1,8 @@
 // HITFAT — the app asks THIS for what a buyer owns, instead of SELECTing payments in the browser
 // (that depended on RLS) — and it double-checks pending orders against Bayarcash itself, so a
 // callback that never arrives or fails its checksum can no longer strand a real payment.
+// The caller must present their own Supabase access token: purchases are answered for the
+// user that token belongs to, never for a user_id named in the URL.
 // Env: SUPABASE_URL, SUPABASE_SERVICE_KEY, BAYARCASH_TOKEN
 const SITE = 'https://hybrid.hitfat.io';
 const BC = 'https://api.console.bayar.cash/v3';
@@ -8,7 +10,7 @@ const CORS = {
   'Content-Type': 'application/json',
   'Access-Control-Allow-Origin': SITE,
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type'
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization'
 };
 
 exports.handler = async (event) => {
@@ -18,51 +20,24 @@ exports.handler = async (event) => {
   const h = { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY };
   const q = event.queryStringParameters || {};
 
-  // health view — counts and the newest rows, with no buyer identity in the response
-  if (q.diag === '1') {
-    const rows = await sb(SB_URL, h, 'payments?select=order_number,program_id,amount,status,created_at,paid_at&order=created_at.desc&limit=8');
-    if (!Array.isArray(rows)) return json(502, { error: 'query_failed', detail: rows });
-    const by = {};
-    rows.forEach(x => { by[x.status] = (by[x.status] || 0) + 1; });
-    return json(200, { shown: rows.length, by_status: by, rows });
-  }
-
-  // setup check: which portals exist, which channels each has, and which key we are configured to use
-  if (q.portals === '1') {
-    const TOKEN = process.env.BAYARCASH_TOKEN;
-    if (!TOKEN) return json(500, { error: 'no_token' });
-    const r = await fetch(BC + '/portals', { headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + TOKEN } });
-    if (!r.ok) return json(502, { error: 'http_' + r.status });
-    const d = await r.json();
-    const list = Array.isArray(d) ? d : (d && d.data) || [];
-    const inUse = process.env.BAYARCASH_PORTAL_KEY || '';
-    return json(200, {
-      configured_key_tail: inUse.slice(-6),
-      portals: list.map(p => ({
-        name: p.portal_name || p.name,
-        key_tail: String(p.portal_key || '').slice(-6),
-        is_configured: p.portal_key === inUse,
-        matches_query: q.key ? p.portal_key === q.key : undefined,
-        channels: (p.payment_channels || []).map(c => c.id + ':' + (c.name || c.code))
-      }))
-    });
-  }
-
   // support/debug: what does Bayarcash itself say about one order?
   if (q.verify) {
-    const v = await bcStatus(q.verify);
+    const row = await sb(SB_URL, h, 'payments?select=amount&order_number=eq.' + enc(q.verify) + '&limit=1');
+    const v = await bcStatus(q.verify, Array.isArray(row) && row[0] ? row[0].amount : null);
     if (v && v.paid) await markPaid(SB_URL, h, q.verify, v.tx);
     return json(200, { order_number: q.verify, bayarcash: v });
   }
 
-  const user_id = q.user_id;
-  if (!user_id) return json(400, { error: 'missing_user_id' });
+  // who is asking — verified against Supabase itself (same as stats.js), so a forged JWT cannot pass.
+  // Any ?user_id= in the URL is ignored: it used to let anyone read anyone's purchases.
+  const user_id = await userFromToken(SB_URL, SB_KEY, event.headers || {});
+  if (!user_id) return json(401, { error: 'no_session' });
 
   // any order still pending might simply have lost its callback — ask Bayarcash directly
-  const pend = await sb(SB_URL, h, 'payments?select=order_number&status=eq.pending&user_id=eq.' + enc(user_id) + '&order=created_at.desc&limit=10');
+  const pend = await sb(SB_URL, h, 'payments?select=order_number,amount&status=eq.pending&user_id=eq.' + enc(user_id) + '&order=created_at.desc&limit=10');
   if (Array.isArray(pend)) {
     for (const row of pend) {
-      const v = await bcStatus(row.order_number);
+      const v = await bcStatus(row.order_number, row.amount);
       if (v && v.paid) await markPaid(SB_URL, h, row.order_number, v.tx);
     }
   }
@@ -73,7 +48,10 @@ exports.handler = async (event) => {
 };
 
 // 3 = Success (0 New · 1 Pending · 2 Failed · 4 Cancelled)
-async function bcStatus(order_number) {
+// A success only counts if it is for THIS order and paid at least the order's amount. The response
+// shape isn't documented, so a field that is missing is not held against the buyer — only a field
+// that is present and disagrees.
+async function bcStatus(order_number, expected) {
   const TOKEN = process.env.BAYARCASH_TOKEN;
   if (!TOKEN || !order_number) return null;
   try {
@@ -83,9 +61,34 @@ async function bcStatus(order_number) {
     if (!r.ok) return { error: 'http_' + r.status };
     const d = await r.json();
     const list = Array.isArray(d) ? d : (d && d.data) || [];
-    const hit = list.find(t => String(t.status) === '3' || String(t.status).toLowerCase() === 'success');
+    const hit = list.find(t => (String(t.status) === '3' || String(t.status).toLowerCase() === 'success')
+      && sameOrder(t, order_number) && enoughPaid(t.amount, expected));
     return { found: list.length, paid: !!hit, tx: hit ? (hit.id || hit.transaction_id || null) : null, statuses: list.map(t => t.status) };
   } catch (e) { return { error: String(e && e.message) }; }
+}
+
+function sameOrder(t, order_number) {
+  return t.order_number === undefined || t.order_number === null || String(t.order_number).trim() === String(order_number);
+}
+function enoughPaid(paid, expected) {
+  const want = money(expected), got = money(paid);
+  if (want === null || got === null) return true;          // unknown on either side — don't strand a real buyer
+  return got + 0.005 >= want;
+}
+function money(v) {
+  if (v === undefined || v === null || v === '') return null;
+  const n = Number(String(v).replace(/,/g, ''));
+  return isFinite(n) ? n : null;
+}
+
+async function userFromToken(SB_URL, SB_KEY, headers) {
+  const token = String(headers.authorization || headers.Authorization || '').replace(/^Bearer\s+/i, '').trim();
+  if (!token) return null;
+  try {
+    const u = await fetch(SB_URL + '/auth/v1/user', { headers: { apikey: SB_KEY, Authorization: 'Bearer ' + token } });
+    if (!u.ok) return null;
+    return ((await u.json()) || {}).id || null;
+  } catch (e) { return null; }
 }
 
 async function markPaid(SB_URL, h, order_number, tx) {

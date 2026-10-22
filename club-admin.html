@@ -69,6 +69,9 @@ const SUPA_KEY = 'sb_publishable_6tKH033Hb74EV7QlKBCFFA_5K_Lsxgv';   // publisha
 const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
 const $ = id => document.getElementById(id);
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// a value inside an inline handler: the HTML parser decodes &#39; before the JS runs,
+// so esc() alone cannot keep it inside '…'. JSON makes it a JS string, esc keeps it in the attribute.
+const arg = s => esc(JSON.stringify(String(s==null?'':s)));
 let me=null, staff=null, tab='today', codeTimer=null, curSession=null, isHitfat=false;
 
 function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(window._t); window._t=setTimeout(()=>t.classList.remove('on'),2200); }
@@ -152,7 +155,7 @@ async function viewToday(){
   $('body').innerHTML = rows.map(s=>`<div class="card">
       <div class="row"><div class="g"><div class="t">${esc(s.title)}</div>
         <div class="m">${fmtTime(s.starts_at)} · ${esc(s.coach_name||'')} · ${s.checked_in||0} checked in</div></div>
-      <button class="p sm" onclick="openRun('${s.id}')">Run check-in</button></div>
+      <button class="p sm" onclick="openRun(${arg(s.id)})">Run check-in</button></div>
     </div>`).join('') + `<div id="run"></div>`;
 }
 async function openRun(id){
@@ -196,7 +199,7 @@ async function loadCheckedIn(){
   $('inlist').innerHTML = rows.map(r=>`<div class="row" style="padding:6px 0;">
       <div class="g"><div class="t">${esc(names[r.user_id]||'Athlete')}</div>
       <div class="m">${fmtTime(r.checked_in_at)}${r.method==='coach'?' · marked by coach':''}</div></div>
-      <button class="sm dg" onclick="removeCheckIn('${r.user_id}','${esc(names[r.user_id]||'this athlete')}')">Remove</button></div>`).join('');
+      <button class="sm dg" data-name="${esc(names[r.user_id]||'this athlete')}" onclick="removeCheckIn(${arg(r.user_id)},this.dataset.name)">Remove</button></div>`).join('');
 }
 async function removeCheckIn(userId, name){
   if(!curSession) return;
@@ -232,7 +235,7 @@ async function viewSessions(){
     ${rows.length ? rows.map(s=>`<div class="card"><div class="row">
         <div class="g"><div class="t">${esc(s.title)} ${s.status!=='scheduled'?`<span class="pill">${esc(s.status)}</span>`:''}</div>
           <div class="m">${fmtDay(s.starts_at)} · ${fmtTime(s.starts_at)} · ${s.checked_in||0} checked in</div></div>
-        <button class="sm dg" onclick="delSession('${s.id}')">Delete</button></div></div>`).join('')
+        <button class="sm dg" onclick="delSession(${arg(s.id)})">Delete</button></div></div>`).join('')
       : '<div class="card"><div class="m">Nothing scheduled.</div></div>'}`;
 }
 async function createSession(){
@@ -299,14 +302,14 @@ async function viewMembers(){
           <div style="margin-top:6px;">${flag}</div>
         </div></div>
         <div class="row" style="margin-top:10px;gap:6px;flex-wrap:wrap;">
-          <select onchange="setStatus('${m.id}', this.value)" style="width:auto;padding:8px 10px;">
+          <select onchange="setStatus(${arg(m.id)}, this.value)" style="width:auto;padding:8px 10px;">
             ${['active','paused','inactive','expired'].map(s=>`<option ${m.status===s?'selected':''}>${s}</option>`).join('')}
           </select>
-          <select onchange="setRole('${m.id}', this.value)" style="width:auto;padding:8px 10px;">
+          <select onchange="setRole(${arg(m.id)}, this.value)" style="width:auto;padding:8px 10px;">
             ${['member','coach','admin'].map(s=>`<option ${m.role===s?'selected':''}>${s}</option>`).join('')}
           </select>
-          <button class="sm" onclick="noteFor('${m.user_id}','${esc(names[m.user_id]||'Athlete')}')">Add note</button>
-          ${curSession?`<button class="sm" onclick="markIn('${m.user_id}')">Mark in</button>`:''}
+          <button class="sm" data-name="${esc(names[m.user_id]||'Athlete')}" onclick="noteFor(${arg(m.user_id)},this.dataset.name)">Add note</button>
+          ${curSession?`<button class="sm" onclick="markIn(${arg(m.user_id)})">Mark in</button>`:''}
         </div></div>`;
     }).join('')}`;
 }
@@ -319,7 +322,7 @@ async function searchAthletes(){
   $('q-res').innerHTML = rows.length ? rows.map(p=>`<div class="row" style="margin-top:9px;">
       <div class="g"><div class="t">${esc(p.display_name||p.name||('@'+p.username))}</div>
       <div class="m">${esc(p.state||'')}</div></div>
-      <button class="sm" onclick="addMember('${p.id}')">Add</button></div>`).join('')
+      <button class="sm" onclick="addMember(${arg(p.id)})">Add</button></div>`).join('')
     : '<div class="m" style="margin-top:9px;">No athlete found.</div>';
 }
 async function addMember(userId){
@@ -375,8 +378,8 @@ async function viewPartners(){
         ${r.classes?`<div class="note">${esc(r.classes)}</div>`:''}
       </div></div>
       ${r.status==='pending' ? `<div class="row" style="margin-top:10px;gap:6px;">
-        <button class="p sm" onclick="approveApp('${r.id}')">Approve</button>
-        <button class="sm dg" onclick="rejectApp('${r.id}')">Reject</button></div>` : ''}
+        <button class="p sm" onclick="approveApp(${arg(r.id)})">Approve</button>
+        <button class="sm dg" onclick="rejectApp(${arg(r.id)})">Reject</button></div>` : ''}
     </div>`;
   const quiet = board.filter(b=> (b.active||0) === 0 && (b.members||0) > 0);
   $('body').innerHTML = `<h2>${pending.length} waiting</h2>`
@@ -419,7 +422,7 @@ async function viewNews(){
     ${rows.length ? rows.map(a=>`<div class="card"><div class="row"><div class="g">
         <div class="t">${esc(a.title)}</div><div class="m">${esc(a.body||'')}</div>
         <div class="m">${fmtDay(a.created_at)}</div></div>
-        <button class="sm dg" onclick="delNews('${a.id}')">Delete</button></div></div>`).join('')
+        <button class="sm dg" onclick="delNews(${arg(a.id)})">Delete</button></div></div>`).join('')
       : '<div class="card"><div class="m">Nothing posted yet.</div></div>'}`;
 }
 async function createNews(){

@@ -30,15 +30,21 @@ exports.handler = async (event) => {
     const payload = SUM_FIELDS.filter(k => p[k] !== undefined && p[k] !== null)
       .sort().map(k => String(p[k]).trim()).join('|');
     const mine = crypto.createHmac('sha256', SECRET).update(payload).digest('hex');
-    trusted = mine === p.checksum;
+    // constant-time compare; hashing both sides first gives equal-length buffers whatever was sent
+    const a = crypto.createHash('sha256').update(mine).digest();
+    const b = crypto.createHash('sha256').update(String(p.checksum).trim().toLowerCase()).digest();
+    trusted = crypto.timingSafeEqual(a, b);
   }
 
-  let paid = trusted && String(p.status) === '3';   // 3 = Success
+  // what this order should cost — a signed "paid" for a smaller amount must not unlock it
+  const expected = await orderAmount(SB_URL, SB_KEY, order);
+
+  let paid = trusted && String(p.status) === '3' && enoughPaid(p.amount, expected);   // 3 = Success
   let tx = p.transaction_id || null;
 
   // unsigned, or the signature didn't match what we computed — verify with Bayarcash instead
   if (!paid) {
-    const v = await bcStatus(order);
+    const v = await bcStatus(order, expected);
     if (!v || !v.paid) return ok(trusted ? 'ignored' : 'unverified');
     paid = true; tx = v.tx || tx;
   }
@@ -54,7 +60,10 @@ exports.handler = async (event) => {
   return ok('ok');
 };
 
-async function bcStatus(order_number) {
+// A success only counts if it is for THIS order and paid at least the order's amount. The response
+// shape isn't documented, so a field that is missing is not held against the buyer — only a field
+// that is present and disagrees.
+async function bcStatus(order_number, expected) {
   const TOKEN = process.env.BAYARCASH_TOKEN;
   if (!TOKEN) return null;
   try {
@@ -64,8 +73,34 @@ async function bcStatus(order_number) {
     if (!r.ok) return null;
     const d = await r.json();
     const list = Array.isArray(d) ? d : (d && d.data) || [];
-    const hit = list.find(t => String(t.status) === '3' || String(t.status).toLowerCase() === 'success');
+    const hit = list.find(t => (String(t.status) === '3' || String(t.status).toLowerCase() === 'success')
+      && sameOrder(t, order_number) && enoughPaid(t.amount, expected));
     return { paid: !!hit, tx: hit ? (hit.id || hit.transaction_id || null) : null };
+  } catch (e) { return null; }
+}
+
+function sameOrder(t, order_number) {
+  return t.order_number === undefined || t.order_number === null || String(t.order_number).trim() === String(order_number);
+}
+function enoughPaid(paid, expected) {
+  const want = money(expected), got = money(paid);
+  if (want === null || got === null) return true;          // unknown on either side — don't strand a real buyer
+  return got + 0.005 >= want;
+}
+function money(v) {
+  if (v === undefined || v === null || v === '') return null;
+  const n = Number(String(v).replace(/,/g, ''));
+  return isFinite(n) ? n : null;
+}
+async function orderAmount(SB_URL, SB_KEY, order) {
+  if (!SB_URL || !SB_KEY) return null;
+  try {
+    const r = await fetch(SB_URL + '/rest/v1/payments?select=amount&order_number=eq.' + encodeURIComponent(order) + '&limit=1', {
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY }
+    });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    return Array.isArray(rows) && rows[0] ? rows[0].amount : null;
   } catch (e) { return null; }
 }
 
