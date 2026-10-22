@@ -5611,11 +5611,10 @@ function shareWorkoutCard(title, mins, rpe){
 }
 /* Every athlete gets a share moment, whether or not Community is switched on. */
 function offerWorkoutShare(key, title, mins, rpe){
-  const t=String(title||'Workout').replace(/'/g,"\\'");
   $('modal-sheet').innerHTML = '<h3>Workout complete 🔥</h3>'
     + '<p class="msub">'+cmEsc(title||'Session')+(mins?' · '+mins+' min':'')+(rpe?' · RPE '+rpe:'')+'</p>'
     + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Done</button>'
-    + '<button class="confirm" onclick="shareWorkoutCard(\'' + t + '\',' + (mins||0) + ',' + (rpe||0) + ')">Share</button></div>';
+    + '<button class="confirm" onclick="shareWorkoutCard(' + cmArg(title||'Workout') + ',' + (mins||0) + ',' + (rpe||0) + ')">Share</button></div>';
   $('modal').classList.add('on');
 }
 
@@ -5669,10 +5668,10 @@ function sessionResultHTML(r){
     + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Done</button>'
       + '<button class="confirm" onclick="'+(r.fresh&&r.fresh.length
           ? 'shareBadge(\'' + r.fresh[0].slug + '\')'
-          : 'shareWorkoutCard(\'' + String(r.name||'Session').replace(/'/g,"\\'") + '\',' + (r.mins||0) + ',' + (r.rpe||0) + ')')
+          : 'shareWorkoutCard(' + cmArg(r.name||'Session') + ',' + (r.mins||0) + ',' + (r.rpe||0) + ')')
       + '">Share</button></div>'
     + ((typeof cmOn==='function' && cmOn() && cmUp)
-        ? '<button class="ghostbtn" style="width:100%;margin-top:8px;" onclick="closeModal();offerShare(\'' + String(r.key||'').replace(/'/g,"\\'") + '\',\'' + String(r.name||'Session').replace(/'/g,"\\'") + '\',' + (r.mins||0) + ',' + ((r.prs&&r.prs.length)?'true':'false') + ')">Post to Community</button>'
+        ? '<button class="ghostbtn" style="width:100%;margin-top:8px;" onclick="closeModal();offerShare(' + cmArg(r.key||'') + ',' + cmArg(r.name||'Session') + ',' + (r.mins||0) + ',' + ((r.prs&&r.prs.length)?'true':'false') + ')">Post to Community</button>'
         : '');
 }
 function openSessionResult(r){
@@ -6499,6 +6498,15 @@ function setChannel(c){
   if(a) a.className='paych'+(c===1?' on':'');
   if(b) b.className='paych'+(c===6?' on':'');
 }
+/* The pay-* functions decide who the buyer is from the Supabase session token,
+   never from a user_id the browser names — so every call carries it. */
+async function sessionAuth(h){
+  h=h||{};
+  try{ const r=sb && await sb.auth.getSession();
+    const t=r && r.data && r.data.session && r.data.session.access_token;
+    if(t) h.Authorization='Bearer '+t; }catch(e){}
+  return h;
+}
 async function payProgram(id){
   const p=CATALOG[id]; if(!p) return;
   if(!PAYMENTS_LIVE){ closeModal(); nfToast(p.title+' — opening soon.'); return; }
@@ -6506,8 +6514,8 @@ async function payProgram(id){
   track('checkout_start',{id, price:p.price||null, channel:payChannel});
   closeModal(); nfToast('Opening secure payment…');
   try{
-    const r=await fetch('/.netlify/functions/pay-create',{ method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ program_id:id, user_id:HF.userId, email:HF.email, channel:payChannel,
+    const r=await fetch('/.netlify/functions/pay-create',{ method:'POST', headers:await sessionAuth({'Content-Type':'application/json'}),
+      body:JSON.stringify({ program_id:id, email:HF.email, channel:payChannel,
                             name:(HF.data.prefs&&HF.data.prefs.name)||'' }) });
     const d=await r.json();
     if(d && d.url){ location.href=d.url; return; }
@@ -6524,8 +6532,10 @@ async function checkPaidPurchases(silent){
     // which only works if the payments RLS policy lets the buyer read their own rows
     let ids=null;
     try{
-      const r=await fetch('/.netlify/functions/pay-status?user_id='+encodeURIComponent(HF.userId));
-      const d=await r.json(); if(d && Array.isArray(d.programs)) ids=d.programs;
+      const h=await sessionAuth();
+      if(h.Authorization){
+        const r=await fetch('/.netlify/functions/pay-status',{ headers:h });
+        const d=await r.json(); if(d && Array.isArray(d.programs)) ids=d.programs; }
     }catch(e){}
     if(ids===null && sb){   // fallback: direct read
       const { data, error } = await sb.from('payments')
@@ -6603,21 +6613,42 @@ function setStrava(d){                                     // persist to Supabas
   try{ if(d) localStorage.setItem('hf_strava', JSON.stringify(d)); else localStorage.removeItem('hf_strava'); }catch(e){}
 }
 function stravaConnected(){ const d=stravaData(); return !!(d && d.a); }
+/* OAuth state: a random value we remember before leaving, which Strava hands back to
+   strava-callback and strava-callback puts in the fragment next to the tokens. Without
+   it, any link to /#strava={...} could plant someone else's Strava account (and so their
+   activities) into this athlete's training log. localStorage rather than sessionStorage:
+   on a phone the return can land in a new tab (Strava app → browser), which would start
+   with an empty sessionStorage and make every such connect fail. */
+const STRAVA_STATE_KEY='hf_strava_state', STRAVA_STATE_TTL=15*60*1000;
 function connectStrava(){
+  let st='';
+  try{ const b=new Uint8Array(16); crypto.getRandomValues(b); st=Array.from(b,x=>('0'+x.toString(16)).slice(-2)).join(''); }catch(e){}
+  if(!st){ nfToast('Strava connection error — please try again.'); return; }
+  try{ localStorage.setItem(STRAVA_STATE_KEY, JSON.stringify({ s:st, t:Date.now() })); }catch(e){}
   location.href='https://www.strava.com/oauth/authorize?client_id='+STRAVA_CLIENT_ID
     +'&redirect_uri='+encodeURIComponent(STRAVA_REDIRECT)
-    +'&response_type=code&approval_prompt=auto&scope=activity:read_all';   // read_all → also imports PRIVATE activities (Amazfit/Zepp often push as private)
+    +'&response_type=code&approval_prompt=auto&scope=activity:read_all'   // read_all → also imports PRIVATE activities (Amazfit/Zepp often push as private)
+    +'&state='+st;
+}
+function takeStravaState(){                                            // single use: read it once, then forget it
+  let w=null;
+  try{ w=JSON.parse(localStorage.getItem(STRAVA_STATE_KEY)||'null'); localStorage.removeItem(STRAVA_STATE_KEY); }catch(e){}
+  return (w && w.s && Date.now()-(w.t||0) < STRAVA_STATE_TTL) ? w.s : null;
 }
 function disconnectStrava(){ setStrava(null); nfToast('Strava disconnected.'); try{ renderProfile(); }catch(e){} }
 function captureStravaToken(){
   try{
     if(location.hash && location.hash.indexOf('strava=')>-1){        // tokens returned in URL fragment (never hits a server)
-      const p=JSON.parse(decodeURIComponent(location.hash.split('strava=')[1]));
-      if(p && p.a){ localStorage.setItem('hf_strava', JSON.stringify(p)); localStorage.setItem('hf_strava_justconnected','1'); }
-      history.replaceState(null,'', location.pathname + location.search);
+      const raw=location.hash.split('strava=')[1];
+      history.replaceState(null,'', location.pathname + location.search);   // strip it first, whatever happens next
+      const want=takeStravaState();
+      const p=JSON.parse(decodeURIComponent(raw));
+      if(p && p.a && want && p.s===want){ delete p.s;
+        localStorage.setItem('hf_strava', JSON.stringify(p)); localStorage.setItem('hf_strava_justconnected','1'); }
+      else localStorage.setItem('hf_strava_msg', 'state');               // not a connect THIS browser started — ignore the tokens
     }
     const m=new URLSearchParams(location.search).get('strava');       // denied / error / notconfigured
-    if(m){ localStorage.setItem('hf_strava_msg', m); history.replaceState(null,'', location.pathname); }
+    if(m){ takeStravaState(); localStorage.setItem('hf_strava_msg', m); history.replaceState(null,'', location.pathname); }
   }catch(e){}
 }
 async function stravaToken(){                                          // returns a valid access token, refreshing if needed
@@ -6782,7 +6813,22 @@ function cmRank(rows){
 
 const cmOn    = () => !!(sb && HF.userId);
 const cmEsc   = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const cmName  = p => (p && (p.display_name || p.name || (p.username && '@'+p.username))) || 'Athlete';
+/* A value passed to an inline handler, onclick="fn('+cmArg(x)+')". cmEsc alone is
+   not enough there: the HTML parser decodes &#39; back to ' BEFORE the handler
+   runs, so a name or URL could close the '…' string and run code. JSON makes it a
+   proper JS string literal first, and cmEsc then keeps it inside the attribute. */
+const cmArg   = s => cmEsc(JSON.stringify(String(s==null?'':s)));
+/* Photos are only ever uploaded to our own Supabase storage (cmUpload), so an
+   image_url pointing anywhere else was not written by this app — don't show it.
+   auth.hitfat.io is the custom domain; the supabase.co host is the original one,
+   which older posts were saved under. */
+const CM_IMG_HOSTS = ['auth.hitfat.io', 'khuzvhtctjsnrrovjdye.supabase.co'];
+const cmImg   = u => {
+  try{ const x = new URL(String(u||''));
+    return (x.protocol==='https:' && CM_IMG_HOSTS.indexOf(x.hostname)>-1 && x.pathname.indexOf('/storage/v1/')===0) ? x.href : '';
+  }catch(e){ return ''; }
+};
+const cmName = p => (p && (p.display_name || p.name || (p.username && '@'+p.username))) || 'Athlete';
 const cmPlace = p => [p && p.city, p && p.state].filter(Boolean).join(', ');
 
 /* One broken table must never take the training app down with it. */
@@ -6956,18 +7002,18 @@ function cmPostCard(p){
   if(p.workout_mins) meta.push(p.workout_mins+' min');
   if(p.state) meta.push(p.state);
   return '<div class="cmpost">'
-    + '<div class="cmhead" onclick="openAthlete(\''+cmEsc(p.user_id)+'\')">'+cmAvatar(p,38)
+    + '<div class="cmhead" onclick="openAthlete('+cmArg(p.user_id)+')">'+cmAvatar(p,38)
       + '<div class="cmwho"><div class="n">'+cmEsc(cmName(p))+cmTag(p.author_is_official,p.author_is_demo)+'</div>'
       + '<div class="t">'+cmEsc(cmAgo(p.created_at))+(cmPlace(p)?' · '+cmEsc(cmPlace(p)):'')+'</div></div></div>'
-    + '<button class="cmdots" onclick="event.stopPropagation();cmMenu(\'post\',\''+cmEsc(p.id)+'\','+((p.user_id===HF.userId)?'true':'false')+')">\u22ef</button>'
+    + '<button class="cmdots" onclick="event.stopPropagation();cmMenu(\'post\','+cmArg(p.id)+','+((p.user_id===HF.userId)?'true':'false')+')">\u22ef</button>'
     + (p.workout_title ? '<div class="cmwork"><div class="wt">'+cmEsc(p.workout_title)+'</div>'
         + (meta.length?'<div class="wm">'+cmEsc(meta.join(' · '))+'</div>':'')
         + (p.is_pb?'<div class="cmpb">🔥 New Personal Best</div>':'')+'</div>' : '')
     + (p.caption   ? '<div class="cmcap">'+cmEsc(p.caption)+'</div>' : '')
-    + (p.image_url ? '<img class="cmimg" src="'+cmEsc(p.image_url)+'" alt="" loading="lazy" onclick="event.stopPropagation();cmZoom(\''+cmEsc(p.image_url)+'\')">' : '')
+    + (cmImg(p.image_url) ? '<img class="cmimg" src="'+cmEsc(cmImg(p.image_url))+'" alt="" loading="lazy" onclick="event.stopPropagation();cmZoom(this.src)">' : '')
     + '<div class="cmacts">'
-      + '<button class="cmact" onclick="cmReact(\''+cmEsc(p.id)+'\',this)">🔥 <span>'+(p.reaction_count||0)+'</span></button>'
-      + '<button class="cmact" onclick="openThread(\''+cmEsc(p.id)+'\')">💬 <span>'+(p.comment_count||0)+'</span></button>'
+      + '<button class="cmact" onclick="cmReact('+cmArg(p.id)+',this)">🔥 <span>'+(p.reaction_count||0)+'</span></button>'
+      + '<button class="cmact" onclick="openThread('+cmArg(p.id)+')">💬 <span>'+(p.comment_count||0)+'</span></button>'
     + '</div></div>';
 }
 
@@ -7020,10 +7066,10 @@ function cmAthleteRow(a){
   const follows = cmFollowingIds && cmFollowingIds.has(a.id);
   const sub = [cmPlace(a), a.primary_race_category, a.experience_level].filter(Boolean).join(' \u00b7 ');
   return '<div class="cmrow">'
-    + '<div class="cmrl" onclick="openAthlete(\''+cmEsc(a.id)+'\')">'+cmAvatar(a,42)
+    + '<div class="cmrl" onclick="openAthlete('+cmArg(a.id)+')">'+cmAvatar(a,42)
       + '<div class="cmrt"><div class="n">'+cmEsc(cmName(a))+cmTag(a.is_official,a.is_demo)+'</div>'
       + (sub?'<div class="t">'+cmEsc(sub)+'</div>':'')+'</div></div>'
-    + '<button class="cmfollow'+(follows?' on':'')+'" onclick="event.stopPropagation();cmFollow(\''+cmEsc(a.id)+'\',this)">'
+    + '<button class="cmfollow'+(follows?' on':'')+'" onclick="event.stopPropagation();cmFollow('+cmArg(a.id)+',this)">'
       + (follows?'Following':'Follow')+'</button></div>';
 }
 
@@ -7133,17 +7179,17 @@ function cmThreadRow(c, isReply, hasNext){
   const mine = c.user_id === HF.userId;
   const who = cmEsc(cmName(a));
   return '<div class="th'+(isReply?' reply':'')+(hasNext?' hasnext':'')+'">'
-    + '<div class="thl" onclick="openAthlete(\''+cmEsc(c.user_id)+'\')">'+cmAvatar(a, isReply?26:32)+'</div>'
+    + '<div class="thl" onclick="openAthlete('+cmArg(c.user_id)+')">'+cmAvatar(a, isReply?26:32)+'</div>'
     + '<div class="thc">'
       + '<div class="thh">'
-        + '<b onclick="openAthlete(\''+cmEsc(c.user_id)+'\')">'+who+'</b>'
+        + '<b onclick="openAthlete('+cmArg(c.user_id)+')">'+who+'</b>'
         + cmTag(a.is_official, a.is_demo)
         + '<span class="tm">'+cmEsc(cmAgo(c.created_at))+'</span>'
-        + '<button class="thm" onclick="cmMenu(\'comment\',\''+cmEsc(c.id)+'\','+(mine?'true':'false')+')">\u22ef</button>'
+        + '<button class="thm" onclick="cmMenu(\'comment\','+cmArg(c.id)+','+(mine?'true':'false')+')">\u22ef</button>'
       + '</div>'
       + (c.content && c.content !== '\ud83d\udcf7' ? '<div class="thb">'+cmEsc(c.content)+'</div>' : '')
-      + (c.image_url ? '<img class="thimg" src="'+cmEsc(c.image_url)+'" alt="" loading="lazy" onclick="cmZoom(\''+cmEsc(c.image_url)+'\')">' : '')
-      + (isReply ? '' : '<div class="tha"><button onclick="cmSetReply(\''+cmEsc(c.id)+'\',\''+who.replace(/'/g,"&#39;")+'\')">Reply</button></div>')
+      + (cmImg(c.image_url) ? '<img class="thimg" src="'+cmEsc(cmImg(c.image_url))+'" alt="" loading="lazy" onclick="cmZoom(this.src)">' : '')
+      + (isReply ? '' : '<div class="tha"><button data-id="'+cmEsc(c.id)+'" data-who="'+who+'" onclick="cmSetReply(this.dataset.id,this.dataset.who)">Reply</button></div>')
     + '</div></div>';
 }
 
@@ -7193,7 +7239,7 @@ async function openThread(postId){
       + '<textarea id="cm-cinput" rows="2" maxlength="600" placeholder="Write a comment…"></textarea>'
       + '<div class="cmcrow">'
         + '<button class="cmphoto" onclick="cmPickImage(\'cm-cimg\')">📷 Photo</button>'
-        + '<button class="go" style="flex:1" onclick="cmAddComment(\''+cmEsc(postId)+'\')">Post</button>'
+        + '<button class="go" style="flex:1" onclick="cmAddComment('+cmArg(postId)+')">Post</button>'
       + '</div>'
     + '</div>';
   cmClearReply();
@@ -7245,9 +7291,9 @@ function cmMenu(kind, id, mine){
   $('modal-sheet').innerHTML = '<h3>'+(mine?'Your '+label:'This '+label)+'</h3>'
     + (mine
         ? '<button class="go sec" style="width:100%;margin-bottom:9px;color:#ff6b6b !important;" '
-          + 'onclick="cmConfirmDelete(\''+kind+'\',\''+cmEsc(id)+'\')">Delete '+label+'</button>'
+          + 'onclick="cmConfirmDelete(\''+kind+'\','+cmArg(id)+')">Delete '+label+'</button>'
         : '<button class="go sec" style="width:100%;margin-bottom:9px;" '
-          + 'onclick="cmReport(\''+kind+'\',\''+cmEsc(id)+'\')">Report '+label+'</button>')
+          + 'onclick="cmReport(\''+kind+'\','+cmArg(id)+')">Report '+label+'</button>')
     + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Cancel</button></div>';
   $('modal').classList.add('on');
 }
@@ -7258,7 +7304,7 @@ function cmConfirmDelete(kind, id){
     + '<p class="msub">This cannot be undone.</p>'
     + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Cancel</button>'
     + '<button class="confirm" style="background:#ff6b6b;color:#fff;" '
-    + 'onclick="cmDoDelete(\''+kind+'\',\''+cmEsc(id)+'\')">Delete</button></div>';
+    + 'onclick="cmDoDelete(\''+kind+'\','+cmArg(id)+')">Delete</button></div>';
 }
 
 async function cmDoDelete(kind, id){
@@ -7355,9 +7401,9 @@ async function openNotifs(){
     + rows.map(n=>{
         const a = by[n.actor_id] || null;
         const dest = (n.entity_type==='post' && n.entity_id)
-              ? 'openThread(\''+cmEsc(n.entity_id)+'\')'
-              : (n.actor_id ? 'openAthlete(\''+cmEsc(n.actor_id)+'\')' : '');
-        return '<div class="cmn'+(n.read?'':' unread')+'" onclick="cmOpenNotif(\''+cmEsc(n.id)+'\');'+dest+'">'
+              ? 'openThread('+cmArg(n.entity_id)+')'
+              : (n.actor_id ? 'openAthlete('+cmArg(n.actor_id)+')' : '');
+        return '<div class="cmn'+(n.read?'':' unread')+'" onclick="cmOpenNotif('+cmArg(n.id)+');'+dest+'">'
           + cmAvatar(a,36)
           + '<div class="cmnb"><div class="tx">'+cmNotifText(n,a)+'</div>'
           + '<div class="tm">'+cmEsc(cmAgo(n.created_at))+'</div></div>'
@@ -7414,7 +7460,7 @@ async function cmPublishScore(){
 function cmRankRow(r, rankField, me){
   const rank = r[rankField] || 0;
   const medal = rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':null;
-  return '<div class="cmlb'+(me?' me':'')+'" onclick="openAthlete(\''+cmEsc(r.id)+'\')">'
+  return '<div class="cmlb'+(me?' me':'')+'" onclick="openAthlete('+cmArg(r.id)+')">'
     + '<div class="rk">'+(medal||rank)+'</div>'
     + cmAvatar(r,36)
     + '<div class="lbn"><div class="n">'+cmEsc(cmName(r))+(me?' <span class="you">You</span>':'')+'</div>'
@@ -7603,7 +7649,7 @@ async function cmBuildChallenge(){
     ? '<div class="csponsor">'
       + (cmChal.sponsor_logo_url? '<img src="'+cmEsc(cmChal.sponsor_logo_url)+'" alt="">':'')
       + '<div><div class="sl">Presented by</div><div class="sn">'+cmEsc(cmChal.sponsor_name)+'</div></div>'
-      + (cmChal.sponsor_url? '<button class="go sec" style="margin-left:auto;padding:8px 14px;" onclick="window.open(\''+cmEsc(cmChal.sponsor_url)+'\',\'_blank\')">Visit</button>':'')
+      + (/^https?:\/\//i.test(cmChal.sponsor_url||'')? '<button class="go sec" style="margin-left:auto;padding:8px 14px;" onclick="window.open('+cmArg(cmChal.sponsor_url)+',\'_blank\')">Visit</button>':'')
       + '</div>'
       + (cmChal.reward_text? '<div class="cmnote" style="margin-top:8px;">'+cmEsc(cmChal.reward_text)+'</div>':'')
     : '';
@@ -7627,7 +7673,7 @@ async function cmBuildChallenge(){
     + '</div>'
     + (board.length
         ? '<div class="sechead" style="margin:22px 0 10px;">Challenge standings</div>'
-          + board.map(r=> '<div class="cmlb'+(r.user_id===HF.userId?' me':'')+'" onclick="openAthlete(\''+cmEsc(r.user_id)+'\')">'
+          + board.map(r=> '<div class="cmlb'+(r.user_id===HF.userId?' me':'')+'" onclick="openAthlete('+cmArg(r.user_id)+')">'
               + '<div class="rk">'+(r.rank_in_challenge||0)+'</div>'+cmAvatar(r,36)
               + '<div class="lbn"><div class="n">'+cmEsc(cmName(r))+(r.user_id===HF.userId?' <span class="you">You</span>':'')+'</div>'
               + '<div class="t">'+cmEsc(cmPlace(r)||'')+'</div></div>'
@@ -7741,23 +7787,23 @@ async function cmJoinClub(id, btn){
 function cmClubCard(c){
   const mine = cmMe && cmMe.club_id === c.id;
   const n = c.member_count || 0;
-  return '<div class="clubcard" onclick="openClub(\''+cmEsc(c.id)+'\')">'
+  return '<div class="clubcard" onclick="openClub('+cmArg(c.id)+')">'
     + '<div class="clublogo">'+cmEsc((c.name||'C').trim().charAt(0).toUpperCase())+'</div>'
     + '<div class="cn">'+cmEsc(c.name)+'</div>'
     + '<div class="cs">'+cmEsc(c.state||'')+' \u00b7 '+n+' member'+(n===1?'':'s')+'</div>'
-    + '<button class="cmfollow'+(mine?' on':'')+'" onclick="event.stopPropagation();cmJoinClub(\''+cmEsc(c.id)+'\',this)">'
+    + '<button class="cmfollow'+(mine?' on':'')+'" onclick="event.stopPropagation();cmJoinClub('+cmArg(c.id)+',this)">'
       + (mine?'Joined':'Join')+'</button></div>';
 }
 
 function cmClubRow(c){
   const mine = cmMe && cmMe.club_id === c.id;
   return '<div class="cmrow">'
-    + '<div class="cmrl" onclick="openClub(\''+cmEsc(c.id)+'\')">'
+    + '<div class="cmrl" onclick="openClub('+cmArg(c.id)+')">'
       + '<div class="clublogo">'+cmEsc((c.name||'C').trim().charAt(0).toUpperCase())+'</div>'
       + '<div class="cmrt"><div class="n">'+cmEsc(c.name)+(c.is_official?'<span class="cmtag off">Official</span>':'')+'</div>'
       + '<div class="t">'+cmEsc([c.state, (c.member_count||0)+' member'+(c.member_count===1?'':'s')].filter(Boolean).join(' \u00b7 '))+'</div>'
     + '</div></div>'
-    + '<button class="cmfollow'+(mine?' on':'')+'" onclick="event.stopPropagation();cmJoinClub(\''+cmEsc(c.id)+'\',this)">'
+    + '<button class="cmfollow'+(mine?' on':'')+'" onclick="event.stopPropagation();cmJoinClub('+cmArg(c.id)+',this)">'
       + (mine?'Joined':'Join')+'</button></div>';
 }
 
@@ -7785,7 +7831,7 @@ async function openClub(id){
       .eq('club_id', id).order('starts_at').limit(8)) || [];
 
   el.innerHTML = back
-    + (c.photo_url ? '<div class="netphoto" style="background-image:url(\''+cmEsc(c.photo_url)+'\')"></div>' : '')
+    + (c.photo_url ? '<div class="netphoto" style="background-image:url('+cmArg(c.photo_url)+')"></div>' : '')
     + '<div class="cmprof">'
       + (typeof netLogo==='function' ? netLogo(c, 76) : '<div class="clublogo big">'+cmEsc((c.name||'C').trim().charAt(0).toUpperCase())+'</div>')
       + '<div class="cmpn">'+cmEsc(c.name)+'</div>'
@@ -7795,7 +7841,7 @@ async function openClub(id){
       + (c.description ? '<div class="cmpm">'+cmEsc(c.description)+'</div>' : '')
       + '<div class="cmpstats"><div><b>'+(c.member_count||0)+'</b><small>Athletes</small></div>'
       + (c.active_count ? '<div><b>'+c.active_count+'</b><small>Training now</small></div>' : '')+'</div>'
-      + '<button class="go'+(mine?' sec':'')+'" onclick="cmJoinClub(\''+cmEsc(id)+'\',this)">'+(mine?'Joined':'Join club')+'</button>'
+      + '<button class="go'+(mine?' sec':'')+'" onclick="cmJoinClub('+cmArg(id)+',this)">'+(mine?'Joined':'Join club')+'</button>'
     + '</div>'
     + (sched.length
         ? '<div class="sechead" style="margin-top:22px;">This week</div>'
@@ -7905,6 +7951,7 @@ function cmZoom(url){
   const d = document.createElement('div');
   d.className = 'cmzoom';
   d.onclick = ()=> d.remove();
+  url = cmImg(url); if(!url) return;
   d.innerHTML = '<img src="'+cmEsc(url)+'" alt="">';
   document.body.appendChild(d);
 }
@@ -8095,14 +8142,14 @@ async function openAthlete(id){
     + '<div class="cmprof">'+cmAvatar(p,74)
       + '<div class="cmpn">'+cmEsc(cmName(p))+cmTag(p.is_official,p.is_demo)+'</div>'
       + (cmPlace(p) ? '<div class="cmpm">'+cmEsc(cmPlace(p))+(p.country?', '+cmEsc(p.country):'')+'</div>' : '')
-      + (clubName ? '<div class="cmpm cmclub" onclick="openClub(\''+cmEsc(p.club_id)+'\')">'+cmEsc(clubName)+'</div>' : '')
+      + (clubName ? '<div class="cmpm cmclub" onclick="openClub('+cmArg(p.club_id)+')">'+cmEsc(clubName)+'</div>' : '')
       + (detail.length ? '<div class="cmpm">'+detail.join(' · ')+'</div>' : '')
       + '<div class="cmpstats">'
         + '<div><b>'+fCount+'</b><small>Followers</small></div>'
         + '<div><b>'+gCount+'</b><small>Following</small></div>'
         + '<div><b>'+(posts?posts.length:0)+'</b><small>Activities</small></div></div>'
       + (isMe ? '<button class="go sec" onclick="switchTab(\'profile\')">Edit my profile</button>'
-              : '<button class="go'+(follows?' sec':'')+'" onclick="cmFollow(\''+cmEsc(id)+'\',this)">'+(follows?'Following':'Follow')+'</button>')
+              : '<button class="go'+(follows?' sec':'')+'" onclick="cmFollow('+cmArg(id)+',this)">'+(follows?'Following':'Follow')+'</button>')
     + '</div>'
     + (p.hyrox_pb ? '<div class="cmcard"><div class="cml">HYROX PB</div><div class="cmbig">'+cmEsc(p.hyrox_pb)+'</div></div>' : '')
     + (p.upcoming_race_name ? '<div class="cmcard"><div class="cml">Upcoming race</div><div class="cmv">'+cmEsc(p.upcoming_race_name)+'</div></div>' : '')
@@ -8153,14 +8200,13 @@ async function saveAthleteProfile(){
 function offerShare(key, title, mins, isPB){
   if(!cmOn() || !cmUp) return;      // silent when Community is not set up — never a failing modal
   const t = title || 'Workout';
-  const safe = t.replace(/'/g,"\\'");
   $('modal-sheet').innerHTML = '<h3>Share to Community</h3>'
     + '<p class="msub">'+cmEsc(t)+(mins?' · '+mins+' min':'')+'</p>'
     + '<textarea id="cm-cap" rows="3" maxlength="240" placeholder="Say something about this session…" '
     + 'style="width:100%;background:#141414;border:1px solid #2a2a2a;border-radius:12px;padding:11px 13px;color:#fff;font:inherit;font-size:14px;resize:none;"></textarea>'
     + '<div class="modalrow"><button class="cancel" onclick="closeModal()">Not now</button>'
-    + '<button class="confirm" onclick="cmSharePost(\''+cmEsc(key||'')+'\',\''+safe+'\','+(mins||0)+','+(isPB?'true':'false')+')">Post</button></div>'
-    + '<button class="ghostbtn" style="width:100%;margin-top:8px;" onclick="shareWorkoutCard(\''+safe+'\','+(mins||0)+',0)">Share as image</button>';
+    + '<button class="confirm" onclick="cmSharePost('+cmArg(key||'')+','+cmArg(t)+','+(mins||0)+','+(isPB?'true':'false')+')">Post</button></div>'
+    + '<button class="ghostbtn" style="width:100%;margin-top:8px;" onclick="shareWorkoutCard('+cmArg(t)+','+(mins||0)+',0)">Share as image</button>';
   $('modal').classList.add('on');
 }
 
@@ -8494,7 +8540,7 @@ async function clbSchedule(){
     const d=new Date(s.starts_at).toDateString();
     const past = new Date(s.starts_at).getTime() + ((s.duration_min||60)+30)*60000 < Date.now();
     if(d!==day){ day=d; h+='<div class="sechead" style="margin:18px 0 8px;">'+clbWhen(s.starts_at).split(' · ')[0]+' <span style="color:var(--dim);font-size:11px;">'+d.slice(4,10)+'</span></div>'; }
-    h+='<div class="klses'+(past?' clbpast':'')+'" onclick="openClubSession(\''+cmEsc(s.id)+'\')">'
+    h+='<div class="klses'+(past?' clbpast':'')+'" onclick="openClubSession('+cmArg(s.id)+')">'
       + '<div class="kday">'+clbTime(s.starts_at).replace(' ','')+'</div>'
       + '<div class="kbody"><div class="kt">'+cmEsc(s.title)+(s.status==='cancelled'?' · cancelled':'')+'</div>'
       + '<div class="km">'+[s.coach_name, s.location, (s.checked_in?s.checked_in+' checked in':null)].filter(Boolean).map(cmEsc).join(' · ')+'</div></div>'
@@ -9253,7 +9299,7 @@ function netPaintList(){
     return;
   }
   el.innerHTML = list.map(c =>
-    '<div class="netcard" onclick="openClub(\'' + cmEsc(c.id) + '\')">'
+    '<div class="netcard" onclick="openClub('+cmArg(c.id)+')">'
     + netLogo(c, 52)
     + '<div class="nc-body">'
       + '<div class="nc-name">'+cmEsc(c.name)+' '+netPill(c)+'</div>'
